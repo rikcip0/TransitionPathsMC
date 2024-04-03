@@ -1,0 +1,436 @@
+{
+    "graphTypes": {
+        "-2": {
+            "ID": -2,
+            "name": "Erdos-Renyi",
+            "shortName": "ER"
+        },
+        "-1": {
+            "ID": -1,
+            "name": "Random regular graph",
+            "shortName": "RRG"
+        },
+        "1":{
+            "ID": 1,
+            "name": "Square lattice",
+            "shortName": "sqLatt"
+        }
+    },
+    "simulationTypes": {
+        "10": {
+            "ID": 10,
+            "name": "MC over paths, with Qstar in input",
+            "shortName": "tpMC_wQ",
+            "versions": {
+                "0": {
+                    "ID": 0,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 6,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "trajs_Initialization",
+                        "trajs_jumpsInitialization",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ]
+                }
+            }
+        },
+        "11": {
+            "ID": 11,
+            "name": "MC over paths, with Qstar from selfOverlap",
+            "shortName": "tpMC_noInQ",
+            "versions": {
+                "0": {
+                    "ID": 0,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 7,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "trajs_Initialization",
+                        "trajs_jumpsInitialization",
+                        "QstarSettingInfo",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ],
+                    "obsoleteSince": "27Feb24"
+                },
+                "1": {
+                    "ID": 1,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 7,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "QstarSettingInfo",
+                        "trajs_Initialization",
+                        "trajs_jumpsInitialization",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ]
+                }
+            }
+        },
+        "100": {
+            "ID": 100,
+            "name": "MC over paths, with Qstar in input, with annealing",
+            "shortName": "tpMC_wQ_anneal",
+            "versions": {
+                "0": {
+                    "ID": 0,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 5,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "trajs_Initialization",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ]
+                }
+            }
+        },
+        "110": {
+            "ID": 110,
+            "name": "MC over paths, with Qstar from selfOverlap, with annealing",
+            "shortName": "tpMC_noInQ_anneal",
+            "versions": {
+                "0": {
+                    "ID": 0,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 6,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "QstarSettingInfo",
+                        "trajs_Initialization",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ]
+                }
+            }
+        },
+        "15": {
+            "ID": 15,
+            "name": "standard MC",
+            "shortName": "stdMC",
+            "versions": {
+                "0": {
+                    "ID": 0,
+                    "nAdditionalParameters": 5,
+                    "additionalParameters": [
+                        "graphType",
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 3,
+                    "linesMap": [
+                        "mcParameters",
+                        "parameters",
+                        "referenceConfigurationsInfo"
+                    ]
+                }
+            }
+        }
+    },
+    "lines": {
+        "parameters": {
+            "21": {
+                "ID": 21,
+                "description": "Input parameters for tpMC simulation",
+                "shortDescription": "tpMCParams",
+                "nAdditionalParameters": 11,
+                "additionalParameters": [
+                    "N",
+                    "p",
+                    "C",
+                    "graphID",
+                    "T",
+                    "beta",
+                    "h_in",
+                    "Qstar",
+                    "h_out",
+                    "fPosJ",
+                    "hext"
+                ]
+            },
+            "22": {
+                "ID": 22,
+                "description": "Input parameters for stdMC simulation",
+                "shortDescription": "stdMCParams",
+                "nAdditionalParameters": 10,
+                "additionalParameters": [
+                    "N",
+                    "p",
+                    "C",
+                    "graphID",
+                    "T",
+                    "beta",
+                    "h_out",
+                    "Qstar",
+                    "fPosJ",
+                    "hext"
+                ]
+            }
+        },
+        "mcParameters": {
+            "30": {
+                "ID": 30,
+                "description": "Parameters for tpMC simulation",
+                "shortDescription": "tpMCParams",
+                "nAdditionalParameters": 5,
+                "additionalParameters": [
+                    "MC",
+                    "MCeq",
+                    "MCmeas",
+                    "MCprint",
+                    "Np"
+                ]
+            },
+            "31": {
+                "ID": 31,
+                "description": "Parameters for stdMC simulation",
+                "shortDescription": "stdMCParams",
+                "nAdditionalParameters": 3,
+                "additionalParameters": [
+                    "MC",
+                    "MCeq",
+                    "MCmeas"
+                ]
+            }
+        },
+        "thermalizationCheckParameters": {
+            "40": {
+                "ID": 40,
+                "description": "Parameters for tpMC thermalization checks",
+                "shortDescription": "tpMCThermCheckParams",
+                "nAdditionalParameters": 4,
+                "additionalParameters": [
+                    "mcForThermCheck",
+                    "averagingMCForThermCheck",
+                    "nIntervalsForThermCheckQuantities",
+                    "resolutionForThermCheckQuantities"
+                ],
+                "noLongerInUseSince": "11Feb2024"
+            },
+            "41": {
+                "ID": 41,
+                "description": "Parameters for tpMC thermalization checks",
+                "shortDescription": "tpMCThermCheckParams",
+                "nAdditionalParameters": 3,
+                "additionalParameters": [
+                    "mcForThermCheck",
+                    "averagingMCForThermCheck",
+                    "nPointsForDistanceFromStfwdPathComputation"
+                ]
+            }
+        },
+        "referenceConfigurationsInfo": {
+            "50": {
+                "ID": 50,
+                "description": "FM configurations chosen (s1=-1, s2=1)",
+                "shortDescription": "FM",
+                "nAdditionalParameters": 0,
+                "additionalParameters": null
+            },
+            "51": {
+                "ID": 51,
+                "description": "Reference configurations chosen from those extracted from the lowest beta histogram of parallel tempering",
+                "shortDescription": "PT(LowT)",
+                "nAdditionalParameters": 4,
+                "additionalParameters": [
+                    "firstConfigurationIndex",
+                    "secondConfigurationIndex",
+                    "fileOfExtractionName",
+                    "mutualOverlap"
+                ],
+                "obsoleteSince": "16Feb2024"
+            },
+            "52": {
+                "ID": 52,
+                "description": "No reference configuration chosen",
+                "shortDescription": "None",
+                "nAdditionalParameters": 0,
+                "additionalParameters": null
+            },
+            "53": {
+                "ID": 53,
+                "description": "Reference configurations chosen QUENCHING configurations extracted from a parallel tempering",
+                "shortDescription": "q(PT)",
+                "nAdditionalParameters": 9,
+                "additionalParameters": [
+                    "firstConfigurationIndex",
+                    "secondConfigurationIndex",
+                    "mutualOverlapBeforeQuenching",
+                    "betaOfExtraction",
+                    "fileOfExtractionName",
+                    "nQuenchSteps",
+                    "firstConfigurationPostQuenchOverlap",
+                    "secondConfigurationPostQuenchOverlap",
+                    "mutualOverlap"
+                ]
+            },
+            "54": {
+                "ID": 54,
+                "description": "Reference configurations chosen from those extracted from a parallel tempering",
+                "shortDescription": "PT",
+                "nAdditionalParameters": 5,
+                "additionalParameters": [
+                    "firstConfigurationIndex",
+                    "secondConfigurationIndex",
+                    "mutualOverlap",
+                    "betaOfExtraction",
+                    "fileOfExtractionName"
+                ]
+            },
+            "55": {
+                "ID": 55,
+                "description": "Reference configuration chosen from those extracted from a parallel tempering",
+                "shortDescription": "PT",
+                "nAdditionalParameters": 3,
+                "additionalParameters": [
+                    "configurationIndex",
+                    "betaOfExtraction",
+                    "fileOfExtractionName"
+                ]
+            }
+        },
+        "QstarSettingInfo": {
+            "60": {
+                "ID": 60,
+                "description": "Qstar computed from final state self-overlap at simulation beta",
+                "shortDescription": "SelfOverlap",
+                "nAdditionalParameters": 6,
+                "additionalParameters": [
+                    "beta",
+                    "selfOverlap",
+                    "eqSweeps",
+                    "measureSweeps",
+                    "nStories",
+                    "returnedQ"
+                ],
+                "obsoleteSince": "16Feb24"
+            },
+            "61": {
+                "ID": 61,
+                "description": "Qstar computed from final state self-overlap at simulation beta",
+                "shortDescription": "SelfOverlap",
+                "nAdditionalParameters": 5,
+                "additionalParameters": [
+                    "beta",
+                    "selfOverlap",
+                    "measureSweeps",
+                    "nStories",
+                    "returnedQ"
+                ]
+            }
+        },
+        "trajs_Initialization": {
+            "70": {
+                "ID": 70,
+                "description": "Random (+-1 with same probability)",
+                "shortDescription": "Random",
+                "nAdditionalParameters": 0,
+                "additionalParameters": null
+            },
+            "71": {
+                "ID": 71,
+                "description": "Reference configurations: first at start, second at end.",
+                "shortDescription": "Ref 12",
+                "nAdditionalParameters": 0,
+                "additionalParameters": null
+            },
+            "72": {
+                "ID": 72,
+                "description": "Reference configurations: second at start, first at end.",
+                "shortDescription": "Ref 21",
+                "nAdditionalParameters": 0,
+                "additionalParameters": null
+            },
+            "710": {
+                "ID": 710,
+                "description": "Reference configurations: first at start, second at end. With noise",
+                "shortDescription": "Ref 12 with noise",
+                "nAdditionalParameters": 1,
+                "additionalParameters": [
+                    "noise"
+                ]
+            },
+            "720": {
+                "ID": 720,
+                "description": "Reference configurations: second at start, first at end. With noise",
+                "shortDescription": "Ref 21 with noise",
+                "nAdditionalParameters": 1,
+                "additionalParameters": [
+                    "noise"
+                ]
+            },
+            "73": {
+                "ID": 73,
+                "description": "Annealing with constant beta spacing and constant number of steps per beta",
+                "shortDescription": "linear",
+                "nAdditionalParameters": 3,
+                "additionalParameters": [
+                    "startingBeta",
+                    "deltaBeta",
+                    "sweepsPerBeta"
+                ]
+            },
+            "74": {
+                "ID": 74,
+                "description": "Annealing with constant beta spacing and exponential number of steps per beta",
+                "shortDescription": "exp",
+                "nAdditionalParameters": 4,
+                "additionalParameters": [
+                    "startingBeta",
+                    "startingMC",
+                    "finalMC",
+                    "deltaBeta"
+                ]
+            }
+        },
+        "trajs_jumpsInitialization": {
+            "80": {
+                "ID": 80,
+                "description": "0 jump if spin values equal, 1 if different. Jump extracted uniform over time.",
+                "shortDescription": "MinimalN, uniformExt",
+                "nAdditionalParameters": 0,
+                "additionalParameters": null
+            }
+        }
+    }
+}

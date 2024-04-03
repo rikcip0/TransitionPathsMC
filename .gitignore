@@ -1,0 +1,6 @@
+*.exe
+*.log
+*.dat
+*.png
+Data/Graphs
+Data/MultiRun
