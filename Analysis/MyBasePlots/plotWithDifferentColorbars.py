@@ -24,7 +24,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     if(len(y[y!="nan"])<=1):
          return None
 
-    gnuplot = cm.get_cmap('gnuplot', 256)
+    myMap = cm.get_cmap('cool', 256)
     # Define a base color (redder for lower values, bluer for higher values)
 
     fBetaOfExt=betaOfExt
@@ -33,10 +33,10 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
     for val in betas:
         if len(betas)==1 or val =="nan":
-            normalized= 0.5*0.8+0.2
+            normalized= 1.
         else:
-            normalized = (((float) (val) - np.min(fBetaOfExt)) / (np.max(fBetaOfExt) - np.min(fBetaOfExt)))*0.8+0.2
-        newcolors = gnuplot(np.linspace(0, 1, 256))
+            normalized = (((float) (val) - np.min(fBetaOfExt)) / (np.max(fBetaOfExt) - np.min(fBetaOfExt)))
+        newcolors = myMap(np.linspace(0, 1, 256))
         newcolors[:, 3] = 1
         newcolors[:, 1] = (newcolors[:, 1]*normalized + (1-normalized))
         cmaps[val] = ListedColormap(newcolors)

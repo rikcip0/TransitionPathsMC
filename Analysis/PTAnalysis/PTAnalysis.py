@@ -24,7 +24,9 @@ if len(sys.argv) > 1:
     additional_strings= sys.argv[2:]
     if analysisType in analysisVsSimTypesDict:
         simType = analysisVsSimTypesDict[analysisType]
-        archive_path = f"../../Data/Graphs"+analysisType
+        archive_path = f"../../Data/Graphs"
+        if analysisType!="all":
+            archive_path+="/"+analysisType
     else:
         print(f"Analysis of type {analysisType} not implemented.\n")
         print("Implemented analysis types include:")
@@ -33,7 +35,7 @@ if len(sys.argv) > 1:
         print("\n")
         exit()
 
-    selected_PTs = find_directories_with_strings(archive_path, ['configurations', *additional_strings])
+    selected_PTs = find_directories_with_strings(archive_path, ['configurations'])
     if not selected_PTs:
         raise FileNotFoundError(f"No files of type  found in the specified path.")
     print(f"Analyzing all PTs of type {simType}. {len(selected_PTs)} PTs found.")

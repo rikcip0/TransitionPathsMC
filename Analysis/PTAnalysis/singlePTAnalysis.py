@@ -9,7 +9,7 @@ import os
 from MyBasePlots.hist import myHist
 matplotlib.use('Agg') 
 
-preset_folder = "../../Data/Graphs/RRG/p2C4/N80/structure936212/fPosJ0.50/graph3991/configurations6"
+preset_folder = "../../Data/Graphs/ER/p2C3/N100/structure382950/fPosJ0.50/graph5588/configurations3"
 
 def delete_files_in_folder(folder_path):
     for item in os.listdir(folder_path):

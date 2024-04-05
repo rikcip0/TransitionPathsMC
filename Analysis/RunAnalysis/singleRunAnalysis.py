@@ -192,9 +192,10 @@ def txtToInfo(file_path, mappa):
             parameters = lines[nLine+1].strip().split()
             line_structure = line_info[parameters[0]] 
             data[lineType]=line_structure
-            if line_structure["additionalParameters"] is not None:
-                for n, parameter in enumerate(line_structure["additionalParameters"]):
-                    data[lineType][parameter] = parameters[n+1]
+            if "nAdditionalParameters" in line_structure.keys():
+                if line_structure["nAdditionalParameters"] !=0:
+                    for n, parameter in enumerate(line_structure["additionalParameters"]):
+                        data[lineType][parameter] = parameters[n+1]
             data[lineType].pop("nAdditionalParameters", None)
             data[lineType].pop("additionalParameters", None)
     #print(data)

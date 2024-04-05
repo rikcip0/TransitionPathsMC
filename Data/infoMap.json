@@ -327,6 +327,12 @@
                     "betaOfExtraction",
                     "fileOfExtractionName"
                 ]
+            },
+            "56": {
+                "ID": 56,
+                "description": "Reference configuration chosen is FM all ups",
+                "shortDescription": "FM",
+                "nAdditionalParameters": 0
             }
         },
         "QstarSettingInfo": {

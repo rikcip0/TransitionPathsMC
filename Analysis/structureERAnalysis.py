@@ -40,7 +40,7 @@ def singleDegreeAnalysis(folder=""):
     if folder =="":
         folder= preset_folder
     print(folder)
-    plotsFolder = os.path.join(folder, "Analysis")
+    plotsFolder = os.path.join(folder, "ERStructureAnalysis")
     os.makedirs(plotsFolder, exist_ok=True)
     delete_files_in_folder(plotsFolder)
 

@@ -273,7 +273,7 @@ int main(int argc, char **argv)
 
 
   //folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  folder = makeFolderNameFromBuffer_ForCluster(folder+"/DataForPathsMC/PathsMCs", string(buffer), sstart);   //For Cluster
+  folder = makeFolderNameFromBuffer_ForCluster(folder+"/DataForPathsMC/PathsMCs/", string(buffer), sstart);   //For Cluster
 
   createFolder(folder);
   cout << "Simulation is in folder " << folder << endl;

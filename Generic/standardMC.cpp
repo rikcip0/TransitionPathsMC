@@ -24,7 +24,7 @@
 #define MC 100000
 #define MCeq 1000
 #define MCmeas 5
-#define MCprint 100 //deve essere multiplo di MCmeas
+#define MCprint 100 // deve essere multiplo di MCmeas
 
 int main(int argc, char *argv[])
 {
@@ -170,6 +170,8 @@ int main(int argc, char *argv[])
   else
   {
     refS.assign(N, 1); // i.e. refS is all ups.
+    info.first += "Reference configuration is FM conf (all +)";
+    info.second += "56";
   }
 
   if (extremesFixed)

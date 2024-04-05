@@ -113,12 +113,17 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
                 stMC_Hout.append(item['configuration']['parameters']['h_out'])
                 stMC_Qstar.append(item['configuration']['parameters']['Qstar'])
                 stMC_graphID.append(item['configuration']['parameters']['graphID'])
-                stMC_betaOfExtraction.append(item['configuration']['referenceConfigurationsInfo']['betaOfExtraction'])
-                stMC_configurationIndex.append(item['configuration']['referenceConfigurationsInfo']['configurationIndex'])
+                if item['configuration']['referenceConfigurationsInfo']['ID'] == 55:
+                    stMC_betaOfExtraction.append(item['configuration']['referenceConfigurationsInfo']['betaOfExtraction'])
+                    stMC_configurationIndex.append(item['configuration']['referenceConfigurationsInfo']['configurationIndex'])
+                else:
+                    stMC_betaOfExtraction.append("nan")
+                    stMC_configurationIndex.append("nan")
+
                 stMC_TIbeta.append(item["results"]['TI']['beta'])
             continue
 
-        print("analyzing", item['configuration']['ID'])
+        #print("analyzing", item['configuration']['ID'])  #decommentare per controllare quando c'è un intoppo
         ID.append(item['configuration']['ID']) #ID only contains new IDs. will be used to check what analysis to repeat
         refConfInitID.append(item['configuration']['referenceConfigurationsInfo']['ID'])
         graphID.append(item['configuration']['parameters']['graphID'])
@@ -250,7 +255,7 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     stMC_graphID  = np.array(stMC_graphID)
     stMC_betaOfExtraction = [float(value) if value != "infty" else np.inf for value in stMC_betaOfExtraction]
     stMC_betaOfExtraction = np.array(stMC_betaOfExtraction)
-    stMC_configurationIndex  = np.array(stMC_configurationIndex, dtype=np.int16)
+    stMC_configurationIndex  = np.array(stMC_configurationIndex)
 
 
     
@@ -283,15 +288,12 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
             additional=None
             if xName=="beta":
                 stMC_corrBetaAndQif = np.empty((len(stMC_beta), 2), dtype=object)
-                for sim_Bet, sim_Qif in set(zip(np.unique(betaOfExtraction[filt]),np.unique(refConfMutualQ[filt]))):
+                for sim_Bet, sim_Qif in set(zip(betaOfExtraction[filt], refConfMutualQ[filt])):
                     secondConfIndeces = np.unique(secondConfigurationIndex[np.logical_and(filt, refConfMutualQ==sim_Qif)])
                     for secondConfIndex in secondConfIndeces:
                         tempFilt=filt
                         filt= np.logical_and.reduce([stMC_N == v, stMC_Hout == sim_Hout, stMC_Qstar == sim_Qstar, stMC_configurationIndex==secondConfIndex])
-                        if np.isnan(sim_Bet):
-                            stMC_corrBetaAndQif[filt]=["nan",sim_Qif]
-                        else:
-                            stMC_corrBetaAndQif[filt]=[sim_Bet,sim_Qif]
+                        stMC_corrBetaAndQif[filt]=[sim_Bet,sim_Qif]
                         filt=tempFilt
                 additional = [stMC_beta, stMC_TIbeta, stMC_corrBetaAndQif, "inf"]
 
@@ -381,22 +383,23 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
             plt.close('all')
 
 
-    Results_path = os.path.join(analysis_path,"Results")
+    Results_path = os.path.join(analysis_path,"../..","OverallResults")
     if not os.path.exists(Results_path):
         os.makedirs(Results_path)
-    else:
-        delete_files_in_folder(Results_path)
 
     TIbetaFolder= os.path.join(Results_path, "TIbeta")
     if not os.path.exists(TIbetaFolder):
         os.makedirs(TIbetaFolder)
-    else:
-        delete_files_in_folder(TIbetaFolder)
 
+
+    betaOfExtraction = betaOfExtraction.astype(str)
+    firstConfigurationIndex = firstConfigurationIndex.astype(str)
+    secondConfigurationIndex = secondConfigurationIndex.astype(str)
 
     for simHin, simHout, simQstar, simGraphID, simT, simBetaOfExtraction, simFirstConfigurationIndex, simSecondConfigurationIndex, simRefConfMutualQ in set(zip(h_in, h_out, Qstar, graphID, T, betaOfExtraction, firstConfigurationIndex, secondConfigurationIndex, refConfMutualQ)):
         #dovrei anche controllare che le configurazioni di riferimento sono le stesse. Per ora non è un problema
-        filt = np.logical_and.reduce([h_in == simHin, h_out == simHout, Qstar == simQstar, graphID == simGraphID, T == simT, betaOfExtraction==simBetaOfExtraction, firstConfigurationIndex==simFirstConfigurationIndex, secondConfigurationIndex==simSecondConfigurationIndex])
+        filt = np.logical_and.reduce([h_in == simHin, h_out == simHout, Qstar == simQstar, graphID == simGraphID, T == simT, betaOfExtraction==simBetaOfExtraction,
+                                      firstConfigurationIndex==simFirstConfigurationIndex, secondConfigurationIndex== simSecondConfigurationIndex])
         if len(np.unique(beta[filt]))<=4:
             continue
         
@@ -413,21 +416,26 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
             for valore1, valore2 in zip(beta[filt], TIbeta[filt]):
                 f.write('\n{} {}'.format(valore1, valore2))
 
+    stMC_betaOfExtraction = stMC_betaOfExtraction.astype(str)
+    stMC_configurationIndex = stMC_configurationIndex.astype(str)
+
     for simHout, simQstar, simGraphID, simBetaOfExtraction, simConfigurationIndex in set(zip(stMC_Hout, stMC_Qstar, stMC_graphID, stMC_betaOfExtraction, stMC_configurationIndex)):
         #dovrei anche controllare che le configurazioni di riferimento sono le stesse. Per ora non è un problema
+        thisQif = np.unique(refConfMutualQ[np.logical_and.reduce([h_out==simHout, Qstar==simQstar, graphID==simGraphID, betaOfExtraction==simBetaOfExtraction, secondConfigurationIndex==simConfigurationIndex ])])
         
+        if len(thisQif)==0:
+            continue
+        thisQif = thisQif[0]
         filt = np.logical_and.reduce([stMC_Hout == simHout, stMC_Qstar == simQstar, stMC_graphID == simGraphID,  stMC_betaOfExtraction==simBetaOfExtraction, stMC_configurationIndex==simConfigurationIndex])
         if len(np.unique(stMC_beta[filt]))<=4:
             continue
-        print("Found set of datas for TI: ")
-        print(simHout, simQstar, simGraphID, "inf")
 
         if len(np.unique(stMC_N[filt]))>1:
             print("There seems to be more N values for the specified set of parameters.")
             continue
 
         #file_path = f"TIbeta_N{n}C3T{simT}f1.00g{simGraphID}Hin{simHin}Hout{simHout}Qstar{simQstar}.txt"
-        file_path = os.path.join(TIbetaFolder,f"{symType}_{simGraphID}_{simHout}_{simQstar}_inf.txt")
+        file_path = os.path.join(TIbetaFolder,f"{symType}_{simGraphID}_{simHout}_{simQstar}_{thisQif}_inf.txt")
         with open(file_path, 'w') as f:
             f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T\n")
             f.write(f"#{symType} {simGraphID} {simBetaOfExtraction} {simHout} {simQstar}")
