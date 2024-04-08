@@ -35,7 +35,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         if len(betas)==1 or val =="nan":
             normalized= 1.
         else:
-            normalized = (((float) (val) - np.min(fBetaOfExt)) / (np.max(fBetaOfExt) - np.min(fBetaOfExt)))
+            normalized = (((float) (val) - np.min(fBetaOfExt.astype(float))) / (np.max(fBetaOfExt.astype(float)) - np.min(fBetaOfExt.astype(float))))
         newcolors = myMap(np.linspace(0, 1, 256))
         newcolors[:, 3] = 1
         newcolors[:, 1] = (newcolors[:, 1]*normalized + (1-normalized))
@@ -143,6 +143,12 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         additional_X = additionalMarkerTypes[0]
         additional_Y = additionalMarkerTypes[1]
         additional_correspBetaOfExAndQif = additionalMarkerTypes[2]
+
+        additionalXSort = np.argsort(additional_X)
+
+        additional_X = additional_X[additionalXSort]
+        additional_Y = additional_Y[additionalXSort]
+        additional_correspBetaOfExAndQif =additional_correspBetaOfExAndQif[additionalXSort]
 
         marker = "."
         for BetaOfExAndQif in additional_correspBetaOfExAndQif:

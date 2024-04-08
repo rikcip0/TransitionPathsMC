@@ -89,8 +89,8 @@ if len(sys.argv) > 1:
                             print("Errore nella lettura di una simulazione\n")
         presentRunsData.extend(newRunsData)
 
-        with open(previousRuns_JsonFile, "w") as json_file:
-                json.dump(presentRunsData, json_file, indent=4) 
+        #with open(previousRuns_JsonFile, "w") as json_file:
+                #json.dump(presentRunsData, json_file, indent=4) 
 
         selected_runGroups = [
         [

@@ -43,8 +43,8 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
 
     ID = []
     simulationType =[]
+    fPosJ = []
     graphID = []
-
 
     refConfInitID =[]
     betaOfExtraction =[]
@@ -100,7 +100,6 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
 
     for item in runsData:
         if "results" not in item.keys():
-            print("non c è")
             continue
 
         if 'configuration' not in item.keys() or 'parameters' not in item['configuration'] or 'h_in' not in item['configuration']['parameters']:
@@ -138,6 +137,7 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
         h_ext.append(item['configuration']['parameters']['hext'])
         h_in.append(item['configuration']['parameters']['h_in'])
         h_out.append(item['configuration']['parameters']['h_out'])
+        fPosJ.append(item['configuration']['parameters']['fPosJ']) 
         Qstar.append(item['configuration']['parameters']['Qstar'])
             
         if item['configuration']['referenceConfigurationsInfo']['ID']==50:
@@ -197,6 +197,7 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     beta = np.array(beta, dtype=np.float64)
     h_in = np.array(h_in, dtype=np.float64)
     h_out = np.array(h_out, dtype=np.float64)
+    fPosJ = np.array(fPosJ, dtype=np.float64)
     Qstar= np.array(Qstar, dtype=np.int16)
     h_ext = np.array(h_ext, dtype=np.float64)
 
@@ -323,22 +324,22 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
                     trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                     yerr=avEnergyStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
-            mainPlot = plotWithDifferentColorbars(f"nJumps", x[filt], xName, nJumps[filt], "# jumps", "Mean average energy over trajectory vs "+ xName +"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"nJumps", x[filt], xName, nJumps[filt], "# jumps", "Mean number of jumps per spin over trajectory vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                     yerr=nJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
-            mainPlot = plotWithDifferentColorbars(f"deltaNJumps", x[filt], xName, deltaNJumps[filt], "# jumps", "Mean average energy over trajectory vs "+ xName +"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"deltaNJumps", x[filt], xName, deltaNJumps[filt], r"$\delta$", "Spins number of jumps over trajectory stdDev (over sistes) vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                     yerr=deltaNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
                 
-            mainPlot = plotWithDifferentColorbars(f"deltaNOverAvJumps", x[filt], xName, deltaNJumps[filt]**2/nJumps[filt], "# jumps", "Mean average energy over trajectory vs "+ xName +"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"deltaNOverAvJumps", x[filt], xName, deltaNJumps[filt]**2/nJumps[filt], "ratio", r"($\delta$"+"#jumps)^2/(#jumps)" +" vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                     yerr=deltaNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
                 
-            mainPlot = plotWithDifferentColorbars(f"qDist", x[filt], xName, qDist[filt], "distance", "Mean average energy over trajectory vs "+xName +"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"qDist", x[filt], xName, qDist[filt], "distance", "Average distance from stfwd path between reference configurations over trajectory vs "+xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                     yerr=qDistStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
@@ -391,6 +392,10 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     if not os.path.exists(TIbetaFolder):
         os.makedirs(TIbetaFolder)
 
+    ChiFitFolder = os.path.join(Results_path, "ChiData")
+    if not os.path.exists(ChiFitFolder):
+        os.makedirs(ChiFitFolder)
+
 
     betaOfExtraction = betaOfExtraction.astype(str)
     firstConfigurationIndex = firstConfigurationIndex.astype(str)
@@ -409,13 +414,28 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
             continue
 
         #file_path = f"TIbeta_N{n}C3T{simT}f1.00g{simGraphID}Hin{simHin}Hout{simHout}Qstar{simQstar}.txt"
-        file_path = os.path.join(TIbetaFolder, f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{(int (simT))}.txt")
+
+        if simT == np.floor(simT):
+            fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{int(simT)}.txt"
+        else:
+            fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{simT:.1f}.txt"
+
+        file_path = os.path.join(TIbetaFolder, fileName)
         with open(file_path, 'w') as f:
             f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T\n")
             f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT}")
             for valore1, valore2 in zip(beta[filt], TIbeta[filt]):
                 f.write('\n{} {}'.format(valore1, valore2))
 
+        filt = np.logical_and(filt, fPosJ==1.0)
+        file_path = os.path.join(ChiFitFolder, fileName)
+        if len(beta[filt])>0:
+            with open(file_path, 'w') as f:
+                f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T\n")
+                f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT}")
+                for bet, m, tau in zip(beta[filt], chi_m[filt], chi_tau[filt]):
+                    f.write('\n{} {} {}'.format(bet, m, tau))
+    
     stMC_betaOfExtraction = stMC_betaOfExtraction.astype(str)
     stMC_configurationIndex = stMC_configurationIndex.astype(str)
 
@@ -445,10 +465,10 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     if len(np.unique(beta))>2:
         myMultiRunStudy("StudyInBeta", beta, r"beta", N, "N", T, "T")
     if len(np.unique(N))>2:
-        myMultiRunStudy("StudyInN", N, "N", beta, "beta", T, "T")
+        myMultiRunStudy("StudyInN", N, "N",  T, "T",beta, "beta")
 
     Qstar= Qstar/N #così, slice-ando rispetto a N unisco i casi con q_star uguale
     if len(np.unique(T))>2:
-        myMultiRunStudy("StudyInT", T,  "T", beta, r"beta", N, "N")
+        myMultiRunStudy("StudyInT", T,  "T",N, "N",beta, r"beta")
     if len(np.unique(T*N))>2:
-        myMultiRunStudy("StudyInNT", N*T, "NT", beta, r"beta", N, "N")
+        myMultiRunStudy("StudyInNT", N*T, "NT",N, "N", beta, r"beta")

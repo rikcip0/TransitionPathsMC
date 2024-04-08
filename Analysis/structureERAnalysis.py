@@ -11,7 +11,7 @@ matplotlib.use('Agg')
 
 N=100
 C=3
-preset_folder = "../Data/ER/p2C3/N100/structure559248"
+preset_folder = "../Data/Graphs/ER/p2C3/N80/structure423306"
 
 def delete_files_in_folder(folder_path):
     for item in os.listdir(folder_path):

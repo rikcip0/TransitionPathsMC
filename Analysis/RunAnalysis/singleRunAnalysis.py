@@ -29,61 +29,36 @@ def meanAndStdErrForParametricPlot(toBecomeX, toBecomeY):
     y_var_values = np.asarray([np.var(toBecomeY[toBecomeX == x_value])**0.5 for x_value in x_unique_values])
     return x_unique_values, y_mean_values, y_var_values
 
-def progressive_fit(x, y, type, threshold_chi_square=10.):
+def progressiveLinearFit(x, y, type, threshold_chi_square=10.):
 
     par_values = []
     minimumShifting = np.maximum(len(x)//100, 5)
 
-    
     def linear(t, a, b):
         return t*a+b
     
-    def boh(t, alpha, eps):
-        fin = x[-1]
-        return alpha +(1-alpha)*eps/(x[-1]-t+eps) + y[-1]-1
-
-    def boh2(t, tau_m):
-        T = x[-1]
-        condition = np.logical_and(t > tau_m, t<T)
-
-        result = np.zeros_like(t)
-        result[-1]=y[-1]
-        result[condition] = 1/(T-tau_m)* (t[condition] - tau_m +  (T - t[condition]) * (np.log(T - t[condition]) - np.log(T - tau_m)))* y[-2]
-
-        return result
-    
-    if type=="linear":
-        myFunc=linear
-    else:
-        myFunc = boh2
-
     iStartIndex=np.maximum(np.argmax(y>0.001),minimumShifting)
 
-    if iStartIndex+minimumShifting>=len(x-1)-1:
+    if iStartIndex+minimumShifting>=len(x)-1:
         return None
     
-    """"
+
     for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
         for j in range(i+minimumShifting, len(x)-1, minimumShifting):
-                    popt, pcov = curve_fit(myFunc, x[i:j], y[i:j], method='lm', p0=[20,0.6])
+                    popt, pcov = curve_fit(linear, x[i:j], y[i:j], method='lm', p0=[1/x[-1],0.6])
                     slope = popt[0]
                     intercept = popt[1]
-                    chi_value = np.nansum(((y[i:j]-(myFunc(x[i:j],*popt))))**2./y[i:j])/(j-i)
+                    chi_value = np.nansum(((y[i:j]-(linear(x[i:j],*popt))))**2./y[i:j])/(j-i)
                     if chi_value < 3*0.001 and slope*x[-1]>0.1:
                         par_values.append((chi_value, i, j, slope, intercept))
-    """
-    popt, pcov = curve_fit(myFunc, x, y)
-    slope = popt[0]
-    chi_value = np.nansum(((y-(myFunc(x,*popt))))**2./y)/len(x)
-    if chi_value < 3000*0.001:
-        par_values.append((chi_value, 0, len(x)-1, slope, 4))
+
     if len(par_values)==0:
         return None
-    best_segment = min(par_values, key=lambda x: x[0])
+    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**7.5)
     best_Chi = best_segment[0]
 
-    if 1==1:#best_Chi<threshold_chi_square:#  and best_segment[3]>0.00001: #and best_segment[3]*x[-1]+best_segment[4]>0.15
-        return [best_segment[3], best_segment[4]], [best_segment[1], best_segment[2]], best_Chi, myFunc
+    if best_Chi<threshold_chi_square and best_segment[3]>0.00001: #and best_segment[3]*x[-1]+best_segment[4]>0.15
+        return [best_segment[3], best_segment[4]], [best_segment[1], best_segment[2]], best_Chi, linear
     else:
         return None
     
@@ -210,8 +185,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     #setting results folders and plots default lines: START
     resultsFolder= os.path.join(run_Path, "Results")
 
-    """
     jsonResultsPath = os.path.join(resultsFolder,"runData.json")
+    """
     if os.path.exists(jsonResultsPath):
         return
         with open(jsonResultsPath, 'r') as map_file:
@@ -835,9 +810,9 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     plt.plot(time, avChi)
 
     if fracPosJ==1.:
-        fitOutput = progressive_fit(time, avChi, "linear")
+        fitOutput = progressiveLinearFit(time, avChi, "linear")
     else:
-        fitOutput = progressive_fit(time, avChi, "boh2")
+        fitOutput = progressiveLinearFit(time, avChi, "boh2")
 
     linearFitResults = {}
     if fitOutput is not None:
@@ -849,8 +824,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             plt.axvline(time[linearity_lowerIndex], linestyle='dashed', linewidth=1, color='red', label=r"$\tau_{trans}=$"+f"{time[linearity_lowerIndex]:.2f}")
         if linearity_upperIndex is not None:
             plt.axvline(time[linearity_upperIndex], linestyle='dashed', linewidth=1, color='green', label=r"$\tau_{lin. end}=$"+f"{time[linearity_upperIndex]:.2f}")
-        #plt.plot(time,funcToPlot(time, *best_fit_params), '--', label=r'k'+f"={best_fit_params[0]:.3g}\n"+r"c"+f"={best_fit_params[1]:.3g}\n"+r'$\chi^2_{r}$'+f'={chi:.3g}', linewidth= 0.8) 
-        plt.plot(time,funcToPlot(time, best_fit_params[0]), '--', label=r'k'+f"={best_fit_params[0]:.3g}\n"+r'$\chi^2_{r}$'+f'={chi:.3g}', linewidth= 0.8) 
+        plt.plot(time,funcToPlot(time, *best_fit_params), '--', label=r'k'+f"={best_fit_params[0]:.3g}\n"+r"c"+f"={best_fit_params[1]:.3g}\n"+r'$\chi^2_{r}$'+f'={chi:.3g}', linewidth= 0.8) 
+        #plt.plot(time,funcToPlot(time, best_fit_params[0]), '--', label=r'k'+f"={best_fit_params[0]:.3g}\n"+r'$\chi^2_{r}$'+f'={chi:.3g}', linewidth= 0.8) 
         plt.xlim(x_limits)
         plt.ylim(y_limits)
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
