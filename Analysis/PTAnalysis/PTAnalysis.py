@@ -5,6 +5,7 @@ import sys
 
 from singlePTAnalysis import singlePTAnalysis
 
+
 def find_directories_with_strings(parent_dir, target_strings):
     matching_dirs = []
     # Traverse through all subdirectories recursively
@@ -18,15 +19,24 @@ def find_directories_with_strings(parent_dir, target_strings):
     
     return matching_dirs
 
+def get_substring_up_to_first_slash(input_string):
+    index = input_string.find('/')
+    if index != -1:
+        return input_string[:index]
+    else:
+        return input_string
+
 if len(sys.argv) > 1:
-    analysisVsSimTypesDict = {"RRG":"RRG", "ER":"ER"}
-    analysisType = sys.argv[1]
+    analysisVsSimTypesDict = {"DPRRG":"DPRRG", "RRG":"RRG", "ER":"ER", "SqLatt":"SqLatt"}
+
+    analysisType = get_substring_up_to_first_slash(sys.argv[1])
     additional_strings= sys.argv[2:]
+
     if analysisType in analysisVsSimTypesDict:
         simType = analysisVsSimTypesDict[analysisType]
         archive_path = f"../../Data/Graphs"
         if analysisType!="all":
-            archive_path+="/"+analysisType
+            archive_path+="/"+sys.argv[1]
     else:
         print(f"Analysis of type {analysisType} not implemented.\n")
         print("Implemented analysis types include:")
@@ -35,7 +45,9 @@ if len(sys.argv) > 1:
         print("\n")
         exit()
 
-    selected_PTs = find_directories_with_strings(archive_path, ['configurations'])
+        
+    selected_PTs = find_directories_with_strings(archive_path, ['configurations', *additional_strings])
+
     if not selected_PTs:
         raise FileNotFoundError(f"No files of type  found in the specified path.")
     print(f"Analyzing all PTs of type {simType}. {len(selected_PTs)} PTs found.")

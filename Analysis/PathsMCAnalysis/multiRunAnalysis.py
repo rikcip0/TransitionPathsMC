@@ -99,7 +99,7 @@ if len(sys.argv) > 1:
             ],
             f"p2C{x[1]}fPosJ{x[0]:.2f}"
         ]
-        for x in [[1.,3],[0.5,4], [0.5,3], [1.0,4]]
+        for x in [[0.5,4],[0.5,3], [1.0,3], [1.0,4]]
         ]
 
         selected_runGroups= [runGroup for runGroup in selected_runGroups if len(runGroup[0])>1]

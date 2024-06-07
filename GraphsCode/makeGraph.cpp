@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 
     if (argc != 6)
     {
-        fprintf(stderr, "usage: %s type(-2:ER -1:RRG k>0: k-dim sqLatt) <N> <fracPosJ> (<C> <structureID>)\n", argv[0]);
+        fprintf(stderr, "usage: %s type(-3: DPRRG -2:ER -1:RRG k>0: k-dim sqLatt) <N> <fracPosJ> (<C> <structureID>)\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     try
     {
         type = std::stoi(argv[1]);
-        if (type == -2 || type == -1 || type >= 0)
+        if (type == -3 || type == -2 || type == -1 || type >= 0)
         {
             // Input valido
             std::cout << "Input valido: " << type << std::endl;
@@ -59,6 +59,8 @@ int main(int argc, char *argv[])
         sprintf(buffer, "../Data/Graphs/RRG/p%dC%d/N%i/structure%i", p, C, N, structureID);
     else if (type == -2)
         sprintf(buffer, "../Data/Graphs/ER/p%dC%d/N%i/structure%i", p, C, N, structureID);
+    else if (type == -3)
+        sprintf(buffer, "../Data/Graphs/DPRRG/p%dC%d/N%i/structure%i", p, C, N, structureID);
     else
     {
         C = 2 * type;

@@ -10,7 +10,7 @@
             "name": "Random regular graph",
             "shortName": "RRG"
         },
-        "1":{
+        "1": {
             "ID": 1,
             "name": "Square lattice",
             "shortName": "sqLatt"
@@ -40,6 +40,26 @@
                         "thermalizationCheckParameters",
                         "parameters"
                     ]
+                },
+                "2": {
+                    "ID": 2,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 6,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "trajs_Initialization",
+                        "trajs_jumpsInitialization",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ],
+                    "newFeature": "prints fraction of trajectories at overlaps larger than certain milestones, for both the initial and final reference configuration"
                 }
             }
         },
@@ -88,6 +108,27 @@
                         "thermalizationCheckParameters",
                         "parameters"
                     ]
+                },
+                "2": {
+                    "ID": 2,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 7,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "QstarSettingInfo",
+                        "trajs_Initialization",
+                        "trajs_jumpsInitialization",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ],
+                    "newFeature": "prints fraction of trajectories at overlaps larger than certain milestones, for both the initial and final reference configuration"
                 }
             }
         },
@@ -113,6 +154,25 @@
                         "thermalizationCheckParameters",
                         "parameters"
                     ]
+                },
+                "2": {
+                    "ID": 2,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 5,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "trajs_Initialization",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ],
+                    "newFeature": "prints fraction of trajectories at overlaps larger than certain milestones, for both the initial and final reference configuration"
                 }
             }
         },
@@ -139,11 +199,55 @@
                         "thermalizationCheckParameters",
                         "parameters"
                     ]
+                },
+                "2": {
+                    "ID": 2,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 6,
+                    "linesMap": [
+                        "referenceConfigurationsInfo",
+                        "QstarSettingInfo",
+                        "trajs_Initialization",
+                        "mcParameters",
+                        "thermalizationCheckParameters",
+                        "parameters"
+                    ],
+                    "newFeature": "prints fraction of trajectories at overlaps larger than certain milestones, for both the initial and final reference configuration"
                 }
             }
         },
         "15": {
             "ID": 15,
+            "name": "standard MC for PathsMCs",
+            "shortName": "stdMC_forPathsMCs",
+            "versions": {
+                "0": {
+                    "ID": 0,
+                    "nAdditionalParameters": 5,
+                    "additionalParameters": [
+                        "graphType",
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 3,
+                    "linesMap": [
+                        "mcParameters",
+                        "parameters",
+                        "referenceConfigurationsInfo"
+                    ]
+                }
+            }
+        },
+        "16": {
+            "ID": 16,
             "name": "standard MC",
             "shortName": "stdMC",
             "versions": {
@@ -190,8 +294,8 @@
             },
             "22": {
                 "ID": 22,
-                "description": "Input parameters for stdMC simulation",
-                "shortDescription": "stdMCParams",
+                "description": "Input parameters for stdMC simulation for MCPaths",
+                "shortDescription": "stdMCParams_ForPathsMCs",
                 "nAdditionalParameters": 10,
                 "additionalParameters": [
                     "N",
@@ -202,6 +306,21 @@
                     "beta",
                     "h_out",
                     "Qstar",
+                    "fPosJ",
+                    "hext"
+                ]
+            },
+            "23": {
+                "ID": 23,
+                "description": "Input parameters for stdMC simulation",
+                "shortDescription": "stdMCParams",
+                "nAdditionalParameters": 7,
+                "additionalParameters": [
+                    "N",
+                    "p",
+                    "C",
+                    "graphID",
+                    "beta",
                     "fPosJ",
                     "hext"
                 ]
@@ -333,6 +452,19 @@
                 "description": "Reference configuration chosen is FM all ups",
                 "shortDescription": "FM",
                 "nAdditionalParameters": 0
+            },
+            "57": {
+                "ID": 57,
+                "description": "Couple of configurations chosen from those extracted from a parallel tempering according to mutual overlap, reference configurations are first one and its opposite",
+                "shortDescription": "PTc1&f(c1)",
+                "nAdditionalParameters": 5,
+                "additionalParameters": [
+                    "firstConfigurationIndex",
+                    "secondConfigurationIndex",
+                    "mutualOverlap",
+                    "betaOfExtraction",
+                    "fileOfExtractionName"
+                ]
             }
         },
         "QstarSettingInfo": {

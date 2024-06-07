@@ -122,7 +122,7 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
                 stMC_TIbeta.append(item["results"]['TI']['beta'])
             continue
 
-        #print("analyzing", item['configuration']['ID'])  #decommentare per controllare quando c'è un intoppo
+        print("analyzing", item['configuration']['ID'])  #decommentare per controllare quando c'è un intoppo
         ID.append(item['configuration']['ID']) #ID only contains new IDs. will be used to check what analysis to repeat
         refConfInitID.append(item['configuration']['referenceConfigurationsInfo']['ID'])
         graphID.append(item['configuration']['parameters']['graphID'])
@@ -140,7 +140,7 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
         fPosJ.append(item['configuration']['parameters']['fPosJ']) 
         Qstar.append(item['configuration']['parameters']['Qstar'])
             
-        if item['configuration']['referenceConfigurationsInfo']['ID']==50:
+        if item['configuration']['referenceConfigurationsInfo']['ID']==50 or item['configuration']['referenceConfigurationsInfo']['ID']==56:
             betaOfExtraction.append("nan")
             firstConfigurationIndex.append("nan")
             secondConfigurationIndex.append("nan")

@@ -84,10 +84,10 @@ int main(int argc, char **argv)
 
   // START of input management
 
-  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 13 && argc != 15))
+  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 13 && argc != 15 && argc != 16))
   {
     cout << "Probable desired usage: ";
-    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N T beta Hext hin hout Q*(if -1 is self-computed) C structureID fracPosJ graphID (requiredBetaOfSExtraction requiredQif) [if not present, FM(all +) conf. is considered]" << endl;
+    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N T beta Hext hin hout Q*(if -1 is self-computed) \nC structureID fracPosJ graphID(requiredBetaOfSExtraction requiredQif(-1 : take both (preset), 1 : take first and first flipped, 2 : take second and second flipped))[if not present, FM(all +) conf.is considered] " << endl;
     cout << "If d is a lattice, C and structureID are required but ignored." << endl;
     exit(1);
   }
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
   }
 
   int Qstar = atoi(argv[8]);
-  if ((abs(Qstar) % 2 != N % 2 || abs(Qstar) > N)&&Qstar!=-1)
+  if ((abs(Qstar) % 2 != N % 2 || abs(Qstar) > N) && Qstar != -1)
   {
     cout << "Q* value is not allowed!" << endl;
     exit(1);
@@ -175,9 +175,9 @@ int main(int argc, char **argv)
     info.first += (string)("Simulation run on: ") + ugnm.nodename + ", with seed " + to_string(sstart) + ", started at " + getCurrentDateTime() + "\n\n";
     info.first += "Qstar given in input\n\n";
 #ifdef INITANNEALING
-    info.second += (string)("100 0 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
+    info.second += (string)("100 2 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
 #else
-    info.second += (string)("10 0 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
+    info.second += (string)("10 2 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
 #endif
   }
   else
@@ -185,9 +185,9 @@ int main(int argc, char **argv)
     info.first += (string)("Simulation run on: ") + ugnm.nodename + ", with seed " + to_string(sstart) + ", started at " + getCurrentDateTime() + "\n\n";
     info.first += "No Qstar given in input: self-overlap around final configuration will be computed\n\n";
 #ifdef INITANNEALING
-    info.second += (string)("110 1 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
+    info.second += (string)("110 2 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
 #else
-    info.second += (string)("11 1 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
+    info.second += (string)("11 2 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
     cout << "Simulation with extremes fixed to reference configurations.\n\n";
 #endif
   }
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
   referenceConfigurations.first.assign(N, 0);
   referenceConfigurations.second.assign(N, 0);
 
-  if (argc == 15)
+  if (argc == 15 || argc == 16)
   {
     double requiredBetaOfSExtraction = atof(argv[13]);
     int requiredQif = atoi(argv[14]);
@@ -221,11 +221,20 @@ int main(int argc, char **argv)
       std::cout << "requiredBetaOfSExtraction value is not allowed!" << std::endl;
       return 1;
     }
+
+    int configurationsChoiceOption;
+    if (argc == 16)
+    {
+      configurationsChoiceOption = atoi(argv[15]);
+    }
+    else
+      configurationsChoiceOption = -1;
+
     if (!
 #ifndef QUENCHCONFS
-        initializeReferenceConfigurationsFromParTemp_FirstOccurrence(folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction)
+        initializeReferenceConfigurationsFromParTemp_FirstOccurrence(folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
 #else
-        initializeReferenceConfigurationsSeqQuenchingFromParTemp(Graph, folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction)
+        initializeReferenceConfigurationsSeqQuenchingFromParTemp(Graph, folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
 #endif
     )
     {
@@ -265,15 +274,14 @@ int main(int argc, char **argv)
   }
 
   char buffer[200];
-  cout<<extremesFixed<<endl;
+  cout << extremesFixed << endl;
   if (extremesFixed)
     sprintf(buffer, "%.2g_%.2g_%.2g_inf_%i_inf", T, beta, Hext, Qstar);
   else
     sprintf(buffer, "%.2g_%.2g_%.2g_%.2g_%i_%.3g", T, beta, Hext, hin, Qstar, hout);
 
-
-  //folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  folder = makeFolderNameFromBuffer_ForCluster(folder+"/DataForPathsMC/PathsMCs/", string(buffer), sstart);   //For Cluster
+  // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
+  folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer), sstart); // For Cluster
 
   createFolder(folder);
   cout << "Simulation is in folder " << folder << endl;
@@ -347,7 +355,13 @@ int main(int argc, char **argv)
   ofstream integratedMeasuringFile(nomefile);
   vector<vector<int>> ris(3, vector(Np, 0));
   vector<vector<double>> risQ(3, vector(Np, 0.));
-  vector<double> chiM(Np, 0);
+  vector<double> chiQ(Np, 0);
+
+  vector<int> mileStones = {mutualQ, 0, (int)(Qstar / 2), Qstar};
+  pair<vector<vector<long int>>, vector<vector<long int>>> fracOfTrajsInCone;
+  fracOfTrajsInCone.first = vector<vector<long int>>(mileStones.size(), vector<long int>(Np, 0));
+  fracOfTrajsInCone.second = vector<vector<long int>>(mileStones.size(), vector<long int>(Np, 0));
+
   vector<double> qfin_av(3, 0);
   double chifin_av = 0.;
   double probafin_av = 0.;
@@ -378,9 +392,15 @@ int main(int argc, char **argv)
           for (int i = 0; i < 3; i++)
             risQ[i][k] += (double)ris[i][k] / (double)N;
           if (!extremesFixed)
-            chiM[k] += (ris[1][k] < Qstar ? exp(hout * (ris[1][k] - Qstar)) : 1); // computes
+            chiQ[k] += (ris[1][k] < Qstar ? exp(hout * (ris[1][k] - Qstar)) : 1); // computes
           else
-            chiM[k] += (ris[1][k] < Qstar ? 0 : 1);
+            chiQ[k] += (ris[1][k] < Qstar ? 0 : 1);
+
+          for (int i = 0; i < mileStones.size(); i++)
+          {
+            fracOfTrajsInCone.first[i][k] += (ris[0][k] >= mileStones[i] ? 1 : 0);
+            fracOfTrajsInCone.second[i][k] += (ris[1][k] >= mileStones[i] ? 1 : 0);
+          }
         }
         for (int i = 0; i < 3; i++)
           qfin_av[i] += ((double)Qfin[i] / (double)N);
@@ -426,7 +446,14 @@ int main(int argc, char **argv)
           fileM << i * T / (Np - 1) << " ";
           for (int j = 0; j < 3; j++)
             fileM << risQ[j][i] / counter << " ";
-          fileM << chiM[i] / counter << endl;
+          fileM << chiQ[i] / counter << " ";
+
+          for (int j = 0; j < mileStones.size(); j++)
+            fileM << fracOfTrajsInCone.first[j][i] / (double)counter << " ";
+
+          for (int j = 0; j < mileStones.size(); j++)
+            fileM << fracOfTrajsInCone.second[j][i] / (double)counter << " ";
+          fileM << endl;
         }
         fileM << "# FINAL ";
         for (int i = 0; i < 3; i++)

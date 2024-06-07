@@ -13,19 +13,24 @@
 
 using namespace std;
 
-bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta = -1.)
+bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta, int configurationsChoiceOption)
 {
 
     vector<int> s1 = refConfs.first;
     vector<int> s2 = refConfs.second;
     // We read the Betas used in PT from PTRates.txt
-    string fileName = sourceFolder + "configurations/PTInfo.txt";
+    string fileName = sourceFolder + "configurations/swapRates.txt";
     std::ifstream PTFile(fileName); // Open the file
     if (!PTFile.is_open())
     {
-        std::cerr << "Error opening the file." << std::endl;
-        cout << fileName << endl;
-        exit(1);
+        string fileName = sourceFolder + "configurations/PTInfo.txt";
+        PTFile.open(fileName); // Open the file
+        if (!PTFile.is_open())
+        {
+            std::cerr << "Error opening the file." << std::endl;
+            cout << fileName << endl;
+            exit(1);
+        }
     }
 
     // PTFile.ignore(std::numeric_limits<std::streamsize>::max(), ' ');
@@ -57,8 +62,6 @@ bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string s
 
     // We look for configurations with an overlap as similar as possible to what we want
     fileName = sourceFolder + "configurations/B" + to_string(usedPTBeta).substr(0, 4) + "Qs";
-    int nConfigurations;
-    nConfigurations = countLines(fileName) - 1;
 
     PTFile.open(fileName); // Open the file
     if (!PTFile.is_open())
@@ -67,6 +70,17 @@ bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string s
         cout << fileName << endl;
         return 1;
     }
+
+    std::string line;
+    std::getline(PTFile, line);
+    std::getline(PTFile, line);
+
+    int nConfigurations = countNumbersInRow(line);
+    cout << "configurations are " << nConfigurations << endl;
+
+    // Rewind the file pointer to the beginning
+    PTFile.clear();
+    PTFile.seekg(0);
 
     int usedOverlap = 4 * N, firstConfIndex, secondConfIndex;
     double temp;
@@ -85,18 +99,52 @@ bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string s
     PTFile.close();
 
     fileName = sourceFolder + "configurations/B" + to_string(usedPTBeta).substr(0, 4) + "confs";
-    cout << "Taking configurations " << firstConfIndex << " and " << secondConfIndex << " from " << fileName << endl;
-    cout << "Mutual overlap: " << usedOverlap << endl;
-    cout << endl;
 
-    details.first += "Taking configurations " + to_string(firstConfIndex) + " and " + to_string(secondConfIndex) + " from " + fileName + ".\n";
-    details.first += "Mutual overlap: " + to_string(usedOverlap) + ".\n\n";
-    details.second += to_string(initRefConfCode) + " " + to_string(firstConfIndex) + " " + to_string(secondConfIndex) + " " + to_string(usedOverlap) + " " + to_string(usedPTBeta) + " " + fileName + "\n";
+    if (configurationsChoiceOption == -1)
+    {
 
-    if (!initializeVectorFromLine(fileName, firstConfIndex + 1, N, s1))
+        if (!initializeVectorFromLine(fileName, secondConfIndex + 1, N, s2))
+            return false;
+
+        if (!initializeVectorFromLine(fileName, firstConfIndex + 1, N, s1))
+            return false;
+
+        cout << "Taking configurations " << firstConfIndex << " and " << secondConfIndex << " from " << fileName << endl;
+        cout << "Mutual overlap: " << usedOverlap << endl;
+        cout << endl;
+
+        details.first += "Taking configurations " + to_string(firstConfIndex) + " and " + to_string(secondConfIndex) + " from " + fileName + ".\n";
+        details.first += "Mutual overlap: " + to_string(usedOverlap) + ".\n\n";
+        details.second += "54 " + to_string(firstConfIndex) + " " + to_string(secondConfIndex) + " " + to_string(usedOverlap) + " " + to_string(usedPTBeta) + " " + fileName + "\n";
+    }
+    else if (configurationsChoiceOption == 1 || configurationsChoiceOption == 2)
+    {
+        int chosenConfigurationIndex;
+        if (configurationsChoiceOption == 1)
+            chosenConfigurationIndex = firstConfIndex;
+        else
+            chosenConfigurationIndex = secondConfIndex;
+
+        if (!initializeVectorFromLine(fileName, chosenConfigurationIndex + 1, N, s1))
+            return false;
+
+        for (int i = 0; i < N; i++)
+            s2[i] = -s1[i];
+
+        cout << "Considering configurations " << firstConfIndex << " and " << secondConfIndex << " from " << fileName << endl;
+        cout << "Mutual overlap: " << usedOverlap << endl;
+        cout << endl;
+
+        details.first += "Considering configurations " + to_string(firstConfIndex) + " and " + to_string(secondConfIndex) + " from " + fileName + "\n";
+        details.first += "Mutual overlap: " + to_string(usedOverlap) + ".\n";
+        details.first += "Taking configurations " + to_string(firstConfIndex) + " and the same one flipped from " + fileName + ".\n";
+        details.first += "Mutual overlap: " + to_string(-N) + ".\n\n";
+        details.second += "57 " + to_string(firstConfIndex) + " " + to_string(secondConfIndex) + " " + to_string(usedOverlap) + " " + to_string(usedPTBeta) + " " + fileName + "\n";
+    }
+    else
+    {
         return false;
-    if (!initializeVectorFromLine(fileName, secondConfIndex + 1, N, s2))
-        return false;
+    }
 
     refConfs = {s1, s2};
     return true;
@@ -268,9 +316,9 @@ bool initializeReferenceConfigurationsFromParTemp_Random(const string sourceFold
     return true;
 }
 
-bool initializeReferenceConfigurationsSeqQuenchingFromParTemp(vector<vector<vector<rInteraction>>> graph, const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta = -1.)
+bool initializeReferenceConfigurationsSeqQuenchingFromParTemp(vector<vector<vector<rInteraction>>> graph, const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta, int configurationsChoiceOption)
 {
-    initializeReferenceConfigurationsFromParTemp_FirstOccurrence(sourceFolder, N, refConfs, details, desiredOverlap, desiredBeta);
+    initializeReferenceConfigurationsFromParTemp_FirstOccurrence(sourceFolder, N, refConfs, details, desiredOverlap, desiredBeta, configurationsChoiceOption);
     int nSteps = 200;
     vector<int> s_1 = refConfs.first;
     vector<int> s_2 = refConfs.second;

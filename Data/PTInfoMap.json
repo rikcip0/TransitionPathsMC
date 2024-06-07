@@ -1,0 +1,58 @@
+{
+    "simulationTypes": {
+        "12": {
+            "ID": 12,
+            "name": "MC over paths, with Qstar in input",
+            "shortName": "tpMC_wQ",
+            "versions": {
+                "0": {
+                    "ID": 0,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 6,
+                    "linesMap": [
+                        "parameters"
+                    ]
+                }
+            }
+        }
+    },
+    "lines": {
+        "parameters": {
+            "21": {
+                "ID": 21,
+                "description": "Input parameters for parallel tempering environment setting",
+                "shortDescription": "ptParams",
+                "nAdditionalParameters": 6,
+                "additionalParameters": [
+                    "N",
+                    "p",
+                    "C",
+                    "graphID",
+                    "fPosJ",
+                    "hext"
+                ]
+            }
+        },
+        "mcParameters": {
+            "30": {
+                "ID": 30,
+                "description": "Parameters for ptMC simulation",
+                "shortDescription": "ptMCParams",
+                "nAdditionalParameters": 5,
+                "additionalParameters": [
+                    "maxIter",
+                    "numIC",
+                    "MCSperSWAP",
+                    "SwapChancesPerExtraction",
+                    "swapChancesBeforeFirstExtraction"
+                ]
+            }
+        }
+    }
+}

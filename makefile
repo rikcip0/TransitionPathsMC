@@ -21,9 +21,14 @@ compilePT:
 	@echo Program compiled in PT
 	@echo .
 
-compileStandardMC:
-	@cd Generic && g++ standardMC.cpp -o stMC.exe -DFIXEDEXT
+compileSimpleStdMC:
+	@cd standardMCs && g++ standardMC.cpp -o stMC.exe -DFIXEDEXT
 	@echo Program compiled in stMC
+	@echo .
+
+compileMC2:
+	@cd standardMCs && g++ MCWithEnAndQ.cpp -o MCWithEnAndQ.exe -DFIXEDEXT
+	@echo Program compiled in MCWithEnAndQ
 	@echo .
 
 compileAllSims:

@@ -4,15 +4,9 @@
 #include <time.h>
 #include <sys/utsname.h>
 
-#ifdef FIXEDEXT
-#define extremesFixed true
-#else
-#define extremesFixed false
-#endif
-
 #define initRefConfCode 55
 
-#include "random.h"
+#include "../Generic/random.h"
 
 #include "../McTrajs/MCdyn_classi/generic/fileSystemUtil.h"
 #include "../McTrajs/MCdyn_classi/interaction.h"
@@ -21,17 +15,17 @@
 #include "../McTrajs/MCdyn_classi/Initialization/initializeReferenceConfigurations.h"
 
 #define p 2
-#define MC 100000
-#define MCeq 1000
+#define MC 2000
+#define MCeq 100
 #define MCmeas 5
-#define MCprint 100 // deve essere multiplo di MCmeas
+#define MCprint 10 // deve essere multiplo di MCmeas
 
 int main(int argc, char *argv[])
 {
-  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 11 && argc != 13))
+  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 10 && argc != 12))
   {
     cout << "Probable desired usage: ";
-    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N beta Hext hout Q* C structureID fracPosJ graphID (requiredBetaOfSExtraction s_index) [if not present, FM(all +) conf. is considered]" << endl;
+    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N beta Hext C structureID fracPosJ graphID (requiredBetaOfSExtraction s_index) [if not present, FM(all +) conf. is considered] nStories" << endl;
     cout << "If d is a lattice, C and structureID are required but ignored." << endl;
     exit(1);
   }
@@ -40,29 +34,21 @@ int main(int argc, char *argv[])
   int N = atoi(argv[2]);
   double beta = atof(argv[3]);
   double Hext = atof(argv[4]);
-  double hout = atof(argv[5]);
-
-  int Qstar = atoi(argv[6]);
-  if (abs(Qstar) % 2 != N % 2 || abs(Qstar) > N)
-  {
-    cout << "Q* value is not allowed!" << endl;
-    exit(1);
-  }
-
   int C = 0;
   int structureID = -1;
   if (d < 0)
   {
-    C = atoi(argv[7]);
-    structureID = atoi(argv[8]);
+    C = atoi(argv[5]);
+    structureID = atoi(argv[6]);
   }
   else
   {
     C = 2 * d;
   }
 
-  double fracPosJ = atof(argv[9]);
-  int graphID = atoi(argv[10]);
+  int nStories = atoi(argv[11]);
+  double fracPosJ = atof(argv[7]);
+  int graphID = atoi(argv[8]);
 
   vector<vector<vector<rInteraction>>> Graph;
 
@@ -105,50 +91,38 @@ int main(int argc, char *argv[])
   init_random(0, 0);
   long sstart = time(NULL);
 
-  if (!extremesFixed)
-    sprintf(buffer, "inf_%.2g_%.2g_%i_%.3g", beta, Hext, Qstar, hout);
-  else
-    sprintf(buffer, "inf_%.2g_%.2g_inf_%i_inf", beta, Hext, Qstar);
+  sprintf(buffer, "%.2g_%.3g", beta, Hext);
 
   pair<string, string> info; // 1° entry: long info (for human read), 2°entry: short info (for machines read)
   info.first += "Simulation on" + graphType + "\n";
   info.first += (string)("Simulation run on: ") + ugnm.nodename + ", with seed " + to_string(sstart) + ", started at " + getCurrentDateTime() + "\n\n";
-  info.second += (string)("15 0 ") + to_string(d) + " " + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
-
-  if (extremesFixed)
-  {
-    info.first += ("Simulation with extremes fixed to reference configurations.\n\n");
-    cout << "Simulation with extremes fixed to reference configurations.\n\n";
-  }
+  info.second += (string)("16 0 ") + to_string(d) + " " + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
 
   info.first += "mcTotal=" + to_string(MC) + " MCeq=" + to_string(MCeq) + " MCmeas=" + to_string(MCmeas) + "\n\n";
   info.second += "31 " + to_string(MC) + " " + to_string(MCeq) + " " + to_string(MCmeas) + "\n";
 
   string nomefile;
 
-  info.second += "22 " + to_string(N) + " " + to_string((int)p) + " " + to_string(C);
-  info.second += " " + to_string(graphID) + " " + "inf" + " " + to_string(beta);
-  if (!extremesFixed)
-    info.second += " " + to_string(hout) + " " + to_string(Qstar);
-  else
-    info.second += " inf " + to_string(Qstar);
+  info.second += "23 " + to_string(N) + " " + to_string((int)p) + " " + to_string(C);
+  info.second += " " + to_string(graphID) + " "
+                                            " " +
+                 to_string(beta);
   info.second += " " + to_string(fracPosJ) + " " + to_string(Hext) + "\n";
 
-  cout << graphType << " simulation with N=" << N << " p=" << p << " graphID=" << graphID << " T=inf beta=" << beta;
-  cout << " Qstar=" << Qstar << " h_out=" << hout;
+  cout << graphType << " simulation with N=" << N << " p=" << p << " graphID=" << graphID << " beta=" << beta;
   cout << " h_ext=" << Hext << endl
        << endl;
 
   vector<int> *s, refS(N, 0);
-  s = (vector<int> *)calloc(2, sizeof(vector<int>));
-  for (int i = 0; i < 2; i++)
+  s = (vector<int> *)calloc(1, sizeof(vector<int>)); // for easiness of a later implementation including more s's
+  for (int i = 0; i < 1; i++)
     s[i].assign(N, 0);
 
-  if (argc == 13)
+  if (argc == 12)
   {
-    std::string betaOfSExtractionInput(argv[11]);
-    double requiredBetaOfSExtraction = atof(argv[11]);
-    int sIndex = atoi(argv[12]);
+    std::string betaOfSExtractionInput(argv[9]);
+    double requiredBetaOfSExtraction = atof(argv[9]);
+    int sIndex = atoi(argv[10]);
     if (betaOfSExtractionInput == "inf")
     {
       requiredBetaOfSExtraction = 100.; // just a large number
@@ -174,13 +148,8 @@ int main(int argc, char *argv[])
     info.second += "56";
   }
 
-  if (extremesFixed)
-  {
-    hout = 1.;
-  }
-
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  folder = makeFolderNameFromBuffer_ForCluster(folder + "/DataForPathsMC/stdMCs/", string(buffer), sstart); // For Cluster
+  folder = makeFolderNameFromBuffer_ForCluster(folder + "StandardMCs/MCWithEnergyAndOverlap/", string(buffer), sstart); // For Cluster
 
   createFolder(folder);
   cout << "Simulation is in folder " << folder << endl;
@@ -204,38 +173,43 @@ int main(int argc, char *argv[])
   nomefile = folder + "/thermCheck.txt";
   fileO.open(nomefile);
 
-  s[0] = refS;
-  s[1] = refS;
+  int nMeasures = nStories * MC / MCmeas;
+  double energy = 0;
+  long int qWithRefS = 0;
 
-  double energy = 0, energyB = 0.;
-  for (int i = 1; i <= MC; i++)
+  for (int k = 0; k < nStories; k++)
   {
-    MCSweep_withGraph(s[0], N, Graph, beta);
-    MCSweep_withGraph2(s[1], refS, N, Graph, beta, Qstar);
-
-    if (!(i % MCmeas))
+    s[0] = refS;
+    for (int i = 1; i <= MC; i++)
     {
-      double tempH, tempHB;
-      tempH = energy_Graph(s[0], N, Graph);
-      energy += tempH;
+      MCSweep_withGraph(s[0], N, Graph, beta);
 
-      tempHB = energy_Graph(s[1], N, Graph);
-      energyB += tempHB;
-      if (!(i % MCprint))
-        fileO << i << " " << tempH << " " << tempHB << " " << tempH - tempHB << " " << endl;
-    }
-    else
-    {
-      energy += energy_Graph(s[0], N, Graph);
-      energyB += energy_Graph(s[1], N, Graph);
+      if (!(i % MCmeas))
+      {
+        long int tempQWithRefS = 0;
+        for (int j = 0; j < N; j++)
+          tempQWithRefS += refS[j] * s[0][j];
+
+        if (!(i % MCprint))
+        {
+          double tempH = energy_Graph(s[0], N, Graph);
+          fileO << k <<" "<< i << " " << tempH << " " << tempQWithRefS << endl;
+          energy += tempH;
+          qWithRefS += tempQWithRefS;
+        }
+        else
+        {
+          energy += energy_Graph(s[0], N, Graph);
+          qWithRefS += tempQWithRefS;
+        }
+      }
     }
   }
 
   fileO.close();
 
-  cout << "H = " << energy / MC << endl;
-  cout << "H_B = " << energyB / MC << endl;
-  cout << "H-H_B = " << (energy - energyB) / MC << endl;
+  cout << "H = " << energy / (nMeasures) << endl;
+  cout << "Q = " << qWithRefS / (double)(nMeasures) << endl;
 
   nomefile = folder + "/TIbeta.txt";
   fileO.open(nomefile);
@@ -246,7 +220,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  fileO << beta << " " << (energy - energyB) / MC << endl;
+  fileO << beta << " " << energy / (double)(nMeasures) << " " << qWithRefS / (double)(nMeasures) << endl;
 
   fileO.close();
 

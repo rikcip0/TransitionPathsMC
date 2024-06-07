@@ -349,9 +349,11 @@ bool getGraphFromGraphAndStructureID_ForCluster(int type, string &folderPathToFi
   string toSearch;
   if (type < 0)
   {
-    if (type == -2)
+    if (type == -3)
+      toSearch = "../Data/Graphs/DPRRG";
+    else if (type == -2)
       toSearch = "../Data/Graphs/ER";
-    if (type == -1)
+    else if (type == -1)
       toSearch = "../Data/Graphs/RRG";
     folderPathToFind = toSearch + "/p" + to_string(p) + "C" + to_string(C) + "/N" + to_string(N) + "/structure" + to_string(structureID) + "/fPosJ" + to_string(f).substr(0, 4) + "/graph" + to_string(graphID);
   }
@@ -421,6 +423,18 @@ bool initializeArrayFromLine(const string &fileName, int targetLine, int arraySi
     cerr << "Errore nella lettura della riga." << endl;
     return false;
   }
+}
+
+int countNumbersInRow(const std::string &row)
+{
+  std::istringstream iss(row);
+  int count = 0;
+  int num;
+  while (iss >> num)
+  {
+    count++;
+  }
+  return count;
 }
 
 int countLines(const string &fileName)

@@ -19,7 +19,7 @@ def find_directories_with_strings(parent_dir, target_strings):
     return matching_dirs
 
 if len(sys.argv) > 1:
-    analysisVsSimTypesDict = {"all": "any", "RRG":"RRG", "ER":"ER"}
+    analysisVsSimTypesDict = {"all": "any", "RRG":"RRG", "ER":"ER", "SqLatt": "SqLatt"}
     analysisType = sys.argv[1]
     additional_strings= sys.argv[2:]
 

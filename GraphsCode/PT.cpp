@@ -8,16 +8,19 @@
 #include "../MCtrajs/MCdyn_classi/Initialization/initializeGraph.h"
 #include "../Generic/FRTGenerator.h"
 
+#include <sys/utsname.h>
+
 #define p 2
 #define rOpt 1.58
-#define MCSperSWAP 600
-#define SwapChancesPerExtraction 3
+#define MCSperSWAP 10000
+#define SwapChancesPerExtraction 1
+#define swapChancesBeforeFirstExtraction 20
 
 /* variabili globali per il generatore random */
 int N, C, maxDegree, numBeta, *confIndex;
 double *ener;
 vector<vector<vector<rInteraction>>> Graph;
-vector<int> *s;
+vector<int> *s, *whatBetaForReplica;
 int *swapRate;
 vector<float> Beta(0);
 
@@ -43,6 +46,7 @@ void initBetas(string fileName)
     numBeta = Beta.size();
     confIndex = (int *)calloc(numBeta, sizeof(int));
     swapRate = (int *)calloc(numBeta - 1, sizeof(int));
+
     printf("# %i Betas:", numBeta);
 
     for (ib = 0; ib < numBeta; ib++)
@@ -92,7 +96,11 @@ void swapStep(void)
 {
     int ib, tmp;
 
+    for (ib = 0; ib < numBeta; ib++)
+        whatBetaForReplica[confIndex[ib]].push_back(ib);
+
     for (ib = 1; ib < numBeta; ib++)
+
         if (ener[ib - 1] <= ener[ib] || FRANDOM < exp((Beta[ib] - Beta[ib - 1]) * (ener[ib] - ener[ib - 1])))
         {
             tmp = confIndex[ib];
@@ -107,14 +115,14 @@ void swapStep(void)
 
 int main(int argc, char *argv[])
 {
-    int ib, timeLimitFlag, is, numIC, ic;
-    unsigned long long int t, maxIter;
+    int ib, is, numIC, ic;
+    unsigned long long int t, MCtotal;
     FILE *file;
 
-    if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || argc != 10)
+    if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -3 || argc != 10)
     {
         cout << "Probable desired usage: ";
-        cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N Hext C structureID fracPosJ graphID maxIter numIC" << endl;
+        cout << "d(-3:DPRRG -2:ER -1:RRG k>0:k-dim sqLatt) N Hext C structureID fracPosJ graphID MCtotal numIC" << endl;
         cout << "If d is a lattice, C and structureID are required but ignored." << endl;
         exit(1);
     }
@@ -122,28 +130,21 @@ int main(int argc, char *argv[])
     int d = std::stoi(argv[1]); // should include check on d value
     N = atoi(argv[2]);
     double Hext = atof(argv[3]);
-
     C = 0;
-    int structureID = -1;
     if (d < 0)
     {
         C = atoi(argv[4]);
-        structureID = atoi(argv[5]);
     }
     else
     {
         C = 2 * d;
     }
+
+    int structureID = atoi(argv[5]);
     double fracPosJ = atof(argv[6]);
     int graphID = atoi(argv[7]);
 
-    maxIter = atoi(argv[8]);
-    timeLimitFlag = 1;
-    if (maxIter <= 0)
-    {
-        timeLimitFlag = 0;
-        maxIter = 1;
-    }
+    MCtotal = atoi(argv[8]);
     numIC = atoi(argv[9]);
 
     FILE *devran = fopen("/dev/random", "r");
@@ -163,7 +164,9 @@ int main(int argc, char *argv[])
 
     if (d < 0)
     {
-        if (d == -2)
+        if (d == -3)
+            graphType = "DPRRG";
+        else if (d == -2)
             graphType = "ER";
         else if (d == -1)
             graphType = "RRG";
@@ -182,8 +185,8 @@ int main(int argc, char *argv[])
     fileName += graphType + ".txt";
 
     // Open the file for reading
-    if (!initializeGraph(folder + "/", Graph, p, C, N, fracPosJ))
-    {
+    if (!initializeGraph(folder, Graph, p, C, N, fracPosJ))
+    {   cout<<"NOO"<<endl;
         cout << "Error in the graph initialization" << endl;
         return 1;
     }
@@ -209,11 +212,39 @@ int main(int argc, char *argv[])
     for (ib = 0; ib < numBeta; ib++)
         s[ib].assign(N, 0);
 
+    whatBetaForReplica = (vector<int> *)calloc(numBeta, sizeof(vector<int>));
+    for (ib = 0; ib < numBeta; ib++)
+        whatBetaForReplica[ib].assign(0, 0);
+
     ener = (double *)calloc(numBeta, sizeof(double));
+
+    pair<string, string> info;
     std::vector<std::ofstream> outFileConfs(numBeta);
+    struct utsname ugnm;
+    uname(&ugnm);
+
+    info.first += (string)("Simulation run on: ") + ugnm.nodename + ", with seed " + to_string(myrand) + ", started at " + getCurrentDateTime() + "\n";
+    info.second += (string)("12 1 ") + ugnm.nodename + " " + to_string(myrand) + " " + getCurrentDateTime() + "\n";
+
+    info.second += "21 " + to_string(N) + " " + to_string((int)p) + " " + to_string(C) + " " + to_string(graphID);
+    info.second += " " + to_string(fracPosJ) + " " + to_string(Hext) + "\n";
+
+    info.first += "mcTotal=" + to_string(MCtotal) + " numIC=" + to_string(numIC) + " MCPerSwap=" + to_string(MCSperSWAP) + " swapChancesForExtraction=" + to_string(SwapChancesPerExtraction) + " swapChancesBeforeFirstExtraction=" + to_string(swapChancesBeforeFirstExtraction) + "\n\n";
+    info.second += "30 " + to_string(MCtotal) + " " + to_string(numIC) + " " + to_string(MCSperSWAP) + " " + to_string(SwapChancesPerExtraction) + " " + to_string(swapChancesBeforeFirstExtraction) + "\n";
+
+    string nomefile = folder + "/infoLong.dat";
+    ofstream detFile(nomefile);
+    detFile << info.first;
+    detFile.close();
+
+    nomefile = folder + "/info.dat";
+    detFile.open(nomefile);
+    detFile << info.second;
+    detFile.close();
 
     cout << "Running " << graphType << " pt with N=" << N << " graphID=" << graphID << endl;
     cout << "In folder " << folder << endl;
+
     for (int ib = 0; ib < numBeta; ib++)
     {
         fileName = folder + "/B" + std::to_string(Beta[ib]).substr(0, 4) + "confs";
@@ -226,10 +257,12 @@ int main(int argc, char *argv[])
         outFileConfs[ib] << std::to_string(Beta[ib]) << std::endl;
     }
 
-    std::ofstream outFilePTData(folder + "/PTenergies.txt", std::ios::app);
+    std::ofstream outFilePTData(folder + "/energies.txt", std::ios::app);
 
     long double meanMinEner = 0;
     long double meanEner = 0;
+    long int swapChances = 0;
+    int nExtractedConfs = 0;
 
     for (ic = 0; ic < numIC; ic++)
     {
@@ -240,13 +273,13 @@ int main(int argc, char *argv[])
             t++;
             for (ib = 0; ib < numBeta; ib++)
                 oneMCStep(s[confIndex[ib]], Beta[ib], ener + ib);
+
             if (t % MCSperSWAP == 0)
             {
-                if (t % (SwapChancesPerExtraction * MCSperSWAP) == 0)
+
+                if ((t % (SwapChancesPerExtraction * MCSperSWAP) == 0) && t / MCSperSWAP > swapChancesBeforeFirstExtraction)
                 {
 
-                    outFilePTData << ic << " " << t << " ";
-                    meanEner = 0;
                     for (ib = 0; ib < numBeta; ib++)
                     {
                         for (int i = 0; i < N; i++)
@@ -254,16 +287,26 @@ int main(int argc, char *argv[])
                             outFileConfs[ib] << s[confIndex[ib]][i] << " ";
                         }
                         outFileConfs[ib] << std::endl;
-
-                        meanEner += ener[ib];
-                        outFilePTData << ener[ib] << " ";
                     }
-                    outFilePTData << meanEner / (double)numBeta << std::endl;
+
+                    nExtractedConfs++;
                 }
+
+                outFilePTData << ic << " " << t << " ";
+                meanEner = 0;
+                for (ib = 0; ib < numBeta; ib++)
+                {
+
+                    meanEner += ener[ib];
+                    outFilePTData << ener[ib] << " ";
+                }
+                outFilePTData << meanEner / (double)numBeta << std::endl;
+
                 swapStep();
+                swapChances++;
             }
 
-        } while (timeLimitFlag * t < maxIter);
+        } while (t < MCtotal);
         fflush(stdout);
     }
 
@@ -274,20 +317,29 @@ int main(int argc, char *argv[])
 
     outFilePTData.close();
 
-    outFilePTData.open(folder + "/PTInfo.txt", std::ios::app);
+    outFilePTData.open(folder + "/swapRates.txt", std::ios::app);
     outFilePTData << graphID << " " << myrand << endl;
     for (int i = 0; i < numBeta - 1; i++)
-        outFilePTData << Beta[i] << " " << swapRate[i] / (double)(maxIter / MCSperSWAP) / (double)numIC << std::endl;
+        outFilePTData << Beta[i] << " " << swapRate[i] / (double)(swapChances) << std::endl;
     outFilePTData << Beta[numBeta - 1] << " nan" << std::endl;
+    outFilePTData.close();
 
-    int nExtractedConfs = numIC * (maxIter / (SwapChancesPerExtraction * MCSperSWAP));
+    outFilePTData.open(folder + "/permanenceInfo.txt", std::ios::app);
+    for (int i = 0; i < whatBetaForReplica[0].size(); i++)
+    {
+        for (int j = 0; j < numBeta; j++)
+            outFilePTData << whatBetaForReplica[j][i] << " ";
+        outFilePTData << std::endl;
+    }
+    outFilePTData.close();
+
     int Q = 0;
-    int *firstConfiguration;
-    int *secondConfiguration;
-    firstConfiguration = (int *)calloc(N, sizeof(int));
-    secondConfiguration = (int *)calloc(N, sizeof(int));
+    vector<int> *configurations;
+    configurations = (vector<int> *)calloc(nExtractedConfs, sizeof(vector<int>));
 
     std::vector<std::ofstream> outFileConfOverlaps(numBeta);
+    std::vector<std::ofstream> outFileConfMagnetizations(numBeta);
+
     for (int ib = 0; ib < numBeta; ib++)
     {
         fileName = folder + "/B" + std::to_string(Beta[ib]).substr(0, 4) + "Qs";
@@ -297,22 +349,42 @@ int main(int argc, char *argv[])
             std::cerr << "Errore nell'apertura di " << fileName << std::endl;
             return 1;
         }
+
+        fileName = folder + "/B" + std::to_string(Beta[ib]).substr(0, 4) + "Ms";
+        outFileConfMagnetizations[ib].open(fileName);
+        if (!outFileConfMagnetizations[ib].is_open())
+        {
+            std::cerr << "Errore nell'apertura di " << fileName << std::endl;
+            return 1;
+        }
+
         outFileConfOverlaps[ib] << Beta[ib] << "\n";
+        outFileConfMagnetizations[ib] << Beta[ib] << "\n";
+
         fileName = folder + "/B" + std::to_string(Beta[ib]).substr(0, 4) + "confs";
         for (int i = 0; i < nExtractedConfs; i++)
+            initializeVectorFromLine(fileName, i + 1, N, configurations[i]);
+
+        for (int i = 0; i < nExtractedConfs; i++)
         {
-            initializeArrayFromLine(fileName, i + 1, N, firstConfiguration);
+            int M = 0;
+            for (int k = 0; k < N; k++)
+                M += configurations[i][k];
+            outFileConfMagnetizations[ib] << M << " ";
+        }
+        outFileConfMagnetizations[ib] << endl;
+
+        for (int i = 0; i < nExtractedConfs; i++)
+        {
             for (int j = 0; j < nExtractedConfs; j++)
             {
-                initializeArrayFromLine(fileName, j + 1, N, secondConfiguration);
                 Q = 0;
                 for (int k = 0; k < N; k++)
-                {
-                    Q += firstConfiguration[k] * secondConfiguration[k];
-                }
+                    Q += configurations[i][k] * configurations[j][k];
                 outFileConfOverlaps[ib] << Q << " ";
             }
-            outFileConfOverlaps[ib] << std::endl;
+            outFileConfOverlaps[ib] << endl;
+            ;
         }
     }
 
