@@ -63,7 +63,8 @@ bool initializeTrajectoriesFromRefConfs(int N, double T, vector<straj> &trajsToI
 
 bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<straj> &trajsToInitialize, double beta, double Hext,
                                                       vector<vector<vector<rInteraction>>> Graph, double hin, double hout, int Qstar,
-                                                      pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, bool swapConfs = false)
+                                                      pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, const vector<double> randomField,
+                                                      bool swapConfs = false)
 {
     vector<straj> Strajs;
     vector<int> s1(N, 0);
@@ -100,11 +101,10 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
     double factor = pow((((double) MCToArrive)/MCAtBetaStart), (deltaBeta)/(double)(beta-startingBeta));
     double MCAtBetaAnn=MCAtBetaStart;
 
-    field f;
     
     for (; annealingBeta <= beta+0.0001; annealingBeta += deltaBeta)
     {
-        f = field(T, annealingBeta, Hext);
+        field f(T, annealingBeta, Hext, randomField);
 
         for (int j = 0; j < MCAtBetaAnn; j++)
         {
@@ -130,7 +130,8 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
 
 bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T, vector<straj> &trajsToInitialize, double beta, double Hext,
                                                       vector<vector<vector<rInteraction>>> Graph, double hin, double hout, int Qstar,
-                                                      pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, bool swapConfs = false)
+                                                      pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, vector<double> randomField,
+                                                      bool swapConfs = false)
 {
     vector<straj> Strajs;
     vector<int> s1(N, 0);
@@ -167,11 +168,10 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
     double factor = pow((((double) MCToArrive)/MCAtBetaStart), (deltaBeta)/(double)(beta-startingBeta));
     double MCAtBetaAnn=MCAtBetaStart;
 
-    field f;
     
     for (; annealingBeta <= beta+0.0001; annealingBeta += deltaBeta)
     {
-        f = field(T, annealingBeta, Hext);
+        field f(T, annealingBeta, Hext, randomField);
 
         for (int j = 0; j < MCAtBetaAnn; j++)
         {

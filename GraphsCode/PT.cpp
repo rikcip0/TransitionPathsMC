@@ -12,7 +12,7 @@
 
 #define p 2
 #define rOpt 1.58
-#define MCSperSWAP 10000
+#define MCSperSWAP 1800
 #define SwapChancesPerExtraction 1
 #define swapChancesBeforeFirstExtraction 20
 

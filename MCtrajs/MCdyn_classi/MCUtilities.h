@@ -65,12 +65,12 @@ void print_conf(vector<straj> *Strajs, double T, string nomefile)
     pfile.close();
 }
 
-double compute_L_av(vector<straj> *Strajs, vector<vector<vector<rInteraction>>> *Graph, double T, double beta, double Hext) // this computes what is colled U in the paper (RC)
+double compute_L_av(vector<straj> *Strajs, vector<vector<vector<rInteraction>>> *Graph, double T, double beta, double Hext, vector<double> randomField) // this computes what is colled U in the paper (RC)
 {
 
     int N = Strajs->size();
     int currents[N];
-    int currenth[N];
+    double currenth[N];
     int counter[N];
     double L = 0;
 
@@ -78,7 +78,7 @@ double compute_L_av(vector<straj> *Strajs, vector<vector<vector<rInteraction>>> 
     for (int i = 0; i < N; i++)
     {
         currents[i] = (*Strajs)[i].s0;
-        currenth[i] = Hext;
+        currenth[i] = Hext + randomField[i];
         for (int j = 0; j < (*Graph)[i][0].size(); j++)
             currenth[i] += (*Strajs)[(*Graph)[i][0][j]].s0 * (*Graph)[i][0][j].J;
         counter[i] = 0;
@@ -129,26 +129,27 @@ double compute_L_av(vector<straj> *Strajs, vector<vector<vector<rInteraction>>> 
     return L;
 }
 
-vector<double> compute_H_av(vector<straj> *Strajs, vector<vector<vector<rInteraction>>> *Graph, int Np, double T, double Hext) // returns an Np (eq. spaced times) array with the system Hamiltonian value
+vector<double> compute_H_av(vector<straj> *Strajs, vector<vector<vector<rInteraction>>> *Graph, int Np, double T, double Hext, vector<double> randomField) // returns an Np (eq. spaced times) array with the system Hamiltonian value
 {
 
     vector<double> ris(Np, 0);
     int N = Strajs->size();
     int currents[N];
-    int currenth[N];
     int counter[N];
+    double currenth[N];
     double H = 0;
     // init spins and fields
     for (int i = 0; i < N; i++)
     {
+        counter[i] = 0;
+        
         currents[i] = (*Strajs)[i].s0;
-        currenth[i] = Hext;
+        currenth[i] = Hext + randomField[i];
         for (int j = 0; j < (*Graph)[i][0].size(); j++)
         {
             currenth[i] += (*Strajs)[(*Graph)[i][0][j]].s0 * (*Graph)[i][0][j].J; // Maybe we should include the coupling (RC)
         }
-        counter[i] = 0;
-        H -= currents[i] * (currenth[i] + Hext) / 2; // /2 on h also (!?)
+        H -= currents[i] * (currenth[i] + Hext + randomField[i]) / 2.; // /2 on h also (!?)
     }
     // now start
     bool done = false;
@@ -188,8 +189,8 @@ vector<double> compute_H_av(vector<straj> *Strajs, vector<vector<vector<rInterac
         }
     }
 
-    for(int i=0;i<ris.size(); i++){
-        
+    for (int i = 0; i < ris.size(); i++)
+    {
     }
     return ris;
 }

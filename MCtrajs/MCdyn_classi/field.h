@@ -23,6 +23,8 @@ public:
   double T;
   double beta;
   double Hext;
+  vector<double> randomField;
+
   vector<neighjump> fieldjumps;
   vector<vector<double>> h;
   vector<double> lGamma;
@@ -33,11 +35,12 @@ public:
   vector<matrice> TM;
   vector<int> int_s;
 
-  field(double _T = 1, double _beta = 1, double _Hext = 0)
+  field(double _T, double _beta, double _Hext, vector<double> _randomField)
   {
     T = _T;
     beta = _beta;
     Hext = _Hext;
+    randomField = _randomField;
   }
 
   straj generate_new_traj(vector<vector<rInteraction>> *neighbors, vector<straj> *traj, double start, double end)
@@ -140,7 +143,7 @@ public:
       double H;
       for (int i = counter.size() - 1; i >= 0; i--)
       { // in such a way that at the end H = h[0]
-        H = Hext;
+        H = Hext + randomField[i];
         for (int j = 0; j < counter[i].size(); j++)
           H += counter[i][j] * (*neighbors)[i][j].J; // I think we should include the coupling here (RC)
         h[i].push_back(H);
@@ -296,7 +299,7 @@ public:
       double H;
       for (int i = counter.size() - 1; i >= 0; i--)
       { // in such a way that at the end H = h[0]
-        H = Hext;
+        H = Hext + randomField[i];
         for (int j = 0; j < counter[i].size(); j++)
           H += counter[i][j] * (*neighbors)[i][j].J; // I think we should include the coupling here (RC)
         h[i].push_back(H);
@@ -368,9 +371,9 @@ public:
         }
 
         W[0][0] *= p1start * p1end;
-        W[0][1] *= p1start * (1 - p1end);
-        W[1][0] *= (1 - p1start) * p1end;
-        W[1][1] *= (1 - p1start) * (1 - p1end);
+        W[0][1] *= p1start * (1. - p1end);
+        W[1][0] *= (1. - p1start) * p1end;
+        W[1][1] *= (1. - p1start) * (1. - p1end);
 
         TM.push_back(W);
       }

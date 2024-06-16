@@ -5,6 +5,10 @@ help:
 	@echo List of possible targets:
 	@echo Non l ho fatto
 
+compileField:
+	@cd GraphsCode && g++ makeField.cpp -o field.exe
+	@echo Program compiled in field
+	@echo .
 
 compileGraph:
 	@cd GraphsCode && g++ makeGraph.cpp -o graph.exe

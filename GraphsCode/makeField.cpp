@@ -18,7 +18,6 @@
 
 /* variabili globali per il generatore random */
 int N, C;
-vector<vector<vector<rInteraction>>> Graph;
 vector<int> *s;
 vector<float> Beta(0);
 
@@ -28,34 +27,31 @@ int main(int argc, char *argv[])
     unsigned long long int t, MCtotal;
     FILE *file;
 
-    if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -3 || argc != 10)
+    if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -3 || argc != 8)
     {
         cout << "Probable desired usage: ";
-        cout << "d(-3:DPRRG -2:ER -1:RRG k>0:k-dim sqLatt) N Hext C structureID fracPosJ graphID fieldType(1: Bernoulli, 2: Gauss) sigma" << endl;
+        cout << "d(-3:DPRRG -2:ER -1:RRG k>0:k-dim sqLatt) N C structureID fracPosJ graphID fieldType(1: Bernoulli, 2: Gauss)" << endl;
         cout << "If d is a lattice, C and structureID are required but ignored." << endl;
         exit(1);
     }
 
     int d = std::stoi(argv[1]); // should include check on d value
     N = atoi(argv[2]);
-    double Hext = atof(argv[3]);
     C = 0;
     if (d < 0)
     {
-        C = atoi(argv[4]);
+        C = atoi(argv[3]);
     }
     else
     {
         C = 2 * d;
     }
 
-    int structureID = atoi(argv[5]);
-    double fracPosJ = atof(argv[6]);
-    int graphID = atoi(argv[7]);
+    int structureID = atoi(argv[4]);
+    double fracPosJ = atof(argv[5]);
+    int graphID = atoi(argv[6]);
 
-    int fieldType = atoi(argv[8]);
-    double var = atof(argv[9]);
-
+    int fieldType = atoi(argv[7]);
 
     string admittibleGraph, folder;
     if (getGraphFromGraphAndStructureID_ForCluster(d, admittibleGraph, structureID, graphID, p, C, N, fracPosJ))
@@ -90,26 +86,29 @@ int main(int argc, char *argv[])
     graphType += "/fPosJ" + to_string(fracPosJ).substr(0, 4) + "/N" + to_string(N);
     fileName += graphType + ".txt";
 
-    // Open the file for reading
-    if (!initializeGraph(folder, Graph, p, C, N, fracPosJ))
-    {
-        cout << "NOO" << endl;
-        cout << "Error in the graph initialization" << endl;
-        return 1;
-    }
 
+    if (fieldType == 1)
+    {
+        folder+="bernoulliFieldStructures";
+    }
+    else if (fieldType == 2)
+    {
+        folder+="gaussianFieldStructures";
+    }
+cout<<"TTAPPO"<<endl;
+    
     // trova quanti file randomField ci sono e crealo col nome corretto
-    if (folderExists(folder + "randomField1"))
+    if (folderExists(folder + "/realization1"))
     {
         int i1;
-        for (i1 = 2; folderExists(folder + "randomField" + to_string(i1)); i1++)
+        for (i1 = 2; folderExists(folder + "/realization" + to_string(i1)); i1++)
         {
         }
-        folder = folder + "randomField" + to_string(i1);
+        folder = folder + "/realization" + to_string(i1);
     }
     else
     {
-        folder = folder + "randomField";
+        folder = folder + "/realization1";
     }
     createFolder(folder);
 
@@ -118,20 +117,17 @@ int main(int argc, char *argv[])
     if (fieldType == 1)
     {
         for (double &number : randomNumbers)
-        {
-            number = var * Grandom();
-        }
+            number = (1 - 2 * (Xrandom() > 0.5));
     }
     else if (fieldType == 2)
     {
         for (double &number : randomNumbers)
-        {
-            number = var * (1 - 2 * (Xrandom() > 0.5));
-        }
+            number = Grandom();
     }
 
+cout<<"TTAPPO"<<endl;
     // Open a file for writing
-    string nomeFile = folder + "/randomField.txt";
+    string nomeFile = folder + "/fieldStructure.txt";
     std::ofstream outputFile(nomeFile);
 
     // Check if the file is open
@@ -141,13 +137,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    outputFile << N << " " << p << " " << C << " " << structureID<<" "<< fracPosJ<<" "<<graphID<< " "<< myrand << "\n";
+    outputFile << N << " " << p << " " << C << " " << structureID << " " << fracPosJ << " " << graphID << " " << myrand << "\n";
 
     // Write the array to the file
 
     for (double &number : randomNumbers)
     {
-       outputFile <<  number<<endl;
+        outputFile << number << endl;
     }
 
     // Close the file

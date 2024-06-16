@@ -73,6 +73,7 @@
 #define averagingMCForIntegratedMeasuring 1
 #define nPointsForDistanceFromStfwdPathComputation 50
 
+#define configurationsChoiceOption -1 // se -1: quando usato le configurazioni scelte dal parallel tempering in base all'overlap sono 1 e 2, se =1: sono la 1 e la -1, se =2 sono la -2 e la 2
 using namespace std;
 
 vector<int> s_in, s_out;
@@ -84,10 +85,10 @@ int main(int argc, char **argv)
 
   // START of input management
 
-  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 13 && argc != 15 && argc != 16))
+  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 13 && argc != 15 && argc != 16 && argc != 18))
   {
     cout << "Probable desired usage: ";
-    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N T beta Hext hin hout Q*(if -1 is self-computed) \nC structureID fracPosJ graphID(requiredBetaOfSExtraction requiredQif(-1 : take both (preset), 1 : take first and first flipped, 2 : take second and second flipped))[if not present, FM(all +) conf.is considered] " << endl;
+    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N T beta Hext hin hout Q*(if -1 is self-computed) \nC structureID fracPosJ graphID (requiredBetaOfSExtraction requiredQif)[if not present, FM(all +) conf.is considered]\n (randomFieldType(1: Bernoulli, 2:Gaussian), realization, signedVar)" << endl;
     cout << "If d is a lattice, C and structureID are required but ignored." << endl;
     exit(1);
   }
@@ -137,7 +138,20 @@ int main(int argc, char **argv)
   else
     return 1;
 
-  if (!initializeGraph(folder, Graph, p, C, N, fracPosJ))
+  int randomFieldType = 0, fieldStructureRealization = 0;
+  double signedVar = 1.;
+
+  vector<double> randomField(N);
+  if (argc == 16 || argc == 18)
+  {
+    randomFieldType = atoi(argv[argc - 3]);
+    fieldStructureRealization = atoi(argv[argc - 2]);
+    signedVar = atof(argv[argc - 1]);
+  }
+  else
+    randomField.assign(N, 0.);
+
+  if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, signedVar))
   {
     cout << "Error in the graph initialization" << endl;
     return 1;
@@ -196,7 +210,7 @@ int main(int argc, char **argv)
   referenceConfigurations.first.assign(N, 0);
   referenceConfigurations.second.assign(N, 0);
 
-  if (argc == 15 || argc == 16)
+  if (argc == 15 || argc == 18)
   {
     double requiredBetaOfSExtraction = atof(argv[13]);
     int requiredQif = atoi(argv[14]);
@@ -221,14 +235,6 @@ int main(int argc, char **argv)
       std::cout << "requiredBetaOfSExtraction value is not allowed!" << std::endl;
       return 1;
     }
-
-    int configurationsChoiceOption;
-    if (argc == 16)
-    {
-      configurationsChoiceOption = atoi(argv[15]);
-    }
-    else
-      configurationsChoiceOption = -1;
 
     if (!
 #ifndef QUENCHCONFS
@@ -281,7 +287,14 @@ int main(int argc, char **argv)
     sprintf(buffer, "%.2g_%.2g_%.2g_%.2g_%i_%.3g", T, beta, Hext, hin, Qstar, hout);
 
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer), sstart); // For Cluster
+  if (argc == 16 || argc == 18)
+  {
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer) + "_var" + to_string(signedVar), sstart); // For Cluster
+  }
+  else
+  {
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer), sstart); // For Cluster
+  }
 
   createFolder(folder);
   cout << "Simulation is in folder " << folder << endl;
@@ -292,7 +305,7 @@ int main(int argc, char **argv)
 #ifdef INITRANDOM
       initializeTrajectoriesAtRandom(N, T, Strajs, info)
 #elif defined(INITANNEALING)
-      initializeTrajectoriesFromRefConfs_WithAnnealing(N, T, Strajs, beta, Hext, Graph, hin, hout, Qstar, info, referenceConfigurations, swapConfig)
+      initializeTrajectoriesFromRefConfs_WithAnnealing(N, T, Strajs, beta, Hext, Graph, hin, hout, Qstar, info, referenceConfigurations, randomField, swapConfig)
 #else
       initializeTrajectoriesFromRefConfs(N, T, Strajs, info, referenceConfigurations, swapConfig)
 #endif
@@ -320,7 +333,7 @@ int main(int argc, char **argv)
   info.first += "mcForIntegratedMeasuring=" + to_string(mcForIntegratedMeasuring) + " averagingMCForIntegratedMeasuring= " + to_string(averagingMCForIntegratedMeasuring) + " nPointsForDistanceFromStfwdPathComputation=" + to_string(nPointsForDistanceFromStfwdPathComputation) + "\n\n";
   info.second += "41 " + to_string(mcForIntegratedMeasuring) + " " + to_string(averagingMCForIntegratedMeasuring) + " " + to_string(nPointsForDistanceFromStfwdPathComputation) + "\n";
 
-  field F(T, beta, Hext);
+  field F(T, beta, Hext, randomField);
   string nomefile;
 
   info.second += "21 " + to_string(N) + " " + to_string((int)p) + " " + to_string(C);
@@ -410,7 +423,7 @@ int main(int argc, char **argv)
           probafin_av += (Qfin[1] >= Qstar ? exp(2 * hout) : 1);
         else
           probafin_av += (Qfin[1] >= Qstar ? 1 : 0);
-        L_av += compute_L_av(&Strajs, &Graph, T, beta, Hext);
+        L_av += compute_L_av(&Strajs, &Graph, T, beta, Hext, randomField);
         counter++;
       }
     }
@@ -418,7 +431,7 @@ int main(int argc, char **argv)
     if (mc % MCprint == 0)
     {
       vector<double> j = count_jumps(&Strajs);
-      vector<double> risH = compute_H_av(&Strajs, &Graph, Np, T, Hext);
+      vector<double> risH = compute_H_av(&Strajs, &Graph, Np, T, Hext, randomField);
 
       if (mc % MCmeas != 0)
         ris = compute_Q_av(&Strajs, T, Np);
@@ -504,7 +517,7 @@ int main(int argc, char **argv)
       }
 
       double meanEner = 0., maxEner = -C * N;
-      vector<double> risH = compute_H_av(&Strajs, &Graph, Np, T, Hext);
+      vector<double> risH = compute_H_av(&Strajs, &Graph, Np, T, Hext, randomField);
       for (int i = 0; i < Np; i++)
       {
         meanEner += risH[i];

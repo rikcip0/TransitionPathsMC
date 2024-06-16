@@ -10,8 +10,7 @@ using namespace std;
 
 #define PM1
 
-
-bool initializeGraph(const string sourceFolder, vector<vector<vector<rInteraction>>> &GraphToReturn, int p, int C, int N, double fracPosJ)
+bool initializeGraph(string &sourceFolder, vector<vector<vector<rInteraction>>> &GraphToReturn, int p, int C, int N, double fracPosJ, vector<double> &randomFieldToReturn, int randomFieldType, int fieldStructureRealization, double signedVar)
 {
     vector<vector<vector<rInteraction>>> Graph;
     int n_int, numPosJ, i, j, k, site = 0, *deg, tempInt;
@@ -19,8 +18,10 @@ bool initializeGraph(const string sourceFolder, vector<vector<vector<rInteractio
     std::string fileName;
     FILE *file;
 
-    neigh = (vector<int> *)calloc(N, sizeof(vector<int>));         // one array for each spin
-    J = (vector<int> *)calloc(N, sizeof(vector<int>));         // one array for each spin
+
+    cout<<"signed var è "<<signedVar<<endl;
+    neigh = (vector<int> *)calloc(N, sizeof(vector<int>)); // one array for each spin
+    J = (vector<int> *)calloc(N, sizeof(vector<int>));     // one array for each spin
     deg = (int *)calloc(N, sizeof(int));
     numPosJ = (int)(fracPosJ * n_int);
 
@@ -45,12 +46,11 @@ bool initializeGraph(const string sourceFolder, vector<vector<vector<rInteractio
     }
 
     if (fscanf(file, "%d", &n_int) != 1)
-        {
-            fprintf(stderr, "Error reading from the file\n");
-            fclose(file);
-            return false;
-        }
-
+    {
+        fprintf(stderr, "Error reading from the file\n");
+        fclose(file);
+        return false;
+    }
 
     double temp;
     if (fscanf(file, "%lf", &temp) != 1)
@@ -97,7 +97,7 @@ bool initializeGraph(const string sourceFolder, vector<vector<vector<rInteractio
             site = interSites[j];
             for (k = 0; k < p; k++)
                 neigh[site].push_back(interSites[k]); // For each site, in the array neigh[site] we ll hav
-            J[site].push_back(coupl);                    // in the C s + topology position of the array I ll have the coupling
+            J[site].push_back(coupl);                 // in the C s + topology position of the array I ll have the coupling
             //  of the topology interaction of the s spin
             deg[site]++;
         }
@@ -112,7 +112,7 @@ bool initializeGraph(const string sourceFolder, vector<vector<vector<rInteractio
         for (j = 0; j < p * deg[i]; j++)
         {
             if (neigh[i][j] != i)
-                nn.push_back(rInteraction(J[i][j/p], neigh[i][j]));
+                nn.push_back(rInteraction(J[i][j / p], neigh[i][j]));
         }
         app.push_back(nn);
 
@@ -124,7 +124,7 @@ bool initializeGraph(const string sourceFolder, vector<vector<vector<rInteractio
                 for (int k = 0; k < p * deg[neigh[i][j]]; k++)
                 {
                     if (neigh[neigh[i][j]][k] != neigh[i][j] && neigh[neigh[i][j]][k] != i)
-                        nn.push_back(rInteraction(J[neigh[i][j]][k/p], neigh[neigh[i][j]][k]));
+                        nn.push_back(rInteraction(J[neigh[i][j]][k / p], neigh[neigh[i][j]][k]));
                 }
                 app.push_back(nn);
             }
@@ -136,6 +136,84 @@ bool initializeGraph(const string sourceFolder, vector<vector<vector<rInteractio
     // printf("Weird degrees situation at site %d, with deg = %d\n",i, deg[i]);}
 
     GraphToReturn = Graph;
+
+    // inizializzazione del campo random
+    if (randomFieldType != 0)
+    {
+        sourceFolder += "/randomFieldStructures/";
+        if (randomFieldType == 1)
+        {
+            sourceFolder += "/stdBernoulli/";
+        }
+        else if (randomFieldType == 2)
+        {
+            sourceFolder += "/stdGaussian/";
+        }
+        else
+        {
+            cout << "randomFieldType in input not implemented" << endl;
+        }
+        sourceFolder += "realization" + to_string(fieldStructureRealization) + "/";
+        string randomFieldFileName = sourceFolder + "field.txt";
+
+        int tempInt;
+        double temp;
+        vector<double> randomField(N);
+        FILE *file;
+        file = fopen(randomFieldFileName.c_str(), "r");
+        if (file == NULL)
+        {
+            perror("Error opening the file");
+            std::cout << randomFieldFileName.c_str() << std::endl;
+            return false;
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (fscanf(file, "%d", &tempInt) != 1)
+            {
+                fprintf(stderr, "Error reading from the file\n");
+                fclose(file);
+                return false;
+            }
+        }
+
+        if (fscanf(file, "%lf", &temp) != 1)
+        {
+            fprintf(stderr, "Error reading from the file\n");
+            fclose(file);
+            return false;
+        }
+
+        for (int i = 0; i < 2; i++)
+        {
+            if (fscanf(file, "%d", &tempInt) != 1)
+            {
+                fprintf(stderr, "Error reading from the file\n");
+                fclose(file);
+                return false;
+            }
+        }
+
+        for (int i = 0; i < N; i++)
+        {
+            if (fscanf(file, "%lf", &(randomField[i])) != 1)
+            {
+                fprintf(stderr, "Error reading from the file\n");
+                fclose(file);
+                return false;
+            }
+            randomField[i] *= signedVar;
+        }
+
+
+
+        fclose(file);
+        randomFieldToReturn = randomField;
+    }
+    else
+        randomFieldToReturn.assign(N, 0);
+
     return true;
 }
 
