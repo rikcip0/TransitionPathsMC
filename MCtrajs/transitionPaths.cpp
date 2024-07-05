@@ -22,7 +22,8 @@
 #elif defined(INITANNEALING)
 #define initTrajJCode 90
 #ifndef SWAPPED
-#define initTrajCCode 74
+//define initTrajCCode 74 //to make annealing without End fixed
+#define initTrajCCode 740 //to make annealing with End fixed (as if Q*=N during annealing)
 #define swapConfig false
 #else
 #define initTrajCCode 75
@@ -57,11 +58,13 @@
 #define p 2 // as of now, the dynamics generation (and hence the code) only works for p=2 (RC)
 
 #define MC 1000000000
-#ifdef INITANNEALING
-#define MCeq 40000
-#else
+
+//#ifdef INITANNEALING
+//#define MCeq 40000
+//#else
 #define MCeq 100000
-#endif
+//#endif
+
 #define MCmeas 4
 #define MCprint 100000
 #define NpPerN 8
@@ -88,7 +91,7 @@ int main(int argc, char **argv)
   if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 13 && argc != 15 && argc != 16 && argc != 18))
   {
     cout << "Probable desired usage: ";
-    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N T beta Hext hin hout Q*(if -1 is self-computed) \nC structureID fracPosJ graphID (requiredBetaOfSExtraction requiredQif)[if not present, FM(all +) conf.is considered]\n (randomFieldType(1: Bernoulli, 2:Gaussian), realization, signedVar)" << endl;
+    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N T beta Hext hin hout Q*(if -1 is self-computed) \nC structureID fracPosJ graphID (requiredBetaOfSExtraction requiredQif)[if not present, FM(all +) conf.is considered]\n (randomFieldType(1: Bernoulli, 2:Gaussian), realization, sigma)" << endl;
     cout << "If d is a lattice, C and structureID are required but ignored." << endl;
     exit(1);
   }
@@ -139,22 +142,34 @@ int main(int argc, char **argv)
     return 1;
 
   int randomFieldType = 0, fieldStructureRealization = 0;
-  double signedVar = 1.;
+  double sigma = 1.;
 
   vector<double> randomField(N);
   if (argc == 16 || argc == 18)
   {
     randomFieldType = atoi(argv[argc - 3]);
     fieldStructureRealization = atoi(argv[argc - 2]);
-    signedVar = atof(argv[argc - 1]);
+    sigma = atof(argv[argc - 1]);
   }
   else
     randomField.assign(N, 0.);
 
-  if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, signedVar))
+  int i = 0;
+  for (auto val : randomField)
+  {
+    cout << "f " << i << "= " << val << endl;
+    i++;
+  }
+  if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, sigma))
   {
     cout << "Error in the graph initialization" << endl;
     return 1;
+  }
+
+  for (auto val : randomField)
+  {
+    cout << "f " << i << "= " << val << endl;
+    i++;
   }
 
   string graphType;
@@ -289,7 +304,7 @@ int main(int argc, char **argv)
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
   if (argc == 16 || argc == 18)
   {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer) + "_var" + to_string(signedVar), sstart); // For Cluster
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
   }
   else
   {
@@ -305,7 +320,7 @@ int main(int argc, char **argv)
 #ifdef INITRANDOM
       initializeTrajectoriesAtRandom(N, T, Strajs, info)
 #elif defined(INITANNEALING)
-      initializeTrajectoriesFromRefConfs_WithAnnealing(N, T, Strajs, beta, Hext, Graph, hin, hout, Qstar, info, referenceConfigurations, randomField, swapConfig)
+      callAnnealing(N, T, Strajs, beta, Hext, Graph, hin, hout, Qstar, info, referenceConfigurations, randomField, swapConfig)
 #else
       initializeTrajectoriesFromRefConfs(N, T, Strajs, info, referenceConfigurations, swapConfig)
 #endif
@@ -336,13 +351,26 @@ int main(int argc, char **argv)
   field F(T, beta, Hext, randomField);
   string nomefile;
 
-  info.second += "21 " + to_string(N) + " " + to_string((int)p) + " " + to_string(C);
+  if (argc == 16 || argc == 18)
+  {
+    info.second += "210 ";
+  }
+  else
+  {
+    info.second += "21 ";
+  }
+  info.second += to_string(N) + " " + to_string((int)p) + " " + to_string(C);
   info.second += " " + to_string(graphID) + " " + to_string(T) + " " + to_string(beta);
   if (!extremesFixed)
     info.second += " " + to_string(hin) + " " + to_string(Qstar) + " " + to_string(hout);
   else
     info.second += " inf " + to_string(Qstar) + " inf";
-  info.second += " " + to_string(fracPosJ) + " " + to_string(Hext) + "\n";
+  info.second += " " + to_string(fracPosJ) + " " + to_string(Hext);
+  if (argc == 16 || argc == 18)
+  {
+    info.second += " " + to_string(randomFieldType) + " 0. " + to_string(sigma) + " " + to_string(fieldStructureRealization); // randomFieldType, mean, sigma, realization
+  }
+  info.second += "\n";
 
   cout << graphType << " simulation with N=" << N << " p=" << p << " C=" << C << " graphID=" << graphID << " T=" << T << " beta=" << beta;
   cout << " h_in=" << hin << " Qstar=" << Qstar << " h_out=" << hout;
@@ -474,20 +502,21 @@ int main(int argc, char **argv)
         fileM << hout << " " << chifin_av / counter << " " << Qstar << " " << probafin_av / counter << " " << beta << " " << L_av / counter << endl;
         fileM.close();
 
-        ofstream mfinfile(nomeTIQstarFile);
+        ofstream mfinfile(nomeTIQstarFile, std::ios::app);
         mfinfile << mc << " " << hout << " ";
         for (int i = 0; i < 3; i++)
           mfinfile << qfin_av[i] / counter << " ";
         mfinfile << chifin_av / counter << endl;
         mfinfile.close();
 
-        ofstream mfinfile2(nomeTIHoutFile);
+        ofstream mfinfile2(nomeTIHoutFile, std::ios::app);
         mfinfile2 << mc << " " << Qstar << " ";
         for (int i = 0; i < 3; i++)
           mfinfile2 << qfin_av[i] / counter << " ";
+        mfinfile2 << endl;
         mfinfile2.close();
 
-        ofstream mfinfile3(nomeTIBetaFile);
+        ofstream mfinfile3(nomeTIBetaFile, std::ios::app);
         mfinfile3 << mc << " " << beta << " ";
         for (int i = 0; i < 3; i++)
           mfinfile3 << qfin_av[i] / counter << " ";
@@ -568,7 +597,7 @@ int main(int argc, char **argv)
       Qfin[0] -= Strajs[I].sT * s_in[I];
       Qfin[1] -= Strajs[I].sT * s_out[I];
       Qfin[2] -= Strajs[I].sT;
-      Strajs[I] = F.generate_new_traj(&Graph[I], &Strajs, hin * s_in[I], Qfin[1] > Qstar ? 0 : hout * s_out[I]);
+      Strajs[I] = F.generate_new_traj(&Graph[I], &Strajs, hin * s_in[I], Qfin[1] > Qstar ? 0 : hout * s_out[I], I);
       Qfin[0] += Strajs[I].sT * s_in[I];
       Qfin[1] += Strajs[I].sT * s_out[I];
       Qfin[2] += Strajs[I].sT;

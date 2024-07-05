@@ -43,12 +43,12 @@ public:
     randomField = _randomField;
   }
 
-  straj generate_new_traj(vector<vector<rInteraction>> *neighbors, vector<straj> *traj, double start, double end)
+  straj generate_new_traj(vector<vector<rInteraction>> *neighbors, vector<straj> *traj, double start, double end, int siteIndex)
   {
 #ifdef FIXEDEXT
-    construct_field_FIXEDEXT(neighbors, traj, start, end);
+    construct_field_FIXEDEXT(neighbors, traj, start, end, siteIndex);
 #else
-    construct_field(neighbors, traj, start, end);
+    construct_field(neighbors, traj, start, end, siteIndex);
 #endif
 
     generate_int_spin();
@@ -80,7 +80,7 @@ public:
 
   double w(double x) { return exp(-beta * x / 2); } // transition rate, w(x)=w(-x) exp(-beta x)
 
-  void construct_field(vector<vector<rInteraction>> *neighbors, vector<straj> *traj, double hstart, double hend)
+  void construct_field(vector<vector<rInteraction>> *neighbors, vector<straj> *traj, double hstart, double hend, int siteIndex)
   {
     // construct the epochs
     fieldjumps.clear();
@@ -143,11 +143,16 @@ public:
       double H;
       for (int i = counter.size() - 1; i >= 0; i--)
       { // in such a way that at the end H = h[0]
-        H = Hext + randomField[i];
+        H = Hext + randomField[(*neighbors)[0][i - 1].interS[0]];
         for (int j = 0; j < counter[i].size(); j++)
           H += counter[i][j] * (*neighbors)[i][j].J; // I think we should include the coupling here (RC)
         h[i].push_back(H);
       }
+
+      H = Hext + randomField[siteIndex];
+      for (int j = 0; j < counter[0].size(); j++)
+        H += counter[0][j] * (*neighbors)[0][j].J; // I think we should include the coupling here (RC)
+      h[0].push_back(H);
       double wp = w(2 * H);
       double ex = exp(beta * H); // NDR, h[0], local field on the spin updating, is used only here (and hence in Gamma) (RC)
       double wm = wp * ex * ex;  // so for detailed balance it is now w(-2*H) (RC)
@@ -220,8 +225,9 @@ public:
     }
   }
 
-  void construct_field_FIXEDEXT(vector<vector<rInteraction>> *neighbors, vector<straj> *traj, double h_start, double h_end)
+  void construct_field_FIXEDEXT(vector<vector<rInteraction>> *neighbors, vector<straj> *traj, double h_start, double h_end, int siteIndex)
   {
+
     // construct the epochs
     fieldjumps.clear();
     // FZ code: vector<vector<int>> counter = (*neighbors);  //so this is a n+1 long vector of vectors of int, with n=#first nieghbours (RC)
@@ -297,14 +303,20 @@ public:
     for (int e = 1; e < fieldjumps.size(); e++)
     { // epochs loop
       double H;
-      for (int i = counter.size() - 1; i >= 0; i--)
+      for (int i = counter.size() - 1; i > 0; i--)
       { // in such a way that at the end H = h[0]
-        H = Hext + randomField[i];
+
+        H = Hext + randomField[(*neighbors)[0][i - 1].interS[0]];
         for (int j = 0; j < counter[i].size(); j++)
           H += counter[i][j] * (*neighbors)[i][j].J; // I think we should include the coupling here (RC)
         h[i].push_back(H);
       }
 
+      H = Hext + randomField[siteIndex];
+      for (int j = 0; j < counter[0].size(); j++)
+        H += counter[0][j] * (*neighbors)[0][j].J; // I think we should include the coupling here (RC)
+      h[0].push_back(H);
+      // cout<<"epoch e "<<e<<"\n H="<<H<<" fj.i,j,t="<<fieldjumps[e].i<<" "<<fieldjumps[e].j<<" "<<fieldjumps[e].t<<endl;
       double wp = w(2 * H);
       double ex = exp(beta * H); // NDR, h[0], local field on the spin updating, is used only here (and hence in Gamma) (RC)
       double wm = wp * ex * ex;  // so for detailed balance it is now w(-2*H) (RC)

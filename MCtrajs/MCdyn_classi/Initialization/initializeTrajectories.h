@@ -18,7 +18,6 @@ using namespace std;
 #define deltaBeta 0.01
 #define sweepsPerBeta 100
 
-
 bool initializeTrajectoriesFromRefConfs(int N, double T, vector<straj> &trajsToInitialize, pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, bool swapConfs = false)
 {
     vector<straj> Strajs;
@@ -96,13 +95,12 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
     int Qfin = compute_Q_fin(&Strajs)[1]; // It should be N..., but why not to check!?
 
     double annealingBeta = startingBeta;
-    int MCAtBetaStart=30;
+    int MCAtBetaStart = 30;
     int MCToArrive = 3000;
-    double factor = pow((((double) MCToArrive)/MCAtBetaStart), (deltaBeta)/(double)(beta-startingBeta));
-    double MCAtBetaAnn=MCAtBetaStart;
+    double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - startingBeta));
+    double MCAtBetaAnn = MCAtBetaStart;
 
-    
-    for (; annealingBeta <= beta+0.0001; annealingBeta += deltaBeta)
+    for (; annealingBeta <= beta + 0.0001; annealingBeta += deltaBeta)
     {
         field f(T, annealingBeta, Hext, randomField);
 
@@ -112,26 +110,23 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
             {
                 int I = (int)(N * Xrandom());
                 Qfin -= Strajs[I].sT * s_out[I];
-                Strajs[I] = f.generate_new_traj(&Graph[I], &Strajs, hin * s_in[I], Qfin > Qstar ? 0 : hout * s_out[I]);
+                Strajs[I] = f.generate_new_traj(&Graph[I], &Strajs, hin * s_in[I], Qfin > Qstar ? 0 : hout * s_out[I], I);
                 Qfin += Strajs[I].sT * s_out[I];
             }
         }
-        cout<<"Annealing at beta="<< annealingBeta<<" for "<<MCAtBetaAnn<<" mcSweeps"<<endl;
-        MCAtBetaAnn *=factor;
-        
+        cout << "Annealing at beta=" << annealingBeta << " for " << MCAtBetaAnn << " mcSweeps" << endl;
+        MCAtBetaAnn *= factor;
     }
 
     trajsToInitialize = Strajs;
-    details.second += to_string(initTrajCCode) +" "+ to_string(startingBeta)+ " "+ to_string(MCAtBetaStart)+ " "+ to_string(MCToArrive) +  " "+ to_string(deltaBeta) +"\n";
+    details.second += to_string(initTrajCCode) + " " + to_string(startingBeta) + " " + to_string(MCAtBetaStart) + " " + to_string(MCToArrive) + " " + to_string(deltaBeta) + "\n";
     return true;
 }
 
-
-
 bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T, vector<straj> &trajsToInitialize, double beta, double Hext,
-                                                      vector<vector<vector<rInteraction>>> Graph, double hin, double hout, int Qstar,
-                                                      pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, vector<double> randomField,
-                                                      bool swapConfs = false)
+                                                                vector<vector<vector<rInteraction>>> Graph, double hin, double hout,
+                                                                pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, const vector<double> randomField,
+                                                                bool swapConfs = false)
 {
     vector<straj> Strajs;
     vector<int> s1(N, 0);
@@ -163,13 +158,12 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
     int Qfin = compute_Q_fin(&Strajs)[1]; // It should be N..., but why not to check!?
 
     double annealingBeta = startingBeta;
-    int MCAtBetaStart=30;
+    int MCAtBetaStart = 30;
     int MCToArrive = 3000;
-    double factor = pow((((double) MCToArrive)/MCAtBetaStart), (deltaBeta)/(double)(beta-startingBeta));
-    double MCAtBetaAnn=MCAtBetaStart;
+    double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - startingBeta));
+    double MCAtBetaAnn = MCAtBetaStart;
 
-    
-    for (; annealingBeta <= beta+0.0001; annealingBeta += deltaBeta)
+    for (; annealingBeta <= beta + 0.0001; annealingBeta += deltaBeta)
     {
         field f(T, annealingBeta, Hext, randomField);
 
@@ -179,18 +173,34 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
             {
                 int I = (int)(N * Xrandom());
                 Qfin -= Strajs[I].sT * s_out[I];
-                Strajs[I] = f.generate_new_traj(&Graph[I], &Strajs, hin * s_in[I], hout * s_out[I]);
+                Strajs[I] = f.generate_new_traj(&Graph[I], &Strajs, hin * s_in[I], hout * s_out[I], I);
                 Qfin += Strajs[I].sT * s_out[I];
             }
         }
-        cout<<"Annealing at beta="<< annealingBeta<<" for "<<MCAtBetaAnn<<" mcSweeps"<<endl;
-        MCAtBetaAnn *=factor;
-        
+        cout << "Annealing at beta=" << annealingBeta << " for " << MCAtBetaAnn << " mcSweeps" << endl;
+        MCAtBetaAnn *= factor;
     }
 
     trajsToInitialize = Strajs;
-    details.second += to_string(initTrajCCode) +" "+ to_string(startingBeta)+ " "+ to_string(MCAtBetaStart)+ " "+ to_string(MCToArrive) +  " "+ to_string(deltaBeta) +"\n";
+    details.second += to_string(initTrajCCode) + " " + to_string(startingBeta) + " " + to_string(MCAtBetaStart) + " " + to_string(MCToArrive) + " " + to_string(deltaBeta) + "\n";
     return true;
+}
+
+bool callAnnealing(int N, double T, vector<straj> &trajsToInitialize, double beta, double Hext,
+                   vector<vector<vector<rInteraction>>> Graph, double hin, double hout, int Qstar,
+                   pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, const vector<double> randomField,
+                   bool swapConfs = false)
+{
+    bool allOk;
+    if (initTrajCCode == 74)
+    {
+        allOk = initializeTrajectoriesFromRefConfs_WithAnnealing(N, T, trajsToInitialize, beta, Hext, Graph, hin, hout, Qstar, details, refConfs, randomField, swapConfs);
+    }
+    else if (initTrajCCode == 740)
+    {
+        allOk = initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(N, T, trajsToInitialize, beta, Hext, Graph, hin, hout, details, refConfs, randomField, swapConfs);
+    }
+    return allOk;
 }
 
 // if noise=0.5, is equivalent to Initialize at random

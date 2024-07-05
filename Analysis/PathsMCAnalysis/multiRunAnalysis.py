@@ -53,7 +53,7 @@ if len(sys.argv) > 1:
     for simType in simTypes:
 
         print("analyzing ", simType)
-        singleRunsArchive_path = f"../../Data/Graphs/"+simType
+        singleRunsArchive_path = f"../../Data/Graphs/RRG/p2C3/N80/structure828464/fPosJ1.00/graph8486"#+simType
 
         archivedSingleRuns = find_directories_with_string(singleRunsArchive_path, 'run')
 
@@ -99,7 +99,7 @@ if len(sys.argv) > 1:
             ],
             f"p2C{x[1]}fPosJ{x[0]:.2f}"
         ]
-        for x in [[0.5,4],[0.5,3], [1.0,3], [1.0,4]]
+        for x in [[1.,3],[0.5,3], [1.0,3], [0.5,4]]
         ]
 
         selected_runGroups= [runGroup for runGroup in selected_runGroups if len(runGroup[0])>1]

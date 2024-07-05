@@ -292,6 +292,29 @@
                     "hext"
                 ]
             },
+            "210": {
+                "ID": 210,
+                "description": "Input parameters for tpMC simulation, with field",
+                "shortDescription": "tpMCParamsWField",
+                "nAdditionalParameters": 15,
+                "additionalParameters": [
+                    "N",
+                    "p",
+                    "C",
+                    "graphID",
+                    "T",
+                    "beta",
+                    "h_in",
+                    "Qstar",
+                    "h_out",
+                    "fPosJ",
+                    "hext",
+                    "fieldType",
+                    "fieldMean",
+                    "fieldSigma",
+                    "fieldRealization"
+                ]
+            },
             "22": {
                 "ID": 22,
                 "description": "Input parameters for stdMC simulation for MCPaths",
@@ -323,6 +346,28 @@
                     "beta",
                     "fPosJ",
                     "hext"
+                ]
+            },
+            "220": {
+                "ID": 220,
+                "description": "Input parameters for stdMC simulation, with field",
+                "shortDescription": "stdMCParamsWField",
+                "nAdditionalParameters": 14,
+                "additionalParameters": [
+                    "N",
+                    "p",
+                    "C",
+                    "graphID",
+                    "T",
+                    "beta",
+                    "h_out",
+                    "Qstar",
+                    "fPosJ",
+                    "hext",
+                    "fieldType",
+                    "fieldMean",
+                    "fieldSigma",
+                    "fieldRealization"
                 ]
             }
         },
@@ -552,6 +597,18 @@
                 "ID": 74,
                 "description": "Annealing with constant beta spacing and exponential number of steps per beta",
                 "shortDescription": "exp",
+                "nAdditionalParameters": 4,
+                "additionalParameters": [
+                    "startingBeta",
+                    "startingMC",
+                    "finalMC",
+                    "deltaBeta"
+                ]
+            },
+            "740": {
+                "ID": 740,
+                "description": "Annealing with constant beta spacing and exponential number of steps per beta, fixing end to configuration.",
+                "shortDescription": "expF",
                 "nAdditionalParameters": 4,
                 "additionalParameters": [
                     "startingBeta",

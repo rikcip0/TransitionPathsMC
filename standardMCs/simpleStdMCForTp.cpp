@@ -12,7 +12,7 @@
 
 #define initRefConfCode 55
 
-#include "random.h"
+#include "../Generic/random.h"
 
 #include "../McTrajs/MCdyn_classi/generic/fileSystemUtil.h"
 #include "../McTrajs/MCdyn_classi/interaction.h"
@@ -22,16 +22,16 @@
 
 #define p 2
 #define MC 100000
-#define MCeq 1000
-#define MCmeas 5
-#define MCprint 100 // deve essere multiplo di MCmeas
+#define MCeq 10000
+#define MCmeas 10
+#define MCprint 2000 // deve essere multiplo di MCmeas
 
 int main(int argc, char *argv[])
 {
-  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 11 && argc != 13))
+  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 11 && argc != 13 && argc != 14 && argc != 16))
   {
     cout << "Probable desired usage: ";
-    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N beta Hext hout Q* C structureID fracPosJ graphID (requiredBetaOfSExtraction s_index) [if not present, FM(all +) conf. is considered]" << endl;
+    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N beta Hext hout Q* C structureID fracPosJ graphID (requiredBetaOfSExtraction s_index) [if not present, FM(all +) conf. is considered] \n (randomFieldType(1: Bernoulli, 2:Gaussian), realization, sigma)" << endl;
     cout << "If d is a lattice, C and structureID are required but ignored." << endl;
     exit(1);
   }
@@ -92,7 +92,19 @@ int main(int argc, char *argv[])
 
   graphType += +"/N" + to_string(N) + "/fPosJ" + to_string(fracPosJ).substr(0, 4);
 
-  if (!initializeGraph(folder, Graph, p, C, N, fracPosJ))
+  vector<double> randomField(N);
+  int randomFieldType = 0, fieldStructureRealization = 0;
+  double sigma = 0.;
+  if (argc == 14 || argc == 16)
+  {
+    randomFieldType = atoi(argv[argc - 3]);
+    fieldStructureRealization = atoi(argv[argc - 2]);
+    sigma = atof(argv[argc - 1]);
+  }
+  else
+    randomField.assign(N, 0.);
+
+  if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, sigma))
   {
     cout << "Error in the graph initialization" << endl;
     return 1;
@@ -106,9 +118,9 @@ int main(int argc, char *argv[])
   long sstart = time(NULL);
 
   if (!extremesFixed)
-    sprintf(buffer, "inf_%.2g_%.2g_%i_%.3g", beta, Hext, Qstar, hout);
+    sprintf(buffer, "inf_%.3g_%.2g_%i_%.3g", beta, Hext, Qstar, hout);
   else
-    sprintf(buffer, "inf_%.2g_%.2g_inf_%i_inf", beta, Hext, Qstar);
+    sprintf(buffer, "inf_%.3g_%.2g_inf_%i_inf", beta, Hext, Qstar);
 
   pair<string, string> info; // 1° entry: long info (for human read), 2°entry: short info (for machines read)
   info.first += "Simulation on" + graphType + "\n";
@@ -126,13 +138,27 @@ int main(int argc, char *argv[])
 
   string nomefile;
 
-  info.second += "22 " + to_string(N) + " " + to_string((int)p) + " " + to_string(C);
+  if (argc == 14 || argc == 16)
+  {
+    info.second += "220 ";
+  }
+  else
+  {
+    info.second += "22 ";
+  }
+
+  info.second += to_string(N) + " " + to_string((int)p) + " " + to_string(C);
   info.second += " " + to_string(graphID) + " " + "inf" + " " + to_string(beta);
   if (!extremesFixed)
     info.second += " " + to_string(hout) + " " + to_string(Qstar);
   else
     info.second += " inf " + to_string(Qstar);
-  info.second += " " + to_string(fracPosJ) + " " + to_string(Hext) + "\n";
+  info.second += " " + to_string(fracPosJ) + " " + to_string(Hext);
+  if (argc == 14 || argc == 16)
+  {
+    info.second += " " + to_string(randomFieldType) + " 0. " + to_string(sigma) + " " + to_string(fieldStructureRealization); // randomFieldType, mean, sigma, realization
+  }
+  info.second += "\n";
 
   cout << graphType << " simulation with N=" << N << " p=" << p << " graphID=" << graphID << " T=inf beta=" << beta;
   cout << " Qstar=" << Qstar << " h_out=" << hout;
@@ -180,7 +206,14 @@ int main(int argc, char *argv[])
   }
 
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  folder = makeFolderNameFromBuffer_ForCluster(folder + "/DataForPathsMC/stdMCs/", string(buffer), sstart); // For Cluster
+  if (argc == 14 || argc == 16)
+  {
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "/DataForPathsMC/stdMCs/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
+  }
+  else
+  {
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "/DataForPathsMC/stdMCs/", string(buffer), sstart); // For Cluster
+  }
 
   createFolder(folder);
   cout << "Simulation is in folder " << folder << endl;
@@ -208,36 +241,43 @@ int main(int argc, char *argv[])
   s[1] = refS;
 
   double energy = 0, energyB = 0.;
+
+  for (int i = 1; i <= MCeq; i++)
+  {
+    MCSweep_withGraph(s[0], N, Graph, beta, Hext, randomField);
+    MCSweep_withGraph2(s[1], refS, N, Graph, beta, Qstar, Hext, randomField);
+  }
+
   for (int i = 1; i <= MC; i++)
   {
-    MCSweep_withGraph(s[0], N, Graph, beta);
-    MCSweep_withGraph2(s[1], refS, N, Graph, beta, Qstar);
+    MCSweep_withGraph(s[0], N, Graph, beta, Hext, randomField);
+    MCSweep_withGraph2(s[1], refS, N, Graph, beta, Qstar, Hext, randomField);
 
     if (!(i % MCmeas))
     {
       if (!(i % MCprint))
       {
         double tempH, tempHB;
-        tempH = energy_Graph(s[0], N, Graph);
+        tempH = energy_Graph(s[0], N, Graph, Hext, randomField);
         energy += tempH;
 
-        tempHB = energy_Graph(s[1], N, Graph);
+        tempHB = energy_Graph(s[1], N, Graph, Hext, randomField);
         energyB += tempHB;
 
         fileO << i << " " << tempH << " " << tempHB << " " << tempH - tempHB << " " << endl;
       }
       else
       {
-        energy += energy_Graph(s[0], N, Graph);
-        energyB += energy_Graph(s[1], N, Graph);
+        energy += energy_Graph(s[0], N, Graph, Hext, randomField);
+        energyB += energy_Graph(s[1], N, Graph, Hext, randomField);
       }
     }
   }
   fileO.close();
 
-  cout << "H = " << energy / MC << endl;
-  cout << "H_B = " << energyB / MC << endl;
-  cout << "H-H_B = " << (energy - energyB) / MC << endl;
+  cout << "H = " << energy / MC * MCmeas << endl;
+  cout << "H_B = " << energyB / MC * MCmeas << endl;
+  cout << "H-H_B = " << (energy - energyB) / MC * MCmeas << endl;
 
   nomefile = folder + "/TIbeta.txt";
   fileO.open(nomefile);
@@ -248,7 +288,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  fileO << beta << " " << (energy - energyB) / MC << endl;
+  fileO << beta << " " << (energy - energyB) / MC * MCmeas << endl;
 
   fileO.close();
 

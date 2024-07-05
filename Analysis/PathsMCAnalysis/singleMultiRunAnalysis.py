@@ -87,6 +87,10 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     qDistStdErr = []
     realTime = []
     realTimeErr = []
+    fieldType = []
+    fieldMean = []
+    fieldSigma = []
+    fieldRealization = []
 
     stMC_N = []
     stMC_beta = []
@@ -139,7 +143,19 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
         h_out.append(item['configuration']['parameters']['h_out'])
         fPosJ.append(item['configuration']['parameters']['fPosJ']) 
         Qstar.append(item['configuration']['parameters']['Qstar'])
-            
+        
+        if item['configuration']['parameters']['ID']==210:
+            fieldType.append(item['configuration']['parameters']['fieldType'])
+            fieldMean.append(item['configuration']['parameters']['fieldMean'])
+            fieldSigma.append(item['configuration']['parameters']['fieldSigma'])
+            fieldRealization.append(item['configuration']['parameters']['fieldRealization'])
+        else:
+            fieldType.append("nan")
+            fieldMean.append("nan")
+            fieldSigma.append("nan")
+            fieldRealization.append("nan")
+
+
         if item['configuration']['referenceConfigurationsInfo']['ID']==50 or item['configuration']['referenceConfigurationsInfo']['ID']==56:
             betaOfExtraction.append("nan")
             firstConfigurationIndex.append("nan")
@@ -200,6 +216,11 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     fPosJ = np.array(fPosJ, dtype=np.float64)
     Qstar= np.array(Qstar, dtype=np.int16)
     h_ext = np.array(h_ext, dtype=np.float64)
+
+    fieldType = np.array(fieldType)
+    fieldMean = np.array(fieldMean, dtype=np.float64)
+    fieldSigma = np.array(fieldSigma, dtype=np.float64)
+    fieldRealization = np.array(fieldRealization)
 
     lastMeasureMC = np.array(lastMeasureMC, dtype=np.int16)
     MCprint = np.array(MCprint, dtype=np.int16)
@@ -262,8 +283,8 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     
     normalizedRefConfMutualQ = refConfMutualQ/N
 
-    shortDescription= {70: "Random", 71: "Ref 12", 72: "Ref 21", 73: "Annealing", 74: "Annealing"}
-    edgeColorPerInitType={ 70: "lightGreen", 71: "black", 72: "purple", 73: "red", 74: "red"}
+    shortDescription= {70: "Random", 71: "Ref 12", 72: "Ref 21", 73: "Annealing", 74: "Annealing", 740: "AnnealingF"}
+    edgeColorPerInitType={ 70: "lightGreen", 71: "black", 72: "purple", 73: "orange", 74: "orange", 740: "red"}
 
     def myMultiRunStudy(studyName, x, xName, subfolderingVariable, subfolderingVariableName, markerShapeVariable, markerShapeVariableName):
         thisStudyFolder= os.path.join(plotsFolder, studyName)
@@ -469,6 +490,10 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
 
     Qstar= Qstar/N #così, slice-ando rispetto a N unisco i casi con q_star uguale
     if len(np.unique(T))>2:
-        myMultiRunStudy("StudyInT", T,  "T",N, "N",beta, r"beta")
+        myMultiRunStudy("StudyInT", T,  "T", N, "N",beta, r"beta")
+        
+    print(np.unique(np.unique(fieldRealization)))
+    if len(np.unique(fieldRealization))>1:
+        myMultiRunStudy("StudyInBeta2", beta, r"beta", N, "N", fieldRealization, "field")
     if len(np.unique(T*N))>2:
         myMultiRunStudy("StudyInNT", N*T, "NT",N, "N", beta, r"beta")

@@ -87,15 +87,15 @@ int main(int argc, char *argv[])
     fileName += graphType + ".txt";
 
 
+    folder +="randomFieldStructures/";
     if (fieldType == 1)
     {
-        folder+="bernoulliFieldStructures";
+        folder+="stdBernoulli";
     }
     else if (fieldType == 2)
     {
-        folder+="gaussianFieldStructures";
+        folder+="stdGaussian";
     }
-cout<<"TTAPPO"<<endl;
     
     // trova quanti file randomField ci sono e crealo col nome corretto
     if (folderExists(folder + "/realization1"))
@@ -125,9 +125,8 @@ cout<<"TTAPPO"<<endl;
             number = Grandom();
     }
 
-cout<<"TTAPPO"<<endl;
     // Open a file for writing
-    string nomeFile = folder + "/fieldStructure.txt";
+    string nomeFile = folder + "/field.txt";
     std::ofstream outputFile(nomeFile);
 
     // Check if the file is open
@@ -137,7 +136,7 @@ cout<<"TTAPPO"<<endl;
         return 1;
     }
 
-    outputFile << N << " " << p << " " << C << " " << structureID << " " << fracPosJ << " " << graphID << " " << myrand << "\n";
+    outputFile << N << " " << p << " " << C << " " << structureID << " " << fracPosJ << " " << graphID << " " << fieldType<<" " << myrand << "\n";
 
     // Write the array to the file
 

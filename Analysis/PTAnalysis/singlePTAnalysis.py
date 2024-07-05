@@ -1,5 +1,8 @@
 #Analysis of parallel tempering
+import random
 import sys
+
+from matplotlib.colors import LinearSegmentedColormap
 sys.path.append('../')
 from matplotlib import pyplot as plt
 import matplotlib
@@ -43,6 +46,7 @@ def txtToInfo(file_path, mappa):
         print("Error in " +file_path+". First line should include at least simulationType and version.")
         return None
 
+    global simulation_type
     simulation_type = firstLine_tokens[0]
     global simulationCode_version
     simulationCode_version = firstLine_tokens[1]
@@ -73,6 +77,7 @@ def txtToInfo(file_path, mappa):
 
     if(len((simulationTypeVersion_info["linesMap"])) != simulationTypeVersion_info["nAdditionalLines"]):
         print("Error in the map construction")
+        print(len((simulationTypeVersion_info["linesMap"])))
         return None
 
     for nLine, lineType in enumerate(simulationTypeVersion_info["linesMap"]):
@@ -90,6 +95,7 @@ def txtToInfo(file_path, mappa):
             data[lineType].pop("nAdditionalParameters", None)
             data[lineType].pop("additionalParameters", None)
     #print(data)
+    simulation_type = (int) (simulation_type)
     simulationCode_version = (int) (simulationCode_version)
     return data
 
@@ -172,6 +178,12 @@ def oldSinglePTAnalysis( folder=""):
     plt.grid(True)
     plt.plot(temperatures, marker='s')
 
+    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
+    for fig_name in figs:
+        fig = plt.figure(fig_name)
+        filename = os.path.join(resultsFolder, f'{fig_name}.png')
+        fig.savefig(filename, bbox_inches='tight')
+    plt.close('all')
     #swap rate plot: end
 
     qsPath = find_files_with_string(folder, "Qs")
@@ -216,9 +228,10 @@ def oldSinglePTAnalysis( folder=""):
         fig.savefig(filename, bbox_inches='tight')
     plt.close('all')
 
+
     file_path= os.path.join(folder, "PTEnergies.txt")
 
-    betaHist = []
+    nHist = []
 
     with open(file_path, 'r') as file:
             #print("analizzando ", nome_file)
@@ -226,15 +239,15 @@ def oldSinglePTAnalysis( folder=""):
             dataLines = filter(lambda x: not x.startswith('#'), lines)
             data = np.genfromtxt(dataLines, delimiter=' ')
             for i in range(2, 2+temperatures.size):
-                betaHist.append(data[:,i])
+                nHist.append(data[:,i])
 
 
-    betaHist = np.asarray(betaHist)
-    bins=np.linspace(np.min(betaHist.flatten()),np.max(betaHist.flatten())+1, (int)(13*np.sqrt(temperatures.size)))
+    nHist = np.asarray(nHist)
+    bins=np.linspace(np.min(nHist.flatten()),np.max(nHist.flatten())+1, (int)(13*np.sqrt(temperatures.size)))
     plt.figure("EnergyHistograms")
     plt.title("histograms of energies of extracted configurations")
     for i in range(0, temperatures.size):
-        plt.hist(betaHist[i], alpha=0.23, label = r"$\beta$="+f"{temperatures[i]}", bins=bins, edgecolor='black')
+        plt.hist(nHist[i], alpha=0.23, label = r"$\beta$="+f"{temperatures[i]}", bins=bins, edgecolor='black')
     
     plt.xlabel("energy")
     plt.yscale('log')
@@ -243,16 +256,16 @@ def oldSinglePTAnalysis( folder=""):
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
 
     nOfHighestBetasToConsider = 5
-    bins=np.linspace(np.min(betaHist[-nOfHighestBetasToConsider:].flatten()),np.max(betaHist[-nOfHighestBetasToConsider:].flatten())+1, (int)(3*nOfHighestBetasToConsider))
+    bins=np.linspace(np.min(nHist[-nOfHighestBetasToConsider:].flatten()),np.max(nHist[-nOfHighestBetasToConsider:].flatten())+1, (int)(3*nOfHighestBetasToConsider))
     plt.figure("EnergyHistograms_zoomOnHighBetas")
     plt.title(f"histograms of energies of extracted configurations\n zoom on {nOfHighestBetasToConsider} highest betas")
     for i in range(1, nOfHighestBetasToConsider+1):
-        plt.hist(betaHist[-1], alpha=0.5, label = r"$\beta$="+f"{temperatures[-1]}", bins=bins)
+        plt.hist(nHist[-1], alpha=0.5, label = r"$\beta$="+f"{temperatures[-1]}", bins=bins)
     plt.xlabel("energy")
     plt.yscale('log')
     plt.ylabel("n. of occurrences")
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-#    plt.xlim(np.min(betaHist[-1])-0.5, np.max(betaHist[-nOfHighestBetasToConsider])+0.5)
+#    plt.xlim(np.min(nHist[-1])-0.5, np.max(nHist[-nOfHighestBetasToConsider])+0.5)
 
     figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
     for fig_name in figs:
@@ -289,7 +302,7 @@ def newSinglePTAnalysis( folder=""):
     N=len(second_line)
 
     #swap rate plot: start
-    PTInfo_path = os.path.join(folder,"energies.txt")
+    PTInfo_path = os.path.join(folder,"swapRates.txt")
     if not (os.path.exists(PTInfo_path)):
         return None
     temperatures = []
@@ -330,8 +343,97 @@ def newSinglePTAnalysis( folder=""):
 
     #swap rate plot: end
 
-    qsPath = find_files_with_string(folder, "Qs")
+    if simulation_type==12 and simulationCode_version>=1: 
+        file_path= os.path.join(folder, "energies.txt")
+    else:
+        print(simulation_type==12, simulationCode_version==1)
+        file_path= os.path.join(folder, "PTEnergies.txt")
 
+    nHist = []
+
+    with open(file_path, 'r') as file:
+            #print("analizzando ", nome_file)
+            lines = file.readlines()
+            dataLines = filter(lambda x: not x.startswith('#'), lines)
+            data = np.genfromtxt(dataLines, delimiter=' ')
+            for i in range(2, 2+temperatures.size):
+                nHist.append(data[:,i])
+
+
+    nHist = np.asarray(nHist)
+    bins=np.linspace(np.min(nHist.flatten()),np.max(nHist.flatten())+1, (int)(13*np.sqrt(temperatures.size)))
+    plt.figure("EnergyHistograms")
+    plt.title("histograms of energies of extracted configurations")
+    for i in range(0, temperatures.size):
+        plt.hist(nHist[i], alpha=0.23, label = r"$\beta$="+f"{temperatures[i]}", bins=bins, edgecolor='black')
+    
+    plt.xlabel("energy")
+    plt.yscale('log')
+    plt.ylabel("n. of occurrences")
+    plt.grid(True)
+    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+
+    nOfHighestBetasToConsider = 5
+    bins=np.linspace(np.min(nHist[-nOfHighestBetasToConsider:].flatten()),np.max(nHist[-nOfHighestBetasToConsider:].flatten())+1, (int)(3*nOfHighestBetasToConsider))
+    plt.figure("EnergyHistograms_zoomOnHighBetas")
+    plt.title(f"histograms of energies of extracted configurations\n zoom on {nOfHighestBetasToConsider} highest betas")
+    for i in range(1, nOfHighestBetasToConsider+1):
+        plt.hist(nHist[-1], alpha=0.5, label = r"$\beta$="+f"{temperatures[-1]}", bins=bins)
+    plt.xlabel("energy")
+    plt.yscale('log')
+    plt.ylabel("n. of occurrences")
+    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+#    plt.xlim(np.min(nHist[-1])-0.5, np.max(nHist[-nOfHighestBetasToConsider])+0.5)
+
+    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
+    for fig_name in figs:
+        fig = plt.figure(fig_name)
+        filename = os.path.join(resultsFolder, f'{fig_name}.png')
+        fig.savefig(filename, bbox_inches='tight')
+    plt.close('all')
+
+    if simulation_type==12 and simulationCode_version>=1: 
+        file_path= os.path.join(folder, "permanenceInfo.txt")
+    else:
+        return True
+
+    ao = []
+
+    with open(file_path, 'r') as file:
+            #print("analizzando ", nome_file)
+            lines = file.readlines()
+            dataLines = filter(lambda x: not x.startswith('#'), lines)
+            data = np.genfromtxt(dataLines, delimiter=' ')
+            for i in range(0, temperatures.size):
+                ao.append(data[:,i])
+
+    ao= np.asarray(ao, dtype=np.uint32)
+    colors = [(1, 0, 0), (0.5, 0, 0.5), (0, 0, 1)]  # RGB tuples for blue, purple, and red
+    n_bins = 100  # Number of bins for the colormap
+    cmap_name = 'blue_purple_red'
+    cmap = LinearSegmentedColormap.from_list(cmap_name, colors, N=n_bins)
+    norm = plt.Normalize(vmin=0, vmax=temperatures.size-1)
+    
+    plt.figure("permanenceInfo", figsize=(15, 6))
+    plt.title(r"Evolution of $\beta$s of systems evolutions during pt")
+    for i in range(0, temperatures.size):
+        plt.plot(np.arange(1,len(ao[i])+1), temperatures[ao[i]], alpha=0.6, label = f"system {i}", color=cmap(norm(i)))
+    plt.xlabel("mcSwap attempt")
+    plt.xlim(left=1)
+    plt.xscale('log')
+    plt.ylabel(r"$\beta$")
+    plt.grid(True)
+    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+
+
+    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
+    for fig_name in figs:
+        fig = plt.figure(fig_name)
+        filename = os.path.join(resultsFolder, f'{fig_name}.png')
+        fig.savefig(filename, bbox_inches='tight')
+    plt.close('all')
+
+    qsPath = find_files_with_string(folder, "Qs")
     overlaps = []
 
     for qPath in qsPath:
@@ -365,50 +467,6 @@ def newSinglePTAnalysis( folder=""):
                            "Histogram of overlaps among extracted configurations,\n and between a certain configuration and the others, at "+r"$\beta$="+f"{beta:.3g}",
                overlapsAtBetaMinusAutoOv, "Q", N)
 
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(resultsFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
-
-    file_path= os.path.join(folder, "PTEnergies.txt")
-
-    betaHist = []
-
-    with open(file_path, 'r') as file:
-            #print("analizzando ", nome_file)
-            lines = file.readlines()
-            dataLines = filter(lambda x: not x.startswith('#'), lines)
-            data = np.genfromtxt(dataLines, delimiter=' ')
-            for i in range(2, 2+temperatures.size):
-                betaHist.append(data[:,i])
-
-
-    betaHist = np.asarray(betaHist)
-    bins=np.linspace(np.min(betaHist.flatten()),np.max(betaHist.flatten())+1, (int)(13*np.sqrt(temperatures.size)))
-    plt.figure("EnergyHistograms")
-    plt.title("histograms of energies of extracted configurations")
-    for i in range(0, temperatures.size):
-        plt.hist(betaHist[i], alpha=0.23, label = r"$\beta$="+f"{temperatures[i]}", bins=bins, edgecolor='black')
-    
-    plt.xlabel("energy")
-    plt.yscale('log')
-    plt.ylabel("n. of occurrences")
-    plt.grid(True)
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-
-    nOfHighestBetasToConsider = 5
-    bins=np.linspace(np.min(betaHist[-nOfHighestBetasToConsider:].flatten()),np.max(betaHist[-nOfHighestBetasToConsider:].flatten())+1, (int)(3*nOfHighestBetasToConsider))
-    plt.figure("EnergyHistograms_zoomOnHighBetas")
-    plt.title(f"histograms of energies of extracted configurations\n zoom on {nOfHighestBetasToConsider} highest betas")
-    for i in range(1, nOfHighestBetasToConsider+1):
-        plt.hist(betaHist[-1], alpha=0.5, label = r"$\beta$="+f"{temperatures[-1]}", bins=bins)
-    plt.xlabel("energy")
-    plt.yscale('log')
-    plt.ylabel("n. of occurrences")
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-#    plt.xlim(np.min(betaHist[-1])-0.5, np.max(betaHist[-nOfHighestBetasToConsider])+0.5)
 
     figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
     for fig_name in figs:
@@ -421,11 +479,11 @@ def singlePTAnalysis( folder=""):
     PTInfo_path = os.path.join(folder,"info.dat")
     if (os.path.exists(PTInfo_path)):
         newSinglePTAnalysis(folder)
-        print("doinf new")
+        print("doing new")
     else:
         PTInfo_path = os.path.join(folder,"PTInfo.txt")
         if not(os.path.exists(PTInfo_path)):
-            print("doinf no")
+            print("doing no analysis")
             return None
-        print("doinf old")
+        print("doing old")
         oldSinglePTAnalysis(folder)

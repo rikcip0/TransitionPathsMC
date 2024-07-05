@@ -2,7 +2,7 @@
     "simulationTypes": {
         "12": {
             "ID": 12,
-            "name": "MC over paths, with Qstar in input",
+            "name": "Parralel tempering",
             "shortName": "tpMC_wQ",
             "versions": {
                 "0": {
@@ -17,6 +17,21 @@
                     "nAdditionalLines": 6,
                     "linesMap": [
                         "parameters"
+                    ]
+                },
+                "1": {
+                    "ID": 1,
+                    "nAdditionalParameters": 4,
+                    "additionalParameters": [
+                        "machine",
+                        "seed",
+                        "date",
+                        "time"
+                    ],
+                    "nAdditionalLines": 2,
+                    "linesMap": [
+                        "graphParameters",
+                        "ptParameters"
                     ]
                 }
             }

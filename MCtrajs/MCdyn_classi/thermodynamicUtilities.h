@@ -30,7 +30,7 @@ bool zeroTemperatureMCSweep_withGraph(vector<int> &s, int N, vector<vector<vecto
     return true;
 }
 
-bool MCSweep_withGraph(vector<int> &s, int N, vector<vector<vector<rInteraction>>> Graph, double beta)
+bool MCSweep_withGraph(vector<int> &s, int N, vector<vector<vector<rInteraction>>> Graph, double beta, double h_ext, vector<double> randomField)
 {
     int I;
     double locField;
@@ -38,7 +38,7 @@ bool MCSweep_withGraph(vector<int> &s, int N, vector<vector<vector<rInteraction>
     {
         I = (int)(Xrandom() * N);
 
-        locField = 0; // to be changed in h_ext or h_ext[I]
+        locField = h_ext + randomField[I];
         for (int j = 0; j < (Graph)[I][0].size(); j++)
         {
             locField += s[Graph[I][0][j]] * Graph[I][0][j].J;
@@ -49,7 +49,7 @@ bool MCSweep_withGraph(vector<int> &s, int N, vector<vector<vector<rInteraction>
     return true;
 }
 
-bool MCSweep_withGraph2(vector<int> &s, vector<int> referenceConf, int N, vector<vector<vector<rInteraction>>> Graph, double beta, int Qstar)
+bool MCSweep_withGraph2(vector<int> &s, vector<int> referenceConf, int N, vector<vector<vector<rInteraction>>> Graph, double beta, int Qstar, double h_ext, vector<double> randomField)
 {
     int I;
     double locField;
@@ -62,7 +62,7 @@ bool MCSweep_withGraph2(vector<int> &s, vector<int> referenceConf, int N, vector
     {
         I = (int)(Xrandom() * N);
 
-        locField = 0; // to be changed in h_ext or h_ext[I]
+        locField = h_ext + randomField[I];
         for (int j = 0; j < (Graph)[I][0].size(); j++)
         {
             locField += s[Graph[I][0][j]] * Graph[I][0][j].J;
@@ -77,11 +77,12 @@ bool MCSweep_withGraph2(vector<int> &s, vector<int> referenceConf, int N, vector
     return true;
 }
 
-double energy_Graph(vector<int> &s, int N, vector<vector<vector<rInteraction>>> Graph)
+double energy_Graph(vector<int> s, int N, vector<vector<vector<rInteraction>>> Graph, double h_ext, vector<double> randomField)
 {
     double energy = 0.;
     for (int i = 0; i < N; i++)
     {
+        energy -= (h_ext + randomField[i]) * s[i];
         for (int j = 0; j < (Graph)[i][0].size(); j++)
         {
             energy -= s[Graph[i][0][j]] * Graph[i][0][j].J * s[i] / 2.;
@@ -89,6 +90,7 @@ double energy_Graph(vector<int> &s, int N, vector<vector<vector<rInteraction>>> 
     }
     return energy;
 }
+
 bool MCSweep_withJs(vector<int> s, int N, double **J, double beta)
 {
     int I;
@@ -116,6 +118,7 @@ bool computeSelfOverlap_withGraph(int &QToReturn, vector<int> s, vector<vector<v
 
     int Q = 0;
     vector<int> sAtStart = s;
+    vector<double> randomField(N, 0);
 
     if (N != 0 && (N != s.size() || N != Graph.size()))
     {
@@ -131,7 +134,7 @@ bool computeSelfOverlap_withGraph(int &QToReturn, vector<int> s, vector<vector<v
         s = sAtStart;
         for (int i = 0; i < measureSweeps; i++)
         {
-            MCSweep_withGraph(s, N, Graph, beta);
+            MCSweep_withGraph(s, N, Graph, beta, 0, randomField);
             // cout << "at the moment Q=" << Q/ ((double)(i + 1)) << endl;
         }
         for (int j = 0; j < N; j++)
@@ -151,7 +154,7 @@ bool computeSelfOverlap_withGraph(int &QToReturn, vector<int> s, vector<vector<v
     return true;
 }
 
-bool zeroTemperatureQuench_withGraph(vector<int> &s, vector<vector<vector<rInteraction>>> Graph, pair<string, string> &details, int nSteps, int N , bool sequential=false)
+bool zeroTemperatureQuench_withGraph(vector<int> &s, vector<vector<vector<rInteraction>>> Graph, pair<string, string> &details, int nSteps, int N, bool sequential = false)
 {
     if (N != 0 && (N != s.size() || N != Graph.size()))
     {

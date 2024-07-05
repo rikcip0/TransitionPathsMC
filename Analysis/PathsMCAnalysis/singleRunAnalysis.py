@@ -10,13 +10,16 @@ import scipy.stats as stats
 from scipy.stats import linregress
 
 simulationCode_version = None
-currentAnalysisVersion = 'singleRunV'
+currentAnalysisVersion = 'singleRunVe13'
 preset_Path='../../Data/Graphs/RRG/p2C3/N100/structure199200/fPosJ1.00/graph8960/1.2e+02_1_0_inf_100_inf_run1' #for a quick single run analysis
 
 matplotlib.use('Agg') 
 sys.path.append('../')
 from MyBasePlots.hist import myHist
 from MyBasePlots.autocorrelation import autocorrelationWithExpDecayAndMu
+
+
+fieldTypesDict={'1':"Bernoulli", '2': "Gaussian"}
 
 def meanAndStdErrForParametricPlot(toBecomeX, toBecomeY):
     x_unique_values = np.unique(toBecomeX)
@@ -57,6 +60,46 @@ def progressiveLinearFit(x, y, threshold_chi_square=10.):
         return ["a","b"], [best_segment[3], best_segment[4]], [best_segment[1], best_segment[2]], best_Chi, linear
     else:
         return None
+    
+def provaEmailExp(x, y, threshold_chi_square=10.):
+
+    par_values = []
+    minimumShifting = np.maximum(len(x)//100, 5)
+    
+    iStartIndex=np.maximum(np.argmax(y>0.001),minimumShifting)
+
+    if iStartIndex+minimumShifting>=len(x)-1:
+        return None
+    
+    def provExp(t, b, c, d, iStart):
+            tStart = x[iStart]
+            a= y[iStart]
+            return a+(b*t+c*(np.exp(np.clip(d * t, None, np.log(np.finfo(float).max)))-1-d*t-(d*t)**2./2.))-(b*tStart+c*(np.exp(np.clip(d * tStart, None, np.log(np.finfo(float).max)))-1-d*tStart-(d*tStart**2./2.)))
+    
+    j=len(x)-1
+    finalTime=x[-1]
+    bounds = ([0, 0, 0], [np.inf, np.inf, (np.log(2)+80.)/x[-1]])
+    for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
+        def provExpWrapper(t, b, c,d):
+            return provExp(t, b, c, d, iStart=i)
+
+        popt, pcov = curve_fit(provExpWrapper, x[i:j], y[i:j], bounds=bounds, method="dogbox", maxfev=5000000, p0=[0.015/x[-1], 10**(-15.), np.log(1.5*10**(15.))/x[-1]])
+        b = popt[0]
+        c = popt[1]
+        d = popt[2]
+        chi_value = np.nansum(((y[i:j]-(provExpWrapper(x[i:j],*popt))))**2./y[i:j])/(j-i)
+        if chi_value < 3*0.001:# and a*x[-1]>0.0001:
+            par_values.append((chi_value, i, j, b, c, d))
+
+    if len(par_values)==0:
+        return None
+    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**6.5)
+    best_Chi = best_segment[0]
+    print(best_Chi, threshold_chi_square)
+    if best_Chi<threshold_chi_square: #and best_segment[3]*x[-1]+best_segment[4]>0.15
+        return [ "b",r"$\epsilon$ (1-$\delta$)/N", "Nk"],[best_segment[3], best_segment[4], best_segment[5]], [best_segment[1], best_segment[2]], best_Chi, lambda t, b, c, d: provExp(t, b, c, d, iStart= best_segment[1])
+    else:
+        return None
 
 def provaEmail23(x, y, threshold_chi_square=10.):
 
@@ -71,6 +114,48 @@ def provaEmail23(x, y, threshold_chi_square=10.):
     def prov(t,b, c,d, a, iStart):
             tStart = x[iStart]
             return a+(t)*b+(t)**2*c/2.+d*(t)**3/3.-(tStart*b+tStart**2*c/2.+d*tStart**3/3.)
+    
+    j=len(x)-1
+    finalTime=x[-1]
+    for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
+
+
+        
+        def provWrapper(t, b, c,d, a):
+            return prov(t, b, c, d, a, iStart=i)
+
+        popt, pcov = curve_fit(provWrapper, x[i:j], y[i:j], method='lm', maxfev=50000)
+        b = popt[0]
+        c = popt[1]
+        d = popt[2]
+        a = popt[3]
+        chi_value = np.nansum(((y[i:j]-(provWrapper(x[i:j],*popt))))**2./y[i:j])/(j-i)
+        if chi_value < 3*0.001:# and a*x[-1]>0.0001:
+            par_values.append((chi_value, i, j, a, b,c,d))
+
+    if len(par_values)==0:
+        return None
+    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**7.5)
+    best_Chi = best_segment[0]
+    print(best_Chi, threshold_chi_square)
+    if best_Chi<threshold_chi_square: #and best_segment[3]*x[-1]+best_segment[4]>0.15
+        return ["b","c", "d","a"],[best_segment[4], best_segment[5], best_segment[6], best_segment[3]], [best_segment[1], best_segment[2]], best_Chi,lambda t, b, c, d, a: prov(t,b,c,d,a, iStart= best_segment[1])
+    else:
+        return None
+    
+def provaEmail234(x, y, threshold_chi_square=10.):
+
+    par_values = []
+    minimumShifting = np.maximum(len(x)//100, 5)
+    
+    iStartIndex=np.maximum(np.argmax(y>0.001),minimumShifting)
+
+    if iStartIndex+minimumShifting>=len(x)-1:
+        return None
+    
+    def prov(t,b, c,d, a, iStart):
+            tStart = x[iStart]
+            return a+(t)*b+(t)**2*c/2.+d*(t)**3/6.+((d**2)/c)*(t)**4/24.-(tStart*b+tStart**2*c/2.+d*tStart**3/3.+((d**2)/c)*(tStart)**4/24.)
     
     j=len(x)-1
     finalTime=x[-1]
@@ -357,17 +442,24 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     mcPrint = (int)(simData['configuration']['mcParameters']['MCprint'])
     mcMeas = (int)(simData['configuration']['mcParameters']['MCmeas'])
 
-    otherInfoKeys = ['ID', 'description', 'shortDescription']
+    otherInfoKeys = ['ID', 'description', 'shortDescription','fieldType','fieldRealization']
     graphInfoKeys = [ 'graphID', 'fPosJ', 'p', 'C', 'd']
-    parametersInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('-','',1).replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter not in graphInfoKeys+otherInfoKeys])
+    fieldInfoKeys = ['fieldMean', 'fieldSigma']
+    parametersInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('-','',1).replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter not in graphInfoKeys+otherInfoKeys+fieldInfoKeys])
     graphInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in graphInfoKeys])
     
+    parametersSettingID = simData['configuration']['parameters']['ID']
     refConfSettingID = simData['configuration']['referenceConfigurationsInfo']['ID']
     if refConfSettingID== 50 or refConfSettingID== 56:
         Qif = -N
         graphInfo_Line = 'FM '+graphInfo_Line
     else:
         Qif = (int)(simData['configuration']['referenceConfigurationsInfo']['mutualOverlap'])
+
+    if parametersSettingID== 210:
+        fieldInfoKeysDict = {'fieldType': 'type', 'fieldMean':r'$\mu$', 'fieldSigma': r'$\sigma$'}
+        fieldInfo_Line = ' '.join([str(fieldInfoKeysDict[parameter]) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in fieldInfoKeys])
+        graphInfo_Line += ", w/ " + fieldTypesDict[simData['configuration']['parameters']['fieldType']]+ " field "+fieldInfo_Line+" (r"+ simData['configuration']['parameters']['fieldRealization'] +")"
 
     measuresInfo_Line = r'MC$_{eq}$='+f'{mcEq:.2g}'+' '+ r'MC$_{pr}$='+f'{mcPrint:.2g}'+' '+r'MC$_{meas}$='+f'{mcMeas:.2g}'
 
@@ -392,7 +484,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             trajsInitInfo_Line += fr'$\beta_{{start}}$'+simData['configuration']['trajs_Initialization']['startingBeta']
             trajsInitInfo_Line += fr'$\Delta\beta$'+simData['configuration']['trajs_Initialization']['deltaBeta']
             trajsInitInfo_Line += fr'mc/$\beta$'+simData['configuration']['trajs_Initialization']['sweepsPerBeta']
-        elif simData['configuration']['trajs_Initialization']['ID']==74:
+        elif simData['configuration']['trajs_Initialization']['ID']==74 or simData['configuration']['trajs_Initialization']['ID']==740:
             trajsInitInfo_Line += fr"$\beta_{{start}}$" +f"{float(simData['configuration']['trajs_Initialization']['startingBeta']):.2f} "
             trajsInitInfo_Line += fr"$\Delta\beta$" +f"{float(simData['configuration']['trajs_Initialization']['deltaBeta']):.2f} "
             trajsInitInfo_Line += fr"MC$_{{start}}$" + simData['configuration']['trajs_Initialization']['startingMC']+' '
@@ -495,10 +587,43 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     TIFile = get_file_with_prefix(run_Path, 'TI_beta')
     if TIFile is not None:
         with open(TIFile, 'r') as file:
-            numbers = [float(num) for num in file.readline().replace(',', '.').split() if any(c.isdigit() or c == '.' for c in num)]
-        results['TI']['beta'] = numbers[-1]
+            lines = file.readlines()
+            if len(lines)<3:
+                plt.close('all')
+                writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
+                return None
+            for i in range(len(lines)):
+                lines[i]=lines[i].replace('\n', '')
+                lines[i] = ' '.join(lines[i].split())
+            dataLines = filter(lambda x: not x.startswith('#'), lines)
+            data = np.genfromtxt(dataLines, delimiter=' ')
+            mcTimes = data[:,0]
+            cumulativeUs = data[:,-1]
+
+        results['TI']['beta'] = cumulativeUs[-1] 
+        
+        measuresCounter = np.arange(1, len(mcTimes)+1)
+        previousContribution=np.roll(cumulativeUs*measuresCounter,1)
+        previousContribution[0]=0
+        singleUs = cumulativeUs*measuresCounter-previousContribution
+        measuresCounter = np.arange(1, len(mcTimes)+1)
+
+        measuresCounter*=mcPrint
+        measuresCounter+=mcEq
+
+        titleSpecification = 'computed over sampled trajectories'
+        plt.figure('TI_beta_U')
+        plt.title(r'Quantity for thermodynamic integration (U) vs mc sweeps'+'\n'+ titleSpecification)
+        plt.xlabel('mc sweep')
+        plt.ylabel('U')
+        plt.plot(measuresCounter, cumulativeUs) 
+        plt.scatter(measuresCounter, cumulativeUs, label= "cumulative average")
+        plt.scatter(measuresCounter, singleUs, label= "single measure") 
+        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+        addInfoLines()
     else:
         results['TI']['beta'] = 'nan'
+
 
     TIFile = get_file_with_prefix(run_Path, 'TI_hout')
     if TIFile is not None:
@@ -906,7 +1031,6 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     axYExtremes = ax_y.get_ylim()
     ax_y.axhline(q_in_mean, color='black', linestyle='solid', linewidth=2)
     ax_y.text(1.9, 1., f'Mean '+ r"$Q_{in}$"+ f': {q_in_mean: .3f}  $\sigma$: {q_in_VarSq: .3f}   total occurrences: {len(q_in.flatten())}', color='black', ha='left', fontsize=7, rotation=270, va='top',transform=ax_y.transAxes)
-    ax_y.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
     if (q_in_mean-q_in_VarSq>axYExtremes[0]):
         ax_y.axhline(q_in_mean-q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
     if (q_in_mean+q_in_VarSq<axYExtremes[1]):
@@ -953,6 +1077,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     gs = fig.add_gridspec(18, 100)
     mainPlot = fig.add_subplot(gs[3:, 0:85])
     [mainPlot.plot(times[t], M[t], label=f'traj {t}') for t in someTrajs ]
+    if np.array_equal(M,q_out):
+        mainPlot.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
     mainPlot.set_title(r'M vs time'+'\n'+ titleSpecification)
     mainPlot.set_xlabel('time')
     mainPlot.set_ylabel(r'M')
@@ -964,16 +1090,22 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     ax_y.yaxis.tick_right()
     if fracPosJ==1.0:
         ax_y.set_xscale('log')
-    mainPlot.set_ylim(ax_y.get_ylim())
-    ax_y.axhline(M_mean, color='black', linestyle='solid', linewidth=2)
+    axYExtremes = ax_y.get_ylim()
+    ax_y.axhline(q_out_mean, color='black', linestyle='solid', linewidth=2)
     ax_y.text(1.9, 1., f'Mean M: {M_mean: .3f}  $\sigma$: {M_VarSq: .3f}   total occurrences: {len(M.flatten())}', color='black', ha='left', fontsize=7, rotation=270, va='top',transform=ax_y.transAxes)
-    ax_y.axhline(M_mean+M_VarSq, color='green', linestyle='dashed', linewidth=1)
-    ax_y.axhline(M_mean-M_VarSq, color='green', linestyle='dashed', linewidth=1)
+    if np.array_equal(M,q_out):
+        ax_y.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
+    if (M_mean-M_VarSq>axYExtremes[0]):
+        ax_y.axhline(M_mean-M_VarSq, color='green', linestyle='dashed', linewidth=1)
+    if (M_mean+M_VarSq<axYExtremes[1]):
+        ax_y.axhline(M_mean+M_VarSq, color='green', linestyle='dashed', linewidth=1)
+    mainPlot.set_ylim(axYExtremes)
     plt.subplots_adjust(hspace=0.7, wspace=0.7)
     handles, labels = mainPlot.get_legend_handles_labels()
     # Create figure-level legend using handles and labels from mainPlot
     fig.legend(handles, labels, bbox_to_anchor=(-0.13, 0.6), loc='center left')
     addInfoLines(mainPlot)
+
 
     plt.figure('QoutVsQin')
     [plt.plot(q_in[t], q_out[t], label=f'traj {t}') for t in someTrajs ]
@@ -1080,7 +1212,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             secondConfData = data[:, 5+nMileStones:5+2*nMileStones ]
 
 
-    for fitTypeAndName in [["2", provaEmail2], ["3", provaEmail3], ["2e3", provaEmail23]]:
+    for fitTypeAndName in [["2", provaEmail2], ["3", provaEmail3], ["2e3", provaEmail23], ["exp", provaEmailExp]]:#, ["2e3_4", provaEmail234]]: #:
         plt.figure('Chi'+fitTypeAndName[0])
         plt.plot(time, avChi)
 
@@ -1115,12 +1247,13 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             linearFitResults['m'] = 'nan'
             linearFitResults['c'] = 'nan'
 
+        plt.title(f'$\chi$ vs time\n'+titleSpecification)
+        plt.xlabel('time')
+        plt.ylabel(r'$\chi$')
+
     results['chiLinearFit'] = linearFitResults
 
-    plt.title(f'$\chi$ vs time\n'+titleSpecification)
-    plt.xlabel('time')
-    plt.ylabel(r'$\chi$')
-    addInfoLines()
+
 
     plt.figure('ChiVsQout')
     plt.plot(avQout, avChi)
@@ -1138,7 +1271,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
         plt.figure('milestones_in')
         for i, milestone in enumerate(mileStones):
-            plt.plot(time, firstConfData[i], label=r'$\tilde{Q}$'+f'={milestone}')
+            plt.plot(time, firstConfData[i], label=r'$\tilde{Q}$'+f'={milestone:.2g}')
         plt.title(f'Fraction of trajectories with overlap with final configuration '+r'$Q_i>\tilde{Q}$'+'\n'+titleSpecification)
         plt.xlabel(r'$t$')
         plt.ylabel(r'$fraction$')
@@ -1254,6 +1387,7 @@ def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
         plt.text(1, xlabel_position[1] - 0.18, initInfo_Line, fontsize=7, ha='right', va='center', transform=plt.gca().transAxes)
     #setting results folders and plots default lines: END
 
+
     #ANALYSIS OF TI FILES: START
     results = {}
     results['TI'] ={'beta':[]}
@@ -1285,10 +1419,9 @@ def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
     therm_HB = []
 
 
-    mcMeas= int(simData['configuration']['mcParameters']['MCmeas'])
-    mcEq= int(simData['configuration']['mcParameters']['MCeq'])
-    firstIndexOfMeasuresAtEq = (int)(np.ceil(mcEq/mcMeas))
-
+    mcMeas= (int)(simData['configuration']['mcParameters']['MCmeas'])
+    mcEq= (int)(simData['configuration']['mcParameters']['MCeq'])
+    firstIndexOfMeasuresAtEq = 0
     measuresToSkipInOOEPlot = 1      #The first measure may be very different even wrt non-eq ones, as it contains the initialization trajectory
     
     with open(thermCheck_filePath, 'r') as file:

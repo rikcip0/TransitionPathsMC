@@ -19,7 +19,6 @@ bool initializeGraph(string &sourceFolder, vector<vector<vector<rInteraction>>> 
     FILE *file;
 
 
-    cout<<"signed var è "<<signedVar<<endl;
     neigh = (vector<int> *)calloc(N, sizeof(vector<int>)); // one array for each spin
     J = (vector<int> *)calloc(N, sizeof(vector<int>));     // one array for each spin
     deg = (int *)calloc(N, sizeof(int));
@@ -185,7 +184,7 @@ bool initializeGraph(string &sourceFolder, vector<vector<vector<rInteraction>>> 
             return false;
         }
 
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 3; i++)
         {
             if (fscanf(file, "%d", &tempInt) != 1)
             {

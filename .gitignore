@@ -2,5 +2,6 @@
 *.log
 *.dat
 *.png
+*.pdf
 Data/Graphs
 Data/MultiRun
