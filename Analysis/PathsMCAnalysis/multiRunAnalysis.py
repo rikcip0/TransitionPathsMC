@@ -53,7 +53,7 @@ if len(sys.argv) > 1:
     for simType in simTypes:
 
         print("analyzing ", simType)
-        singleRunsArchive_path = f"../../Data/Graphs/RRG/p2C3/N80/structure828464/fPosJ1.00/graph8486"#+simType
+        singleRunsArchive_path = f"../../Data/Graphs/RRG/p2C3/N80"#+simType
 
         archivedSingleRuns = find_directories_with_string(singleRunsArchive_path, 'run')
 

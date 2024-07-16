@@ -10,7 +10,7 @@ import scipy.stats as stats
 from scipy.stats import linregress
 
 simulationCode_version = None
-currentAnalysisVersion = 'singleRunVe13'
+currentAnalysisVersion = 'singleRunVe1'
 preset_Path='../../Data/Graphs/RRG/p2C3/N100/structure199200/fPosJ1.00/graph8960/1.2e+02_1_0_inf_100_inf_run1' #for a quick single run analysis
 
 matplotlib.use('Agg') 
@@ -588,7 +588,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     if TIFile is not None:
         with open(TIFile, 'r') as file:
             lines = file.readlines()
-            if len(lines)<3:
+            if len(lines)<1:
                 plt.close('all')
                 writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
                 return None
@@ -597,30 +597,33 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 lines[i] = ' '.join(lines[i].split())
             dataLines = filter(lambda x: not x.startswith('#'), lines)
             data = np.genfromtxt(dataLines, delimiter=' ')
-            mcTimes = data[:,0]
-            cumulativeUs = data[:,-1]
-
-        results['TI']['beta'] = cumulativeUs[-1] 
+            if len(lines)>1:
+                mcTimes = data[:,0]
+                cumulativeUs = data[:,-1]
+                results['TI']['beta'] = cumulativeUs[-1]
+            else:
+                results['TI']['beta'] = data[-1]
         
-        measuresCounter = np.arange(1, len(mcTimes)+1)
-        previousContribution=np.roll(cumulativeUs*measuresCounter,1)
-        previousContribution[0]=0
-        singleUs = cumulativeUs*measuresCounter-previousContribution
-        measuresCounter = np.arange(1, len(mcTimes)+1)
+        if len(lines)>1:
+            measuresCounter = np.arange(1, len(mcTimes)+1)
+            previousContribution=np.roll(cumulativeUs*measuresCounter,1)
+            previousContribution[0]=0
+            singleUs = cumulativeUs*measuresCounter-previousContribution
+            measuresCounter = np.arange(1, len(mcTimes)+1)
 
-        measuresCounter*=mcPrint
-        measuresCounter+=mcEq
+            measuresCounter*=mcPrint
+            measuresCounter+=mcEq
 
-        titleSpecification = 'computed over sampled trajectories'
-        plt.figure('TI_beta_U')
-        plt.title(r'Quantity for thermodynamic integration (U) vs mc sweeps'+'\n'+ titleSpecification)
-        plt.xlabel('mc sweep')
-        plt.ylabel('U')
-        plt.plot(measuresCounter, cumulativeUs) 
-        plt.scatter(measuresCounter, cumulativeUs, label= "cumulative average")
-        plt.scatter(measuresCounter, singleUs, label= "single measure") 
-        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-        addInfoLines()
+            titleSpecification = 'computed over sampled trajectories'
+            plt.figure('TI_beta_U')
+            plt.title(r'Quantity for thermodynamic integration (U) vs mc sweeps'+'\n'+ titleSpecification)
+            plt.xlabel('mc sweep')
+            plt.ylabel('U')
+            plt.plot(measuresCounter, cumulativeUs) 
+            plt.scatter(measuresCounter, cumulativeUs, label= "cumulative average")
+            plt.scatter(measuresCounter, singleUs, label= "single measure") 
+            plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+            addInfoLines()
     else:
         results['TI']['beta'] = 'nan'
 

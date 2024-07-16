@@ -101,6 +101,10 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     stMC_graphID = []
     stMC_betaOfExtraction = []
     stMC_configurationIndex = []
+    stMC_fieldType = []
+    stMC_fieldMean = []
+    stMC_fieldSigma = []
+    stMC_fieldRealization = []
 
     for item in runsData:
         if "results" not in item.keys():
@@ -122,6 +126,16 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
                 else:
                     stMC_betaOfExtraction.append("nan")
                     stMC_configurationIndex.append("nan")
+                if item['configuration']['parameters']['ID'] == 220:
+                    stMC_fieldType.append(item['configuration']['parameters']['fieldType'])
+                    stMC_fieldMean.append(item['configuration']['parameters']['fieldMean'])
+                    stMC_fieldSigma.append(item['configuration']['parameters']['fieldSigma'])
+                    stMC_fieldRealization.append(item['configuration']['parameters']['fieldRealization'])
+                else:
+                    stMC_fieldType.append("nan")
+                    stMC_fieldMean.append("nan")
+                    stMC_fieldSigma.append("nan")
+                    stMC_fieldRealization.append("nan")
 
                 stMC_TIbeta.append(item["results"]['TI']['beta'])
             continue
@@ -217,9 +231,14 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     Qstar= np.array(Qstar, dtype=np.int16)
     h_ext = np.array(h_ext, dtype=np.float64)
 
+    fieldTypeDictionary ={"2":"gauss", "1":"bernoulli", "nan":"noField"}
+    fieldType =  [fieldTypeDictionary[value] for value in fieldType]
     fieldType = np.array(fieldType)
+    fieldMean = [float(value) if (value != "infty" and value!="nan") else ( 0)for value in fieldMean]
     fieldMean = np.array(fieldMean, dtype=np.float64)
+    fieldSigma = [float(value) if (value != "infty" and value!="nan") else (0)for value in fieldSigma]
     fieldSigma = np.array(fieldSigma, dtype=np.float64)
+    fieldRealization = [value if (value != "infty" and value!="nan") else (0)for value in fieldRealization]
     fieldRealization = np.array(fieldRealization)
 
     lastMeasureMC = np.array(lastMeasureMC, dtype=np.int16)
@@ -279,6 +298,14 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     stMC_betaOfExtraction = np.array(stMC_betaOfExtraction)
     stMC_configurationIndex  = np.array(stMC_configurationIndex)
 
+    stMC_fieldType =  [fieldTypeDictionary[value] for value in stMC_fieldType]
+    stMC_fieldType = np.array(stMC_fieldType)
+    stMC_fieldMean = [float(value) if (value != "infty" and value!="nan") else ( 0)for value in stMC_fieldMean]
+    stMC_fieldMean = np.array(stMC_fieldMean, dtype=np.float64)
+    stMC_fieldSigma = [float(value) if (value != "infty" and value!="nan") else (0)for value in stMC_fieldSigma]
+    stMC_fieldSigma = np.array(stMC_fieldSigma, dtype=np.float64)
+    stMC_fieldRealization = [value if (value != "infty" and value!="nan") else (0)for value in stMC_fieldRealization]
+    stMC_fieldRealization = np.array(stMC_fieldRealization)
 
     
     normalizedRefConfMutualQ = refConfMutualQ/N
@@ -422,10 +449,11 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     firstConfigurationIndex = firstConfigurationIndex.astype(str)
     secondConfigurationIndex = secondConfigurationIndex.astype(str)
 
-    for simHin, simHout, simQstar, simGraphID, simT, simBetaOfExtraction, simFirstConfigurationIndex, simSecondConfigurationIndex, simRefConfMutualQ in set(zip(h_in, h_out, Qstar, graphID, T, betaOfExtraction, firstConfigurationIndex, secondConfigurationIndex, refConfMutualQ)):
+    for simHin, simHout, simQstar, simGraphID, simT, simBetaOfExtraction, simFirstConfigurationIndex, simSecondConfigurationIndex, simRefConfMutualQ, simFieldType, simFieldMean, simFieldSigma, simFieldRealization in set(zip(h_in, h_out, Qstar, graphID, T, betaOfExtraction, firstConfigurationIndex, secondConfigurationIndex, refConfMutualQ,fieldType, fieldMean, fieldSigma, fieldRealization)):
         #dovrei anche controllare che le configurazioni di riferimento sono le stesse. Per ora non è un problema
         filt = np.logical_and.reduce([h_in == simHin, h_out == simHout, Qstar == simQstar, graphID == simGraphID, T == simT, betaOfExtraction==simBetaOfExtraction,
-                                      firstConfigurationIndex==simFirstConfigurationIndex, secondConfigurationIndex== simSecondConfigurationIndex])
+                                      firstConfigurationIndex==simFirstConfigurationIndex, secondConfigurationIndex== simSecondConfigurationIndex,
+                                      fieldType==simFieldType, fieldMean==simFieldMean, fieldSigma==simFieldSigma, fieldRealization==simFieldRealization])
         if len(np.unique(beta[filt]))<=4:
             continue
         
@@ -437,14 +465,14 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
         #file_path = f"TIbeta_N{n}C3T{simT}f1.00g{simGraphID}Hin{simHin}Hout{simHout}Qstar{simQstar}.txt"
 
         if simT == np.floor(simT):
-            fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{int(simT)}.txt"
+            fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{int(simT)}_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt"
         else:
-            fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{simT:.1f}.txt"
+            fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{simT:.1f}_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt"
 
         file_path = os.path.join(TIbetaFolder, fileName)
         with open(file_path, 'w') as f:
-            f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T\n")
-            f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT}")
+            f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T fieldType fieldMean fieldSigma fieldRealization\n")
+            f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT} {simFieldType} {simFieldMean} {simFieldSigma} {simFieldRealization}")
             for valore1, valore2 in zip(beta[filt], TIbeta[filt]):
                 f.write('\n{} {}'.format(valore1, valore2))
 
@@ -452,22 +480,24 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
         file_path = os.path.join(ChiFitFolder, fileName)
         if len(beta[filt])>0:
             with open(file_path, 'w') as f:
-                f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T\n")
-                f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT}")
+                f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T fieldType fieldMean fieldSigma fieldRealization\n")
+                f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT} {simFieldType} {simFieldMean} {simFieldSigma} {simFieldRealization}")
                 for bet, m, tau in zip(beta[filt], chi_m[filt], chi_tau[filt]):
                     f.write('\n{} {} {}'.format(bet, m, tau))
     
     stMC_betaOfExtraction = stMC_betaOfExtraction.astype(str)
     stMC_configurationIndex = stMC_configurationIndex.astype(str)
 
-    for simHout, simQstar, simGraphID, simBetaOfExtraction, simConfigurationIndex in set(zip(stMC_Hout, stMC_Qstar, stMC_graphID, stMC_betaOfExtraction, stMC_configurationIndex)):
+    for simHout, simQstar, simGraphID, simBetaOfExtraction, simConfigurationIndex, simFieldType, simFieldMean, simFieldSigma, simFieldRealization in set(zip(stMC_Hout, stMC_Qstar, stMC_graphID, stMC_betaOfExtraction, stMC_configurationIndex, stMC_fieldType, stMC_fieldMean, stMC_fieldSigma, stMC_fieldRealization)):
         #dovrei anche controllare che le configurazioni di riferimento sono le stesse. Per ora non è un problema
-        thisQif = np.unique(refConfMutualQ[np.logical_and.reduce([h_out==simHout, Qstar==simQstar, graphID==simGraphID, betaOfExtraction==simBetaOfExtraction, secondConfigurationIndex==simConfigurationIndex ])])
+        thisQif = np.unique(refConfMutualQ[np.logical_and.reduce([h_out==simHout, Qstar==simQstar, graphID==simGraphID, betaOfExtraction==simBetaOfExtraction, secondConfigurationIndex==simConfigurationIndex,
+                                                                  fieldType==simFieldType, fieldMean==simFieldMean, fieldSigma==simFieldSigma, fieldRealization==simFieldRealization ])])
         
         if len(thisQif)==0:
             continue
         thisQif = thisQif[0]
-        filt = np.logical_and.reduce([stMC_Hout == simHout, stMC_Qstar == simQstar, stMC_graphID == simGraphID,  stMC_betaOfExtraction==simBetaOfExtraction, stMC_configurationIndex==simConfigurationIndex])
+        filt = np.logical_and.reduce([stMC_Hout == simHout, stMC_Qstar == simQstar, stMC_graphID == simGraphID,  stMC_betaOfExtraction==simBetaOfExtraction, stMC_configurationIndex==simConfigurationIndex,
+                                      stMC_fieldType==simFieldType, stMC_fieldMean==simFieldMean, stMC_fieldSigma==simFieldSigma, stMC_fieldRealization==simFieldRealization])
         if len(np.unique(stMC_beta[filt]))<=4:
             continue
 
@@ -476,7 +506,7 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
             continue
 
         #file_path = f"TIbeta_N{n}C3T{simT}f1.00g{simGraphID}Hin{simHin}Hout{simHout}Qstar{simQstar}.txt"
-        file_path = os.path.join(TIbetaFolder,f"{symType}_{simGraphID}_{simHout}_{simQstar}_{thisQif}_inf.txt")
+        file_path = os.path.join(TIbetaFolder,f"{symType}_{simGraphID}_{simHout}_{simQstar}_{thisQif}_inf_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt")
         with open(file_path, 'w') as f:
             f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T\n")
             f.write(f"#{symType} {simGraphID} {simBetaOfExtraction} {simHout} {simQstar}")
