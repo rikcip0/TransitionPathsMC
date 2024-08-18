@@ -1,7 +1,10 @@
 TODO:
-sistema i 2 fit
-multiRunAnalysis
 
+PathsMCAnalysis
+-sistema i 2 fit
+
+multiRunAnalysis
+-implementa correttamente l archivio dei paths per non doverli riaggiornare
 
 
 
