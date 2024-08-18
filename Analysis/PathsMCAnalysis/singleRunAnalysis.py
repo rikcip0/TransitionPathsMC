@@ -443,7 +443,6 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     h_in = simData['configuration']['parameters']['h_in']
     h_out = simData['configuration']['parameters']['h_out']
     Qstar = (int)(simData['configuration']['parameters']['Qstar']) 
-
     
     totalMC = (int)(simData['configuration']['mcParameters']['MC'])
     mcEq = (int)(simData['configuration']['mcParameters']['MCeq'])
@@ -456,6 +455,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     parametersInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('-','',1).replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter not in graphInfoKeys+otherInfoKeys+fieldInfoKeys])
     graphInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in graphInfoKeys])
     
+    
     parametersSettingID = simData['configuration']['parameters']['ID']
     refConfSettingID = simData['configuration']['referenceConfigurationsInfo']['ID']
     if refConfSettingID== 50 or refConfSettingID== 56:
@@ -464,13 +464,16 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     else:
         Qif = (int)(simData['configuration']['referenceConfigurationsInfo']['mutualOverlap'])
 
+
     if parametersSettingID== 210:
         fieldInfoKeysDict = {'fieldType': 'type', 'fieldMean':r'$\mu$', 'fieldSigma': r'$\sigma$'}
         fieldInfo_Line = ' '.join([str(fieldInfoKeysDict[parameter]) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in fieldInfoKeys])
         graphInfo_Line += ", w/ " + fieldTypesDict[simData['configuration']['parameters']['fieldType']]+ " field "+fieldInfo_Line+" (r"+ simData['configuration']['parameters']['fieldRealization'] +")"
-
+        configurationsInfo['ID']+= ''.join([str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in fieldInfoKeys])
+    configurationsInfo['ID']+= str(parametersSettingID)+str(refConfSettingID)+''.join([str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in graphInfoKeys]) 
+    configurationsInfo['ID']+=str(parametersSettingID) + str(simData['configuration']['trajs_Initialization']['ID'])
+    
     measuresInfo_Line = r'MC$_{eq}$='+f'{mcEq:.2g}'+' '+ r'MC$_{pr}$='+f'{mcPrint:.2g}'+' '+r'MC$_{meas}$='+f'{mcMeas:.2g}'
-
     settingInfo_Line = parametersInfo_Line+'\n'+ graphInfo_Line+'\n'+measuresInfo_Line
 
     if refConfSettingID== 54:
@@ -1273,7 +1276,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     addInfoLines()
 
     xForDerivative2, yDerivative2= aDiscreteDerivative(xForDerivative, yDerivative)
-    plt.figure('Chi2Deriv')
+    plt.figure('ChiDeriv2')
     plt.plot(xForDerivative2, yDerivative2)
     plt.title(f'Second derivative of $\chi$ vs '+r'time'+'\n'+titleSpecification)
     plt.xlabel(r'time')
