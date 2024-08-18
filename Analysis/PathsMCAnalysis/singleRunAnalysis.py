@@ -28,6 +28,14 @@ def meanAndStdErrForParametricPlot(toBecomeX, toBecomeY):
     y_median_values = np.asarray([np.median(toBecomeY[toBecomeX == x_value]) for x_value in x_unique_values])
     return x_unique_values, y_mean_values, y_var_values, y_median_values
 
+def aDiscreteDerivative(xArray, yArray):
+    if len(xArray) < 4 or len(yArray) < 4:
+        raise ValueError("Not enough points to calculate the derivative.")
+    if len(xArray)!= len(yArray):
+        raise ValueError("Something wrong: x and y datasets for calculating the derivative should have the same length.")
+    derivative = (((yArray[1:]-yArray[:-1])/(xArray[1:]-xArray[:-1]))[:-2]+2.*((yArray[2:]-yArray[:-2])/(xArray[2:]-xArray[:-2]))[:-1]+((yArray[3:]-yArray[:-3])/(xArray[3:]-xArray[:-3])))/4.
+    return xArray[:-3], derivative
+
 def progressiveLinearFit(x, y, threshold_chi_square=10.):
 
     par_values = []
@@ -1256,7 +1264,21 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     results['chiLinearFit'] = linearFitResults
 
+    xForDerivative, yDerivative= aDiscreteDerivative(time, avChi)
+    plt.figure('ChiDeriv')
+    plt.plot(xForDerivative, yDerivative)
+    plt.title(f'Derivative of $\chi$ vs '+r'time'+'\n'+titleSpecification)
+    plt.xlabel(r'time')
+    plt.ylabel(r'$\chi$'+'\'')
+    addInfoLines()
 
+    xForDerivative2, yDerivative2= aDiscreteDerivative(xForDerivative, yDerivative)
+    plt.figure('Chi2Deriv')
+    plt.plot(xForDerivative2, yDerivative2)
+    plt.title(f'Second derivative of $\chi$ vs '+r'time'+'\n'+titleSpecification)
+    plt.xlabel(r'time')
+    plt.ylabel(r'$\chi$'+'\'\'')
+    addInfoLines()
 
     plt.figure('ChiVsQout')
     plt.plot(avQout, avChi)
