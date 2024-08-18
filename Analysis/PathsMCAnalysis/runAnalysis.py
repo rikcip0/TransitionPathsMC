@@ -5,47 +5,68 @@ import sys
 
 from singleRunAnalysis import singleRunAnalysis
 
-def find_directories_with_strings(parent_dir, target_strings):
-    matching_dirs = []
-    # Traverse through all subdirectories recursively
-    for root, dirs, files in os.walk(parent_dir):
-        for directory in dirs:
-            # Check if the directory name contains the first target string
-            if target_strings[0] in directory:
-                # Check if any of the eventual other strings are in any part of the full name
-                if all(string in os.path.join(root,directory) for string in target_strings[1:]):
-                    matching_dirs.append(os.path.join(root, directory))
+fnameOfFoldersContainingRuns = ["stdMCs", "PathsMCs"]
+
+def findFoldersWithString(parent_dir, target_strings):
+    result = []
     
-    return matching_dirs
+    # Funzione ricorsiva per cercare le cartelle
+    def search_in_subfolders(directory, livello=1):
+        if livello > 10:
+            return
+        for root, dirs, files in os.walk(directory):
+            for dir_name in dirs:
+                full_path = os.path.join(root, dir_name)
+                # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
+                if dir_name in fnameOfFoldersContainingRuns:
+                    # Cerca le cartelle che contengono "_run" nel loro nome
+                    for subdir in os.listdir(full_path):
+                        if all(string in subdir for string in target_strings):
+                            result.append(os.path.join(full_path, subdir))
+                    return  # Evita di cercare ancora più in profondità
+                
+            # Se non troviamo "stdMCs" o "PathsMCs", passiamo al livello successivo
+            for dir_name in dirs:
+                search_in_subfolders(os.path.join(root, dir_name), livello+1)
+            break  # Si processa solo il primo livello di cartelle per evitare ricorsione non necessaria
+    
+    # Inizia la ricerca dalla directory di base
+    search_in_subfolders(parent_dir)
+    
+    return result
+
 
 if len(sys.argv) > 1:
-    analysisVsSimTypesDict = {"all": "any", "RRG":"RRG", "ER":"ER", "SqLatt": "SqLatt"}
+    archive_path = f"../../Data/Graphs"
+    analysisVsSimTypesDict = {"all": "any"}
     analysisType = sys.argv[1]
     additional_strings= sys.argv[2:]
 
     if analysisType in analysisVsSimTypesDict:
         simType = analysisVsSimTypesDict[analysisType]
-        archive_path = f"../../Data/Graphs"
-        if analysisType!="all":
+        if simType!="any":
             archive_path+="/"+analysisType
+    elif os.path.exists(archive_path+"/"+analysisType):
+        simType=analysisType
+        archive_path+="/"+analysisType
     else:
-        print(f"Analysis of type {analysisType} not implemented.\n")
+        print(f"Analysis of type {analysisType} not implemented.")
+        print(f"Also, "+archive_path+"/"+analysisType+" folder does not exist.\n")
         print("Implemented analysis types include:")
         for implementedAnalysis in analysisVsSimTypesDict:
             print(implementedAnalysis)
         print("\n")
         exit()
 
-    selected_runs = find_directories_with_strings(archive_path, ['_run', *additional_strings])
+    print("A")
+    selected_runs = findFoldersWithString(archive_path, ['_run', *additional_strings])
     if not selected_runs:
         raise FileNotFoundError(f"No files of type  found in the specified path.")
     
     print(f"Analyzing all runs of type {simType}. {len(selected_runs)} runs found.")
 
-    i=0
-    for run in sorted(selected_runs, reverse=True):
-        i+=1 
-        print(f"Analyzing simulation #{i} out of {len(selected_runs)}\n")
+    for i, run in enumerate(sorted(selected_runs, reverse=True)):
+        print(f"Analyzing simulation #{i+1} out of {len(selected_runs)}\n")
         singleRunAnalysis(run)
     # Get the stories names in the folder
     print("Analysis completed.\n")
