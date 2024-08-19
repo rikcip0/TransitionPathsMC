@@ -5,7 +5,7 @@ import sys
 
 from singleRunAnalysis import singleRunAnalysis
 
-fnameOfFoldersContainingRuns = ["stdMCs", "PathsMCs"]
+nameOfFoldersContainingRuns = ["stdMCs", "PathsMCs"]
 
 def findFoldersWithString(parent_dir, target_strings):
     result = []
@@ -18,7 +18,7 @@ def findFoldersWithString(parent_dir, target_strings):
             for dir_name in dirs:
                 full_path = os.path.join(root, dir_name)
                 # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
-                if dir_name in fnameOfFoldersContainingRuns:
+                if dir_name in nameOfFoldersContainingRuns:
                     # Cerca le cartelle che contengono "_run" nel loro nome
                     for subdir in os.listdir(full_path):
                         if all(string in os.path.join(full_path, subdir) for string in target_strings):
@@ -58,7 +58,6 @@ if len(sys.argv) > 1:
         print("\n")
         exit()
 
-    print("A")
     selected_runs = findFoldersWithString(archive_path, ['_run', *additional_strings])
     if not selected_runs:
         raise FileNotFoundError(f"No files of type  found in the specified path.")

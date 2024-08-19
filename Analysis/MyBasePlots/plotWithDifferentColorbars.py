@@ -29,8 +29,8 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
     fBetaOfExt=betaOfExt
     betas = betas.astype(str)
-    betaOfExt = betaOfExt.astype(str)
-
+    betaOfExt = np.asarray(betaOfExt, dtype=str)
+    print("unici", np.unique(betaOfExt))
     for val in betas:
         if len(betas)==1 or val =="nan":
             normalized= 1.
@@ -49,6 +49,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     trajsExtremesInitID = trajsExtremesInitID[xSort]
     markerShapeVariable = markerShapeVariable[xSort]
     betaOfExt = betaOfExt[xSort]
+
     Qif = Qif[xSort]
     if yerr is not None:
         yerr = yerr[xSort]
@@ -59,7 +60,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     fig = plt.figure(name, figsize=(10, figHeight))  # Adjust the figsize as needed
     gs = fig.add_gridspec(1+2*nColorbars, 1, height_ratios=[plotToBarRatio] +  [1.2,1] +[0.9,1] * (nColorbars-1))
 
-    Ts = np.unique(markerShapeVariable)
+    curveTypes = np.unique(markerShapeVariable,axis=0)
     trajsExtInitIDs = np.unique(trajsExtremesInitID)
     Qifs = np.unique(Qif)
     # Plot the main scatter plot
@@ -67,7 +68,6 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     ax1.set_title(title)
     ax1.set_xlabel(xName)
     ax1.set_ylabel(yName)
-
     edgeColorMap = {}
 
     for key, value in edgeColorPerInitType.items():
@@ -80,26 +80,39 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
     ax1.scatter([],[], label=f"        ", color="None")
     ax1.scatter([],[], label=markerShapeVariableName+":", color="None")
-
-    for i, t in enumerate(Ts):
+    for i, t in enumerate(curveTypes):
+        if i>=len(markers):
+            continue
         marker= markers[i]
-        if yerr is None:
-            ax1.scatter([],[], label=f"{t}", color="grey", marker=marker)
+        if t.ndim==0:
+            if yerr is None:
+                ax1.scatter([],[], label=f"{t}", color="grey", marker=marker)
+            else:
+                ax1.errorbar([],[], label=f"{t}", color="grey", marker=marker)
         else:
-            ax1.errorbar([],[], label=f"{t}", color="grey", marker=marker)
+            if yerr is None:
+                ax1.scatter([],[], label=f"{', '.join(map(str, t ))}", color="grey", marker=marker)
+            else:
+                ax1.errorbar([],[], label=f"{', '.join(map(str, t))}", color="grey", marker=marker)
+
     if additionalMarkerTypes is not None:
             ax1.errorbar([],[], label=f"{additionalMarkerTypes[3]}", color="grey", marker=".")
     
     if fitType!='':
         ax1.scatter([],[], label="", color="None")
-
-    for i, t in enumerate(Ts):
+    print(markerShapeVariable)
+    for i, t in enumerate(curveTypes):
+        print("t=",t)
+        print([variable==t for variable in markerShapeVariable])
         marker = markers[i]
         for ext in trajsExtInitIDs:
             for q in Qifs:
-                outCondition = np.logical_and(np.logical_and(trajsExtremesInitID == ext, markerShapeVariable == t),
-                                            Qif == q)
+                print([variable==t for variable in markerShapeVariable])
+                outCondition = np.logical_and.reduce([trajsExtremesInitID == ext, [variable==t for variable in markerShapeVariable],
+                                            Qif == q])
+                print("e facciamo calcio 2")
                 for betOfEx in np.unique(betaOfExt[outCondition]):
+                    print("e facciamo calcio")
                     condition = np.logical_and(outCondition, betaOfExt==betOfEx)
                     if len(x[condition]) == 0:
                         continue

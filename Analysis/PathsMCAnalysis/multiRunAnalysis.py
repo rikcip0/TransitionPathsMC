@@ -8,64 +8,78 @@ import numpy as np
 
 from singleMultiRunAnalysis import singleMultiRunAnalysis
 
-def find_directories_with_strings(parent_dir, target_strings):
-    matching_dirs = []
-    # Traverse through all subdirectories recursively
-    for root, dirs, files in os.walk(parent_dir):
-        for directory in dirs:
-            # Check if the directory name contains the first target string
-            if target_strings[0] in directory:
-                # Check if any of the eventual other strings are in any part of the full name
-                if all(string in os.path.join(root,directory) for string in target_strings[1:]):
-                    matching_dirs.append(os.path.join(root, directory))
+archive_path = f"../../Data/Graphs"
+nameOfFoldersContainingRuns = ["stdMCs", "PathsMCs"]
+
+def findFoldersWithString(parent_dir, target_strings):
+    result = []
     
-    return matching_dirs
+    # Funzione ricorsiva per cercare le cartelle
+    def search_in_subfolders(directory, livello=1):
+        if livello > 10:
+            return
+        for root, dirs, files in os.walk(directory):
+            for dir_name in dirs:
+                full_path = os.path.join(root, dir_name)
+                # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
+                if dir_name in nameOfFoldersContainingRuns:
+                    # Cerca le cartelle che contengono "_run" nel loro nome
+                    for subdir in os.listdir(full_path):
+                        if all(string in os.path.join(full_path, subdir) for string in target_strings):
+                            result.append(os.path.join(full_path, subdir))
+                    return  # Evita di cercare ancora più in profondità
+                
+            # Se non troviamo "stdMCs" o "PathsMCs", passiamo al livello successivo
+            for dir_name in dirs:
+                search_in_subfolders(os.path.join(root, dir_name), livello+1)
+            break  # Si processa solo il primo livello di cartelle per evitare ricorsione non necessaria
+    
+    # Inizia la ricerca dalla directory di base
+    search_in_subfolders(parent_dir)
+    
+    return result
 
-
-def find_directories_with_string(parent_dir, target_string):
-    matching_dirs = []
-    # Traverse through all subdirectories recursively
-    for root, dirs, files in os.walk(parent_dir):
-        for directory in dirs:
-            # Check if the directory name contains the target string
-            if target_string in directory:
-                matching_dirs.append(os.path.join(root, directory))
-    return matching_dirs
-
-if len(sys.argv) > 1:
-    analysisVsSimTypesDict = {"all":"all","ER":"ER", "RRG":"RRG"}
-    analysisType = sys.argv[1]
+if len(sys.argv) != 1:
+    analysisVsSimTypesDict = {"all":"any","ER":"ER", "RRG":"RRG"}
+    
+    requestedAnalysis = sys.argv[1]
     additional_strings= sys.argv[2:]
 
-    if analysisType not in analysisVsSimTypesDict:
-        print(f"Analysis of type {analysisType} not implemented.\n")
+    noUpdate = ("noUpdate" in additional_strings)
+    if noUpdate:
+        additional_strings.remove("noUpdate")
+
+    if requestedAnalysis in analysisVsSimTypesDict:
+        if requestedAnalysis!="all":
+            simType = analysisVsSimTypesDict[requestedAnalysis]
+        else:
+            simTypes = ["ER", "RRG"]
+    if os.path.exists(archive_path+"/"+requestedAnalysis):
+        archive_path+="/"+requestedAnalysis
+        simTypes= [requestedAnalysis.split('/')[0].split('\\')[0]]
+    else:
+        print(f"Analysis of type {requestedAnalysis} not implemented.")
+        print(f"Also, "+archive_path+"/"+requestedAnalysis+" folder does not exist.\n")
         print("Implemented analysis types include:")
         for implementedAnalysis in analysisVsSimTypesDict:
             print(implementedAnalysis)
         print("\n")
         exit()
-    
-    if analysisType == "all":
-        simTypes = ["ER", "RRG"]
-    else:
-        simTypes = [analysisVsSimTypesDict[analysisType]]
 
-    for simType in simTypes:
+    for i, simType in enumerate(simTypes):
 
         print("analyzing ", simType)
-        singleRunsArchive_path = f"../../Data/Graphs/RRG/p2C3/N80"#+simType
 
-        archivedSingleRuns = find_directories_with_string(singleRunsArchive_path, 'run')
-
-
-        parentFolder = f"../../Data/MultiRun/"+simType
-        os.makedirs(parentFolder, exist_ok=True)
-        previousRuns_JsonFile =parentFolder+"/runsData.json"
+        archivedSingleRuns = findFoldersWithString(archive_path, '_run')
+        parentFolderForResults = f"../../Data/MultiRun/"+requestedAnalysis
+        os.makedirs(parentFolderForResults, exist_ok=True)
+        presentRunsData = []
+        """
+        previousRuns_JsonFile =parentFolderForResults+"/runsData.json"
         if os.path.exists(previousRuns_JsonFile):
             with open(previousRuns_JsonFile, 'r') as file:
                 presentRunsData = json.load(file)
-        else:
-            presentRunsData = []
+        """
 
         oldDataIDs=[]
         for run in presentRunsData:
@@ -92,29 +106,13 @@ if len(sys.argv) > 1:
         #with open(previousRuns_JsonFile, "w") as json_file:
                 #json.dump(presentRunsData, json_file, indent=4) 
 
-        selected_runGroups = [
-        [
-            [
-                item for item in presentRunsData if (float(item["configuration"]["parameters"]["fPosJ"]) == x[0] and float(item["configuration"]["parameters"]["C"]) == x[1])
-            ],
-            f"p2C{x[1]}fPosJ{x[0]:.2f}"
-        ]
-        for x in [[1.,3],[0.5,3], [1.0,3], [0.5,4]]
-        ]
-
-        selected_runGroups= [runGroup for runGroup in selected_runGroups if len(runGroup[0])>1]
-
-        if not selected_runGroups:
+        if not presentRunsData:
             raise FileNotFoundError(f"No files of type  found in the specified path.")
-        print(f"Analyzing all run groups of type {simType}. {len(selected_runGroups)} groups found.")
+        print(f"Analyzing all run groups of type {simType}. {len(simTypes)} groups found.")
 
-        i=0
-        for i, runGroup in enumerate(selected_runGroups):
-
-            analysis_path = os.path.join(parentFolder, runGroup[1])
-            print(f"Analyzing run group #{i} ({runGroup[1]}) out of {len(selected_runGroups)}\n")
-            singleMultiRunAnalysis(runGroup[0], analysis_path,simType)
+        print(f"Analyzing run group #{i} ({simTypes[i]}) out of {len(simTypes)}\n")
+        singleMultiRunAnalysis(presentRunsData, parentFolderForResults, simType)
         # Get the stories names in the folder
         print("Analysis completed.\n")
 else:
-    singleMultiRunAnalysis("")
+    print("Analysis type not specified.")

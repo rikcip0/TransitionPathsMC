@@ -14,7 +14,7 @@ from scipy.optimize import curve_fit
 from uncertainties import ufloat
 
 from MyBasePlots.plotWithDifferentColorbars import plotWithDifferentColorbars
-
+minNumberOfSingleRunsToDoAnAnalysis=4
 
 def delete_files_in_folder(folder_path):
     for item in os.listdir(folder_path):
@@ -27,7 +27,7 @@ def delete_files_in_folder(folder_path):
             # Dopo aver eliminato i file, elimina la cartella stessa
             os.rmdir(item_path)
 
-def singleMultiRunAnalysis(runsData, analysis_path, symType):
+def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
 
     plt.rcParams["axes.grid"]= True
     plt.rcParams['lines.marker'] = 'o'
@@ -36,14 +36,10 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     markers = ['.', '^', 'o', 'v','p', 'h']
 
 
-
-    plotsFolder = os.path.join(analysis_path, "Plots")
-    os.makedirs(plotsFolder, exist_ok=True)
-    # Define the path of destination for the plots
-
     ID = []
     simulationType =[]
     fPosJ = []
+    C = []
     graphID = []
 
     refConfInitID =[]
@@ -143,19 +139,22 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
         print("analyzing", item['configuration']['ID'])  #decommentare per controllare quando c'è un intoppo
         ID.append(item['configuration']['ID']) #ID only contains new IDs. will be used to check what analysis to repeat
         refConfInitID.append(item['configuration']['referenceConfigurationsInfo']['ID'])
-        graphID.append(item['configuration']['parameters']['graphID'])
 
 
         #trajsJumpsInitID.append(item['configuration']['trajs_jumpsInitialization']['ID'])
 
         n=(int)(item['configuration']['parameters']['N'])
         N.append(n)
+        C.append(item['configuration']['parameters']['C']) 
+        fPosJ.append(item['configuration']['parameters']['fPosJ']) 
+        graphID.append(item['configuration']['parameters']['graphID'])
+        
+        h_ext.append(item['configuration']['parameters']['hext'])
         beta.append(item['configuration']['parameters']['beta'])
         T.append(item['configuration']['parameters']['T'])
-        h_ext.append(item['configuration']['parameters']['hext'])
+        
         h_in.append(item['configuration']['parameters']['h_in'])
         h_out.append(item['configuration']['parameters']['h_out'])
-        fPosJ.append(item['configuration']['parameters']['fPosJ']) 
         Qstar.append(item['configuration']['parameters']['Qstar'])
         
         if item['configuration']['parameters']['ID']==210:
@@ -227,6 +226,7 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     beta = np.array(beta, dtype=np.float64)
     h_in = np.array(h_in, dtype=np.float64)
     h_out = np.array(h_out, dtype=np.float64)
+    C = np.array(C, dtype=np.int16)
     fPosJ = np.array(fPosJ, dtype=np.float64)
     Qstar= np.array(Qstar, dtype=np.int16)
     h_ext = np.array(h_ext, dtype=np.float64)
@@ -234,15 +234,15 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     fieldTypeDictionary ={"2":"gauss", "1":"bernoulli", "nan":"noField"}
     fieldType =  [fieldTypeDictionary[value] for value in fieldType]
     fieldType = np.array(fieldType)
-    fieldMean = [float(value) if (value != "infty" and value!="nan") else ( 0)for value in fieldMean]
+    fieldMean = [float(value) if (value != "infty" and value!="nan") else ( 0.) for value in fieldMean]
     fieldMean = np.array(fieldMean, dtype=np.float64)
-    fieldSigma = [float(value) if (value != "infty" and value!="nan") else (0)for value in fieldSigma]
+    fieldSigma = [float(value) if (value != "infty" and value!="nan") else (0.) for value in fieldSigma]
     fieldSigma = np.array(fieldSigma, dtype=np.float64)
-    fieldRealization = [value if (value != "infty" and value!="nan") else (0)for value in fieldRealization]
+    fieldRealization = [value if (value != "infty" and value!="nan") else (0) for value in fieldRealization]
     fieldRealization = np.array(fieldRealization)
 
-    lastMeasureMC = np.array(lastMeasureMC, dtype=np.int16)
-    MCprint = np.array(MCprint, dtype=np.int16)
+    lastMeasureMC = np.array(lastMeasureMC, dtype=np.int64)
+    MCprint = np.array(MCprint, dtype=np.int64)
 
     nMeasures = lastMeasureMC//MCprint #not completely correcty
 
@@ -254,7 +254,9 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     firstConfigurationIndex = np.array(firstConfigurationIndex)
     secondConfigurationIndex = [int(value) if value != "nan" else np.nan for value in secondConfigurationIndex]
     secondConfigurationIndex = np.array(secondConfigurationIndex)
-
+    betaOfExtraction = betaOfExtraction.astype(str)
+    firstConfigurationIndex = firstConfigurationIndex.astype(str)
+    secondConfigurationIndex = secondConfigurationIndex.astype(str)
 
     trajsExtremesInitID = np.array(trajsExtremesInitID, dtype=np.int16)
     trajsJumpsInitID = np.array(trajsJumpsInitID, dtype=np.int16)
@@ -306,29 +308,37 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
     stMC_fieldSigma = np.array(stMC_fieldSigma, dtype=np.float64)
     stMC_fieldRealization = [value if (value != "infty" and value!="nan") else (0)for value in stMC_fieldRealization]
     stMC_fieldRealization = np.array(stMC_fieldRealization)
-
     
     normalizedRefConfMutualQ = refConfMutualQ/N
 
     shortDescription= {70: "Random", 71: "Ref 12", 72: "Ref 21", 73: "Annealing", 74: "Annealing", 740: "AnnealingF"}
     edgeColorPerInitType={ 70: "lightGreen", 71: "black", 72: "purple", 73: "orange", 74: "orange", 740: "red"}
 
-    def myMultiRunStudy(studyName, x, xName, subfolderingVariable, subfolderingVariableName, markerShapeVariable, markerShapeVariableName):
+    def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableName, markerShapeVariable, markerShapeVariableName):
+
+        if len(np.unique(x[filter]))<3:
+            return
+        
         thisStudyFolder= os.path.join(plotsFolder, studyName)
+
         if not os.path.exists(thisStudyFolder):
-            os.makedirs(thisStudyFolder)
+            os.makedirs(thisStudyFolder, exist_ok=True)
         else:
             delete_files_in_folder(thisStudyFolder)
 
         for v, sim_Hin, sim_Hout, sim_Qstar in set(zip(subfolderingVariable, h_in, h_out, Qstar)):
-            filt = np.logical_and.reduce([subfolderingVariable==v, h_in==sim_Hin, h_out==sim_Hout, Qstar==sim_Qstar])
-
+            print("AEE1",x)
+            filt = np.logical_and.reduce([filter,
+                                          subfolderingVariable==v,
+                                          h_in==sim_Hin, h_out==sim_Hout, Qstar==sim_Qstar
+                                          ])
+            print("AEE",x[filt])
             if len(np.unique(x[filt]))<3:
                 continue
 
             theseFiguresFolder= os.path.join(thisStudyFolder, f"{subfolderingVariableName}{v}", f"{sim_Hin}_{sim_Hout}_{sim_Qstar}")
             if not os.path.exists(theseFiguresFolder):
-                os.makedirs(theseFiguresFolder)
+                os.makedirs(theseFiguresFolder, exist_ok=True)
             else:
                 delete_files_in_folder(theseFiguresFolder)
 
@@ -345,32 +355,41 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
                         stMC_corrBetaAndQif[filt]=[sim_Bet,sim_Qif]
                         filt=tempFilt
                 additional = [stMC_beta, stMC_TIbeta, stMC_corrBetaAndQif, "inf"]
+            plt.plot(x[filt],meanBarrier[filt])
 
             TIbetaMainPlot = plotWithDifferentColorbars(f"TIbeta", x[filt], xName, TIbeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
             betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
             trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType,
             markerShapeVariable[filt], markerShapeVariableName,
-            nGraphs=len(np.unique(graphID[filt])), additionalMarkerTypes=additional)
+            nGraphs=len(np.unique(graphID[filt])), 
+            additionalMarkerTypes=additional
+            )
+
+            mainPlot = plotWithDifferentColorbars(f"meanBarrier", x[filt], xName, meanBarrier[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+                        betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                        trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
+                        yerr=stdDevBarrier[filt], nGraphs=len(np.unique(graphID[filt])))
             
-
-
-
-            mainPlot = plotWithDifferentColorbars(f"TIhout", x[filt], xName, TIhout[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
-                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType,
-                    markerShapeVariable[filt], markerShapeVariableName,
-                    nGraphs=len(np.unique(graphID[filt])))
-                
-            mainPlot = plotWithDifferentColorbars(f"TIQstar", x[filt], xName, TIQstar[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
-                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType,
-                    markerShapeVariable[filt], markerShapeVariableName,
-                    nGraphs=len(np.unique(graphID[filt])))
-                
             mainPlot = plotWithDifferentColorbars(f"avEnergy", x[filt], xName, avEnergy[filt], "energy", "Mean average energy over trajectory vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                     yerr=avEnergyStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
+            
+            mainPlot = plotWithDifferentColorbars(f"muAvEnergy", x[filt], xName, muAvEnergy[filt], r"$\mu$", r"$\mu$"+" vs "+ xName+"\n"+specificationLine,
+                            betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                            trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
+                            yerr=stdDevBarrier[filt], fitType='', xscale='', 
+                            #yscale='log', 
+                            nGraphs=len(np.unique(graphID[filt])))
+            tempFilt=filt
+            for t in np.unique(markerShapeVariable[filt]):
+                filt = np.logical_and(np.all(markerShapeVariable == t, axis=markerShapeVariable.ndim-1), tempFilt)
+                if len(ID[filt])>0:
+                    mainPlot = plotWithDifferentColorbars(f"muAvEnergy_{markerShapeVariableName}{t}", x[filt], xName, muAvEnergy[filt], r"$\mu$", r"$\mu$"+" vs "+ xName+"\n"+specificationLine,
+                            betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                            trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
+                            yerr=stdDevBarrier[filt], fitType='', xscale='', yscale='', nGraphs=len(np.unique(graphID[filt])))
+            filt=tempFilt
 
             mainPlot = plotWithDifferentColorbars(f"nJumps", x[filt], xName, nJumps[filt], "# jumps", "Mean number of jumps per spin over trajectory vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
@@ -392,138 +411,148 @@ def singleMultiRunAnalysis(runsData, analysis_path, symType):
                     trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                     yerr=qDistStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
-            mainPlot = plotWithDifferentColorbars(f"meanBarrier", x[filt], xName, meanBarrier[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
-                        betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                        trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
-                        yerr=stdDevBarrier[filt], nGraphs=len(np.unique(graphID[filt])))
-
             mainPlot = plotWithDifferentColorbars(f"tau", x[filt], xName, chi_tau[filt], r"$\tau_{trans}$", r"transient time $\tau_{trans}$ vs "+ xName+"\n"+specificationLine,
                         betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                         trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                         yerr=stdDevBarrier[filt], nGraphs=len(np.unique(graphID[filt])))
-
                 
             mainPlot = plotWithDifferentColorbars(f"realTime", x[filt], xName, realTime[filt], "computer time (seconds)", "Seconds required to perform 10^5 mc sweeps vs "+ xName+"\n"+specificationLine,
                         betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                         trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
                         yerr=realTimeErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
-            mainPlot = plotWithDifferentColorbars(f"muAvEnergy", x[filt], xName, muAvEnergy[filt], r"$\mu$", r"$\mu$"+" vs "+ xName+"\n"+specificationLine,
-                            betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                            trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
-                            yerr=stdDevBarrier[filt], fitType='', xscale='', yscale='log', nGraphs=len(np.unique(graphID[filt])))
-            
-            tempFilt=filt
-            for t in np.unique(markerShapeVariable[filt]):
-                filt = np.logical_and(markerShapeVariable==t, tempFilt)
-                if len(ID[filt])>0:
-                    mainPlot = plotWithDifferentColorbars(f"muAvEnergy_{markerShapeVariableName}{t}", x[filt], xName, muAvEnergy[filt], r"$\mu$", r"$\mu$"+" vs "+ xName+"\n"+specificationLine,
-                            betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                            trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType, markerShapeVariable[filt], markerShapeVariableName,
-                            yerr=stdDevBarrier[filt], fitType='', xscale='', yscale='', nGraphs=len(np.unique(graphID[filt])))
-            filt=tempFilt
+            mainPlot = plotWithDifferentColorbars(f"TIhout", x[filt], xName, TIhout[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                    trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType,
+                    markerShapeVariable[filt], markerShapeVariableName,
+                    nGraphs=len(np.unique(graphID[filt])))
+                
+            mainPlot = plotWithDifferentColorbars(f"TIQstar", x[filt], xName, TIQstar[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                    trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType,
+                    markerShapeVariable[filt], markerShapeVariableName,
+                    nGraphs=len(np.unique(graphID[filt])))
+                
 
 
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
             for fig_name in figs:
                 fig = plt.figure(fig_name)
                 filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
+                print(filename)
                 fig.savefig(filename, bbox_inches='tight')
             plt.close('all')
 
+    selectedRunGroups_FiltersAndNames = [
+        [
+            np.logical_and(C==c, fPosJ==f),
+            f"p2C{c}/fPosJ{f:.2f}"
+        ]
+        for c,f in set(zip(C,fPosJ))
+        ]
 
-    Results_path = os.path.join(analysis_path,"../..","OverallResults")
-    if not os.path.exists(Results_path):
-        os.makedirs(Results_path)
+    selectedRunGroups_FiltersAndNames= [runGroup for runGroup in selectedRunGroups_FiltersAndNames if runGroup[0].sum()>minNumberOfSingleRunsToDoAnAnalysis]
 
-    TIbetaFolder= os.path.join(Results_path, "TIbeta")
-    if not os.path.exists(TIbetaFolder):
-        os.makedirs(TIbetaFolder)
+    for runGroupFilter, runGroupName in selectedRunGroups_FiltersAndNames:
 
-    ChiFitFolder = os.path.join(Results_path, "ChiData")
-    if not os.path.exists(ChiFitFolder):
-        os.makedirs(ChiFitFolder)
+        analysis_path = parentAnalysis_path+"/"+runGroupName
+        plotsFolder = os.path.join(analysis_path, "Plots")
+        os.makedirs(plotsFolder, exist_ok=True)
 
+        if len(np.unique(N[runGroupFilter]))>1: 
+            print(np.unique(N[runGroupFilter]))
+            tempQstar= Qstar #così, slice-ando rispetto a N unisco i casi con q_star uguale
+            Qstar= Qstar/N
+            print(Qstar)
+            a = N>0 
+            myMultiRunStudy(runGroupFilter, "StudyInN", N, "N", a , "AO" , np.array(list(zip(T, beta))), "T, beta")
+            Qstar=tempQstar
+        if len(np.unique(beta[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", N, "N", np.array(list(zip(T, graphID))), "T, graphID")
+        return
 
-    betaOfExtraction = betaOfExtraction.astype(str)
-    firstConfigurationIndex = firstConfigurationIndex.astype(str)
-    secondConfigurationIndex = secondConfigurationIndex.astype(str)
+        if len(np.unique(T[runGroupFilter]))>2:
+            myMultiRunStudy(filter=runGroupFilter,studyName="StudyInT", x=T,  xName="T", subfolderingVariable=N, subfolderingVariableName="N", markerShapeVariable=beta, markerShapeVariableName=r"beta")
+            
+        if len(np.unique(fieldRealization))>1:
+            myMultiRunStudy(runGroupFilter,"StudyInBeta2", beta, r"beta", N, "N", fieldRealization, "field")
+        if len(np.unique((T*N)[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInNT", N*T, "NT",N, "N", beta, r"beta")
 
-    for simHin, simHout, simQstar, simGraphID, simT, simBetaOfExtraction, simFirstConfigurationIndex, simSecondConfigurationIndex, simRefConfMutualQ, simFieldType, simFieldMean, simFieldSigma, simFieldRealization in set(zip(h_in, h_out, Qstar, graphID, T, betaOfExtraction, firstConfigurationIndex, secondConfigurationIndex, refConfMutualQ,fieldType, fieldMean, fieldSigma, fieldRealization)):
-        #dovrei anche controllare che le configurazioni di riferimento sono le stesse. Per ora non è un problema
-        filt = np.logical_and.reduce([h_in == simHin, h_out == simHout, Qstar == simQstar, graphID == simGraphID, T == simT, betaOfExtraction==simBetaOfExtraction,
-                                      firstConfigurationIndex==simFirstConfigurationIndex, secondConfigurationIndex== simSecondConfigurationIndex,
-                                      fieldType==simFieldType, fieldMean==simFieldMean, fieldSigma==simFieldSigma, fieldRealization==simFieldRealization])
-        if len(np.unique(beta[filt]))<=4:
-            continue
-        
-        n=np.unique(N[filt])
-        if len(n)>1:
-            print("There seems to be more N values for the specified set of parameters.")
-            continue
+        """
+        # Define the path of destination for the plots
+        Results_path = os.path.join(analysis_path,"../..","OverallResults")
+        if not os.path.exists(Results_path):
+            os.makedirs(Results_path)
 
-        #file_path = f"TIbeta_N{n}C3T{simT}f1.00g{simGraphID}Hin{simHin}Hout{simHout}Qstar{simQstar}.txt"
+        TIbetaFolder= os.path.join(Results_path, "TIbeta")
+        if not os.path.exists(TIbetaFolder):
+            os.makedirs(TIbetaFolder)
 
-        if simT == np.floor(simT):
-            fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{int(simT)}_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt"
-        else:
-            fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{simT:.1f}_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt"
+        ChiFitFolder = os.path.join(Results_path, "ChiData")
 
-        file_path = os.path.join(TIbetaFolder, fileName)
-        with open(file_path, 'w') as f:
-            f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T fieldType fieldMean fieldSigma fieldRealization\n")
-            f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT} {simFieldType} {simFieldMean} {simFieldSigma} {simFieldRealization}")
-            for valore1, valore2 in zip(beta[filt], TIbeta[filt]):
-                f.write('\n{} {}'.format(valore1, valore2))
+        for simHin, simHout, simQstar, simGraphID, simT, simBetaOfExtraction, simFirstConfigurationIndex, simSecondConfigurationIndex, simRefConfMutualQ, simFieldType, simFieldMean, simFieldSigma, simFieldRealization in set(zip(h_in, h_out, Qstar, graphID, T, betaOfExtraction, firstConfigurationIndex, secondConfigurationIndex, refConfMutualQ,fieldType, fieldMean, fieldSigma, fieldRealization)):
+            #dovrei anche controllare che le configurazioni di riferimento sono le stesse. Per ora non è un problema
+            filt = np.logical_and.reduce([runGroupFilter,
+                                          h_in == simHin, h_out == simHout, Qstar == simQstar, graphID == simGraphID, T == simT, betaOfExtraction==simBetaOfExtraction,
+                                        firstConfigurationIndex==simFirstConfigurationIndex, secondConfigurationIndex== simSecondConfigurationIndex,
+                                        fieldType==simFieldType, fieldMean==simFieldMean, fieldSigma==simFieldSigma, fieldRealization==simFieldRealization])
+            if len(np.unique(beta[filt]))<=4:
+                continue
+            
+            n=np.unique(N[filt])
+            if len(n)>1:
+                print("There seems to be more N values for the specified set of parameters.")
+                continue
 
-        filt = np.logical_and(filt, fPosJ==1.0)
-        file_path = os.path.join(ChiFitFolder, fileName)
-        if len(beta[filt])>0:
+            #file_path = f"TIbeta_N{n}C3T{simT}f1.00g{simGraphID}Hin{simHin}Hout{simHout}Qstar{simQstar}.txt"
+
+            if simT == np.floor(simT):
+                fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{int(simT)}_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt"
+            else:
+                fileName = f"{symType}_{simGraphID}_{simRefConfMutualQ}_{simHin}_{simHout}_{simQstar}_{simT:.1f}_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt"
+
+            file_path = os.path.join(TIbetaFolder, fileName)
             with open(file_path, 'w') as f:
                 f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T fieldType fieldMean fieldSigma fieldRealization\n")
                 f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT} {simFieldType} {simFieldMean} {simFieldSigma} {simFieldRealization}")
-                for bet, m, tau in zip(beta[filt], chi_m[filt], chi_tau[filt]):
-                    f.write('\n{} {} {}'.format(bet, m, tau))
-    
-    stMC_betaOfExtraction = stMC_betaOfExtraction.astype(str)
-    stMC_configurationIndex = stMC_configurationIndex.astype(str)
+                for valore1, valore2 in zip(beta[filt], TIbeta[filt]):
+                    f.write('\n{} {}'.format(valore1, valore2))
 
-    for simHout, simQstar, simGraphID, simBetaOfExtraction, simConfigurationIndex, simFieldType, simFieldMean, simFieldSigma, simFieldRealization in set(zip(stMC_Hout, stMC_Qstar, stMC_graphID, stMC_betaOfExtraction, stMC_configurationIndex, stMC_fieldType, stMC_fieldMean, stMC_fieldSigma, stMC_fieldRealization)):
-        #dovrei anche controllare che le configurazioni di riferimento sono le stesse. Per ora non è un problema
-        thisQif = np.unique(refConfMutualQ[np.logical_and.reduce([h_out==simHout, Qstar==simQstar, graphID==simGraphID, betaOfExtraction==simBetaOfExtraction, secondConfigurationIndex==simConfigurationIndex,
-                                                                  fieldType==simFieldType, fieldMean==simFieldMean, fieldSigma==simFieldSigma, fieldRealization==simFieldRealization ])])
+            filt = np.logical_and(filt, fPosJ==1.0)
+            file_path = os.path.join(ChiFitFolder, fileName)
+            if len(beta[filt])>0:
+                with open(file_path, 'w') as f:
+                    f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T fieldType fieldMean fieldSigma fieldRealization\n")
+                    f.write(f"#{symType} {simGraphID} {simRefConfMutualQ} {simHin} {simHout} {simQstar} {simT} {simFieldType} {simFieldMean} {simFieldSigma} {simFieldRealization}")
+                    for bet, m, tau in zip(beta[filt], chi_m[filt], chi_tau[filt]):
+                        f.write('\n{} {} {}'.format(bet, m, tau))
         
-        if len(thisQif)==0:
-            continue
-        thisQif = thisQif[0]
-        filt = np.logical_and.reduce([stMC_Hout == simHout, stMC_Qstar == simQstar, stMC_graphID == simGraphID,  stMC_betaOfExtraction==simBetaOfExtraction, stMC_configurationIndex==simConfigurationIndex,
-                                      stMC_fieldType==simFieldType, stMC_fieldMean==simFieldMean, stMC_fieldSigma==simFieldSigma, stMC_fieldRealization==simFieldRealization])
-        if len(np.unique(stMC_beta[filt]))<=4:
-            continue
+        stMC_betaOfExtraction = stMC_betaOfExtraction.astype(str)
+        stMC_configurationIndex = stMC_configurationIndex.astype(str)
 
-        if len(np.unique(stMC_N[filt]))>1:
-            print("There seems to be more N values for the specified set of parameters.")
-            continue
+        for simHout, simQstar, simGraphID, simBetaOfExtraction, simConfigurationIndex, simFieldType, simFieldMean, simFieldSigma, simFieldRealization in set(zip(stMC_Hout, stMC_Qstar, stMC_graphID, stMC_betaOfExtraction, stMC_configurationIndex, stMC_fieldType, stMC_fieldMean, stMC_fieldSigma, stMC_fieldRealization)):
+            #dovrei anche controllare che le configurazioni di riferimento sono le stesse. Per ora non è un problema
+            thisQif = np.unique(refConfMutualQ[np.logical_and.reduce([h_out==simHout, Qstar==simQstar, graphID==simGraphID, betaOfExtraction==simBetaOfExtraction, secondConfigurationIndex==simConfigurationIndex,
+                                                                    fieldType==simFieldType, fieldMean==simFieldMean, fieldSigma==simFieldSigma, fieldRealization==simFieldRealization ])])
+            
+            if len(thisQif)==0:
+                continue
+            thisQif = thisQif[0]
+            filt = np.logical_and.reduce([stMC_Hout == simHout, stMC_Qstar == simQstar, stMC_graphID == simGraphID,  stMC_betaOfExtraction==simBetaOfExtraction, stMC_configurationIndex==simConfigurationIndex,
+                                        stMC_fieldType==simFieldType, stMC_fieldMean==simFieldMean, stMC_fieldSigma==simFieldSigma, stMC_fieldRealization==simFieldRealization])
+            if len(np.unique(stMC_beta[filt]))<=4:
+                continue
 
-        #file_path = f"TIbeta_N{n}C3T{simT}f1.00g{simGraphID}Hin{simHin}Hout{simHout}Qstar{simQstar}.txt"
-        file_path = os.path.join(TIbetaFolder,f"{symType}_{simGraphID}_{simHout}_{simQstar}_{thisQif}_inf_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt")
-        with open(file_path, 'w') as f:
-            f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T\n")
-            f.write(f"#{symType} {simGraphID} {simBetaOfExtraction} {simHout} {simQstar}")
-            for valore1, valore2 in zip(stMC_beta[filt], stMC_TIbeta[filt]):
-                f.write('\n{} {}'.format(valore1, valore2))
+            if len(np.unique(stMC_N[filt]))>1:
+                print("There seems to be more N values for the specified set of parameters.")
+                continue
 
-    if len(np.unique(beta))>2:
-        myMultiRunStudy("StudyInBeta", beta, r"beta", N, "N", T, "T")
-    if len(np.unique(N))>2:
-        myMultiRunStudy("StudyInN", N, "N",  T, "T",beta, "beta")
-
-    Qstar= Qstar/N #così, slice-ando rispetto a N unisco i casi con q_star uguale
-    if len(np.unique(T))>2:
-        myMultiRunStudy("StudyInT", T,  "T", N, "N",beta, r"beta")
-        
-    print(np.unique(np.unique(fieldRealization)))
-    if len(np.unique(fieldRealization))>1:
-        myMultiRunStudy("StudyInBeta2", beta, r"beta", N, "N", fieldRealization, "field")
-    if len(np.unique(T*N))>2:
-        myMultiRunStudy("StudyInNT", N*T, "NT",N, "N", beta, r"beta")
+            #file_path = f"TIbeta_N{n}C3T{simT}f1.00g{simGraphID}Hin{simHin}Hout{simHout}Qstar{simQstar}.txt"
+            file_path = os.path.join(TIbetaFolder,f"{symType}_{simGraphID}_{simHout}_{simQstar}_{thisQif}_inf_{simFieldType}_{simFieldMean}_{simFieldSigma}_{simFieldRealization}.txt")
+            with open(file_path, 'w') as f:
+                f.write("#graphType graphID [refConfsInfo] Hin Hout Qstar T\n")
+                f.write(f"#{symType} {simGraphID} {simBetaOfExtraction} {simHout} {simQstar}")
+                for valore1, valore2 in zip(stMC_beta[filt], stMC_TIbeta[filt]):
+                    f.write('\n{} {}'.format(valore1, valore2))
+        """
