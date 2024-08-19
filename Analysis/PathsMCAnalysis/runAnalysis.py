@@ -21,7 +21,7 @@ def findFoldersWithString(parent_dir, target_strings):
                 if dir_name in fnameOfFoldersContainingRuns:
                     # Cerca le cartelle che contengono "_run" nel loro nome
                     for subdir in os.listdir(full_path):
-                        if all(string in subdir for string in target_strings):
+                        if all(string in os.path.join(full_path, subdir) for string in target_strings):
                             result.append(os.path.join(full_path, subdir))
                     return  # Evita di cercare ancora più in profondità
                 
