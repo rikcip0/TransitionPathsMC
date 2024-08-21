@@ -278,8 +278,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     
     avEnergy = np.array(avEnergy, dtype=np.float64)
     avEnergyStdErr = np.array(avEnergyStdErr, dtype=np.float64)
+    
+    avEnergy/=N
+    avEnergyStdErr/=N
     muAvEnergy = np.array(muAvEnergy, dtype=np.float64)
     
+
     nJumps =  np.array(nJumps, dtype=np.float64)
     nJumpsStdErr =  np.array(nJumpsStdErr, dtype=np.float64)
     
@@ -316,7 +320,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
 
     def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableName, markerShapeVariable, markerShapeVariableName):
 
-        if len(np.unique(x[filter]))<3:
+        if len(np.unique(x[filter]))<2:
             return
         
         thisStudyFolder= os.path.join(plotsFolder, studyName)
@@ -326,37 +330,41 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         else:
             delete_files_in_folder(thisStudyFolder)
 
-        for v, sim_Hin, sim_Hout, sim_Qstar in set(zip(subfolderingVariable, h_in, h_out, Qstar)):
-            print("AEE1",x)
+        for v in np.unique(subfolderingVariable, axis=0):
+            subFolderingFilter = []
+            if subfolderingVariable.ndim==1:
+                subFolderingFilter = (subfolderingVariable==v)
+            else: 
+                subFolderingFilter= np.all(subfolderingVariable == v, axis=1)
             filt = np.logical_and.reduce([filter,
-                                          subfolderingVariable==v,
-                                          h_in==sim_Hin, h_out==sim_Hout, Qstar==sim_Qstar
-                                          ])
-            print("AEE",x[filt])
-            if len(np.unique(x[filt]))<3:
+                                        subFolderingFilter
+                                        ])
+
+            if len(np.unique(x[filt]))<2:
                 continue
 
-            theseFiguresFolder= os.path.join(thisStudyFolder, f"{subfolderingVariableName}{v}", f"{sim_Hin}_{sim_Hout}_{sim_Qstar}")
+            theseFiguresFolder= os.path.join(thisStudyFolder, f"{subfolderingVariableName}{v}")
             if not os.path.exists(theseFiguresFolder):
                 os.makedirs(theseFiguresFolder, exist_ok=True)
             else:
                 delete_files_in_folder(theseFiguresFolder)
 
-            specificationLine =f"at {subfolderingVariableName} = {v} h_in = {sim_Hin} h_out = {sim_Hout} Qstar = {sim_Qstar}"
+            specificationLine =f"at {subfolderingVariableName} = {v}"
 
             additional=None
-            if xName=="beta":
+            if xName==r"$\beta$":
                 stMC_corrBetaAndQif = np.empty((len(stMC_beta), 2), dtype=object)
-                for sim_Bet, sim_Qif in set(zip(betaOfExtraction[filt], refConfMutualQ[filt])):
-                    secondConfIndeces = np.unique(secondConfigurationIndex[np.logical_and(filt, refConfMutualQ==sim_Qif)])
-                    for secondConfIndex in secondConfIndeces:
-                        tempFilt=filt
-                        filt= np.logical_and.reduce([stMC_N == v, stMC_Hout == sim_Hout, stMC_Qstar == sim_Qstar, stMC_configurationIndex==secondConfIndex])
-                        stMC_corrBetaAndQif[filt]=[sim_Bet,sim_Qif]
-                        filt=tempFilt
-                additional = [stMC_beta, stMC_TIbeta, stMC_corrBetaAndQif, "inf"]
-            plt.plot(x[filt],meanBarrier[filt])
+                for sim_graphID, sim_BetOfEx, sim_SecConfInd, sim_Qif in set(zip(stMC_graphID, betaOfExtraction[filt], secondConfigurationIndex[filt])):
+                    stMCFilt= np.logical_and.reduce([#stMC_N == v[0],
+                                                     #stMC_graphID==sim_graphID,
+                                                     stMC_betaOfExtraction==sim_BetOfEx,
+                                                     stMC_configurationIndex==sim_SecConfInd
+                                                    ])
+                    stMC_corrBetaAndQif[stMCFilt]=[sim_BetOfEx, sim_Qif]
+                additional = [[stMC_beta, stMC_TIbeta, stMC_corrBetaAndQif, f"inf, {g}"] for g in stMC_graphID[filt]]
+                print("additional", additional)
 
+            
             TIbetaMainPlot = plotWithDifferentColorbars(f"TIbeta", x[filt], xName, TIbeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
             betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
             trajsExtremesInitID[filt], shortDescription, edgeColorPerInitType,
@@ -439,7 +447,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             for fig_name in figs:
                 fig = plt.figure(fig_name)
                 filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-                print(filename)
+                #print(filename)
                 fig.savefig(filename, bbox_inches='tight')
             plt.close('all')
 
@@ -459,23 +467,26 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         plotsFolder = os.path.join(analysis_path, "Plots")
         os.makedirs(plotsFolder, exist_ok=True)
 
-        if len(np.unique(N[runGroupFilter]))>1: 
+        if len(np.unique(beta[runGroupFilter]))>2:
+            folderingArray= [ [t,g, fT, fS] for t, g, fT, fS in list(zip(T, graphID, fieldType, fieldSigma))]
+            folderingArray = np.asarray(folderingArray)
+            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar))), "N, Qstar", folderingArray, "T, graphID, fieldSigma")
+        
+        return
+        if len(np.unique(T[runGroupFilter]))>2:
+            myMultiRunStudy(filter=runGroupFilter,studyName="StudyInT", x=T,  xName="T", subfolderingVariable=N, subfolderingVariableName="N", markerShapeVariable=np.array(list(zip(beta, graphID))), markerShapeVariableName="beta, graphID")
+            
+        if len(np.unique(N[runGroupFilter]))>2: 
             print(np.unique(N[runGroupFilter]))
             tempQstar= Qstar #così, slice-ando rispetto a N unisco i casi con q_star uguale
-            Qstar= Qstar/N
-            print(Qstar)
-            a = N>0 
-            myMultiRunStudy(runGroupFilter, "StudyInN", N, "N", a , "AO" , np.array(list(zip(T, beta))), "T, beta")
+            Qstar*=0
+            b=np.array(list(zip(h_in, h_out, Qstar)))
+            myMultiRunStudy(runGroupFilter, "StudyInN", N, "N", np.asarray(list(zip(Qstar, beta))), "h_in, h_out, Qstar, beta" , np.array(list(zip(T))), "T")
             Qstar=tempQstar
-        if len(np.unique(beta[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", N, "N", np.array(list(zip(T, graphID))), "T, graphID")
-        return
 
-        if len(np.unique(T[runGroupFilter]))>2:
-            myMultiRunStudy(filter=runGroupFilter,studyName="StudyInT", x=T,  xName="T", subfolderingVariable=N, subfolderingVariableName="N", markerShapeVariable=beta, markerShapeVariableName=r"beta")
-            
-        if len(np.unique(fieldRealization))>1:
-            myMultiRunStudy(runGroupFilter,"StudyInBeta2", beta, r"beta", N, "N", fieldRealization, "field")
+        if len(np.unique(fieldSigma[runGroupFilter]))>1:
+                myMultiRunStudy(runGroupFilter,"StudyInFieldSigma", fieldSigma, r"fieldSigma", np.array(list(zip(N, T))), "N, T", np.array(list(zip(beta, graphID, fieldRealization))), "field")
+
         if len(np.unique((T*N)[runGroupFilter]))>2:
             myMultiRunStudy(runGroupFilter,"StudyInNT", N*T, "NT",N, "N", beta, r"beta")
 

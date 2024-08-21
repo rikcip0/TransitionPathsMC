@@ -30,7 +30,6 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     fBetaOfExt=betaOfExt
     betas = betas.astype(str)
     betaOfExt = np.asarray(betaOfExt, dtype=str)
-    print("unici", np.unique(betaOfExt))
     for val in betas:
         if len(betas)==1 or val =="nan":
             normalized= 1.
@@ -45,7 +44,6 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
     x = x[xSort]
     y = y[xSort]
-
     trajsExtremesInitID = trajsExtremesInitID[xSort]
     markerShapeVariable = markerShapeVariable[xSort]
     betaOfExt = betaOfExt[xSort]
@@ -60,6 +58,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     fig = plt.figure(name, figsize=(10, figHeight))  # Adjust the figsize as needed
     gs = fig.add_gridspec(1+2*nColorbars, 1, height_ratios=[plotToBarRatio] +  [1.2,1] +[0.9,1] * (nColorbars-1))
 
+    np.asarray(markerShapeVariable)
     curveTypes = np.unique(markerShapeVariable,axis=0)
     trajsExtInitIDs = np.unique(trajsExtremesInitID)
     Qifs = np.unique(Qif)
@@ -96,27 +95,25 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                 ax1.errorbar([],[], label=f"{', '.join(map(str, t))}", color="grey", marker=marker)
 
     if additionalMarkerTypes is not None:
-            ax1.errorbar([],[], label=f"{additionalMarkerTypes[3]}", color="grey", marker=".")
+            [ax1.errorbar([],[], label=f"{additionalMarkerType[3]}", color="grey", marker=".") for additionalMarkerType in additionalMarkerTypes ]
     
     if fitType!='':
         ax1.scatter([],[], label="", color="None")
-    print(markerShapeVariable)
     for i, t in enumerate(curveTypes):
-        print("t=",t)
-        print([variable==t for variable in markerShapeVariable])
+        if i>=len(markers):
+            continue
+        
         marker = markers[i]
         for ext in trajsExtInitIDs:
             for q in Qifs:
-                print([variable==t for variable in markerShapeVariable])
-                outCondition = np.logical_and.reduce([trajsExtremesInitID == ext, [variable==t for variable in markerShapeVariable],
-                                            Qif == q])
-                print("e facciamo calcio 2")
+                #[print(t,variable) for variable in markerShapeVariable]
+                outCondition = np.logical_and.reduce([trajsExtremesInitID == ext,
+                                                    [np.array_equal(t,variable) for variable in markerShapeVariable],
+                                                    Qif == q])
                 for betOfEx in np.unique(betaOfExt[outCondition]):
-                    print("e facciamo calcio")
                     condition = np.logical_and(outCondition, betaOfExt==betOfEx)
                     if len(x[condition]) == 0:
                         continue
-                    
                     if len(Qifs)>1:
                         norm = Normalize(vmin=np.min(Qifs), vmax=np.max(Qifs))
                     else:
@@ -151,29 +148,31 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     plt.plot(x[fitCondition], c*x[fitCondition]**alpha, linestyle='--', marker='', color=color)
 
                     plt.plot([], [], label=f'c={c:.3g} ' + r'$\alpha$'+f'={alpha:.3g}', linestyle='--', marker=marker, color=color)
-
+    print(additionalMarkerTypes)
     if additionalMarkerTypes is not None:
-        additional_X = additionalMarkerTypes[0]
-        additional_Y = additionalMarkerTypes[1]
-        additional_correspBetaOfExAndQif = additionalMarkerTypes[2]
+        for additionalMarkerType in additionalMarkerTypes:
+            additional_X = additionalMarkerType[0]
+            additional_Y = additionalMarkerType[1]
+            additional_correspBetaOfExAndQif = additionalMarkerType[2]
 
-        additionalXSort = np.argsort(additional_X)
+            additionalXSort = np.argsort(additional_X)
 
-        additional_X = additional_X[additionalXSort]
-        additional_Y = additional_Y[additionalXSort]
-        additional_correspBetaOfExAndQif =additional_correspBetaOfExAndQif[additionalXSort]
+            additional_X = additional_X[additionalXSort]
+            additional_Y = additional_Y[additionalXSort]
+            additional_correspBetaOfExAndQif =additional_correspBetaOfExAndQif[additionalXSort]
 
-        marker = "."
-        for BetaOfExAndQif in additional_correspBetaOfExAndQif:
-                if BetaOfExAndQif[0] is None:
-                    continue
-                BetaOfExAndQif[0] = str(BetaOfExAndQif[0])
-                condition = np.all(additional_correspBetaOfExAndQif == BetaOfExAndQif, axis=1)
-                if len(additional_X[condition]) == 0:
-                    continue
-                color = cmaps[BetaOfExAndQif[0]](norm(BetaOfExAndQif[1]))
-                ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40)
-                ax1.plot(additional_X[condition], additional_Y[condition], color=color, marker=" ", linewidth=0.4)
+            marker = "."
+            for BetaOfExAndQif in additional_correspBetaOfExAndQif:
+                    print(BetaOfExAndQif)
+                    if BetaOfExAndQif[0] is None:
+                        continue
+                    BetaOfExAndQif[0] = str(BetaOfExAndQif[0])
+                    condition = np.all(additional_correspBetaOfExAndQif == BetaOfExAndQif, axis=1)
+                    if len(additional_X[condition]) == 0:
+                        continue
+                    color = cmaps[BetaOfExAndQif[0]](norm(BetaOfExAndQif[1]))
+                    ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40)
+                    ax1.plot(additional_X[condition], additional_Y[condition], color=color, marker=" ", linewidth=0.4)
 
     if yscale!='':
          plt.yscale(yscale)
