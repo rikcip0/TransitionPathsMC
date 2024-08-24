@@ -5,7 +5,9 @@ import sys
 
 from singleRunAnalysis import singleRunAnalysis
 
-nameOfFoldersContainingRuns = ["stdMCs", "PathsMCs"]
+nameOfFoldersContainingRuns = [#"stdMCs", 
+    "PathsMCs"
+                               ]
 
 def findFoldersWithString(parent_dir, target_strings):
     result = []
@@ -14,16 +16,20 @@ def findFoldersWithString(parent_dir, target_strings):
     def search_in_subfolders(directory, livello=1):
         if livello > 10:
             return
-        for root, dirs, files in os.walk(directory):
+        for root, dirs, _ in os.walk(directory):
+            rightLevelReached=False
             for dir_name in dirs:
                 full_path = os.path.join(root, dir_name)
                 # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
                 if dir_name in nameOfFoldersContainingRuns:
                     # Cerca le cartelle che contengono "_run" nel loro nome
+                    rightLevelReached=True
                     for subdir in os.listdir(full_path):
                         if all(string in os.path.join(full_path, subdir) for string in target_strings):
                             result.append(os.path.join(full_path, subdir))
-                    return  # Evita di cercare ancora più in profondità
+                
+            if rightLevelReached:
+                return  # Evita di cercare ancora più in profondità
                 
             # Se non troviamo "stdMCs" o "PathsMCs", passiamo al livello successivo
             for dir_name in dirs:

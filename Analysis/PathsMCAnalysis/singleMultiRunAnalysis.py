@@ -27,6 +27,26 @@ def delete_files_in_folder(folder_path):
             # Dopo aver eliminato i file, elimina la cartella stessa
             os.rmdir(item_path)
 
+def getUniqueXAndYZAccordingToZ(x, y, criterion):
+    best_indices = {}
+    # Iteriamo su ogni valore unico in filteredStdMCsBetas
+    for value in np.unique(x):
+        # Trova gli indici corrispondenti a questo valore unico
+        indices = np.where(x == value)[0]
+
+        if len(indices) > 1:
+            # Se ci sono più di un indice, scegli quello con il valore massimo in lastMeasureMC
+            best_index = indices[np.argmax(criterion[indices])]
+        else:
+            # Se c'è solo un indice, lo prendiamo direttamente
+            best_index = indices[0]          
+        # Memorizza l'indice migliore
+        best_indices[value] = best_index
+    filtered_x = np.asarray(x[list(best_indices.values())])
+    filtered_y = np.asarray(y[list(best_indices.values())])
+    filtered_criterion = np.asarray(criterion[list(best_indices.values())])
+    return filtered_x, filtered_y, filtered_criterion
+
 def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
 
     plt.rcParams["axes.grid"]= True
@@ -34,7 +54,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     plt.rcParams['lines.linestyle'] = '-'
     plt.rcParams['lines.markersize'] = 10
     markers = ['.', '^', 'o', 'v','p', 'h']
-
 
     ID = []
     simulationType =[]
@@ -94,6 +113,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     stMC_Hout = []
     stMC_Qstar = []
     stMC_TIbeta= []
+    stMC_MC= []
     stMC_graphID = []
     stMC_betaOfExtraction = []
     stMC_configurationIndex = []
@@ -104,10 +124,10 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
 
     for item in runsData:
         if "results" not in item.keys():
+            print(item.keys())
             continue
 
-        if 'configuration' not in item.keys() or 'parameters' not in item['configuration'] or 'h_in' not in item['configuration']['parameters']:
-            if item['configuration']['simulationTypeId']==15:
+        if item['configuration']['simulationTypeId']==15:
                 simulationType.append(15)
                 n=(int)(item['configuration']['parameters']['N'])
                 stMC_N.append(n)
@@ -133,8 +153,9 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     stMC_fieldSigma.append("nan")
                     stMC_fieldRealization.append("nan")
 
+                stMC_MC.append(item['configuration']['mcParameters']['MC'])
                 stMC_TIbeta.append(item["results"]['TI']['beta'])
-            continue
+                continue
 
         print("analyzing", item['configuration']['ID'])  #decommentare per controllare quando c'è un intoppo
         ID.append(item['configuration']['ID']) #ID only contains new IDs. will be used to check what analysis to repeat
@@ -296,12 +317,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     stMC_N = np.array(stMC_N, dtype=np.int16)
     stMC_beta  = np.array(stMC_beta, dtype=np.float64)
     stMC_TIbeta  = np.array(stMC_TIbeta, dtype=np.float64)
+    stMC_MC  = np.array(stMC_MC, dtype=np.int64)
     stMC_Hext  = np.array(stMC_Hext, dtype=np.float64)
     stMC_Hout = np.array(stMC_Hout, dtype=np.float64)
     stMC_Qstar = np.array(stMC_Qstar, dtype=np.int16)
     stMC_graphID  = np.array(stMC_graphID)
     stMC_betaOfExtraction = [float(value) if value != "infty" else np.inf for value in stMC_betaOfExtraction]
-    stMC_betaOfExtraction = np.array(stMC_betaOfExtraction)
+    stMC_betaOfExtraction = np.array(stMC_betaOfExtraction, dtype=str)
     stMC_configurationIndex  = np.array(stMC_configurationIndex)
 
     stMC_fieldType =  [fieldTypeDictionary[value] for value in stMC_fieldType]
@@ -351,18 +373,55 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
 
             specificationLine =f"at {subfolderingVariableName} = {v}"
 
-            additional=None
+            additional= []
             if xName==r"$\beta$":
                 stMC_corrBetaAndQif = np.empty((len(stMC_beta), 2), dtype=object)
-                for sim_graphID, sim_BetOfEx, sim_SecConfInd, sim_Qif in set(zip(stMC_graphID, betaOfExtraction[filt], secondConfigurationIndex[filt])):
-                    stMCFilt= np.logical_and.reduce([#stMC_N == v[0],
-                                                     #stMC_graphID==sim_graphID,
-                                                     stMC_betaOfExtraction==sim_BetOfEx,
-                                                     stMC_configurationIndex==sim_SecConfInd
+                for sim_N, sim_graphID, sim_betOfEx, sim_SecConfInd, sim_Qif, simQstar in set(zip(N[filt],graphID[filt], betaOfExtraction[filt], secondConfigurationIndex[filt], refConfMutualQ[filt], Qstar[filt])):
+                    stMCFilt= np.logical_and.reduce([stMC_N == sim_N,
+                                                     stMC_graphID==sim_graphID,
+                                                     #stMC_betaOfExtraction==sim_betOfEx,
+                                                     stMC_configurationIndex==sim_SecConfInd,
+                                                     stMC_Qstar==simQstar
                                                     ])
-                    stMC_corrBetaAndQif[stMCFilt]=[sim_BetOfEx, sim_Qif]
-                additional = [[stMC_beta, stMC_TIbeta, stMC_corrBetaAndQif, f"inf, {g}"] for g in stMC_graphID[filt]]
-                print("additional", additional)
+                    stMC_corrBetaAndQif[stMCFilt]=[sim_betOfEx, sim_Qif]
+                    if stMCFilt.sum()>1:
+                        additional.append(list([stMC_beta[stMCFilt], stMC_TIbeta[stMCFilt], stMC_corrBetaAndQif[stMCFilt], f"inf, {sim_graphID}"]))
+                if len(additional)==0:
+                    additional=None
+
+                #specifying graph in 2 cycle
+                for sim_N, sim_graphID, sim_Hext in set(zip(N[filt], graphID[filt], h_ext[filt])):
+                    TIFilt = np.logical_and.reduce([N==sim_N, graphID==sim_graphID, h_ext==sim_Hext])
+                    TIFilt = np.logical_and(filt, TIFilt)
+                    st_TIFilt = np.logical_and.reduce([stMC_N==sim_N, stMC_graphID==sim_graphID, stMC_Hext==sim_Hext])
+                    for sim_fieldType, sim_fieldSigma, sim_fieldRealization in set(zip(fieldType[TIFilt], fieldSigma[TIFilt], fieldRealization[TIFilt])):
+                        TIFilt = np.logical_and(TIFilt, np.logical_and.reduce([fieldType==sim_fieldType, fieldSigma==sim_fieldSigma, fieldRealization==sim_fieldRealization]))
+                        st_TIFilt = np.logical_and(st_TIFilt, np.logical_and.reduce([stMC_fieldType==sim_fieldType, stMC_fieldSigma==sim_fieldSigma, stMC_fieldRealization==sim_fieldRealization]))
+                        #specifying configurations
+                        for sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex, sim_Qif in set(zip(betaOfExtraction[TIFilt],firstConfigurationIndex[TIFilt], secondConfigurationIndex[TIFilt], refConfMutualQ[TIFilt])):
+                            TIFilt = np.logical_and(TIFilt, np.logical_and.reduce([betaOfExtraction==sim_betOfEx, firstConfigurationIndex==sim_firstConfIndex, secondConfigurationIndex==sim_secondConfIndex, refConfMutualQ==sim_Qif]))
+                            st_TIFilt = np.logical_and(st_TIFilt, np.logical_and.reduce([stMC_betaOfExtraction==sim_betOfEx, stMC_configurationIndex==sim_secondConfIndex]))
+                            stMC_corrBetaAndQif
+                            #specifying stochastic measure parameters
+                            for sim_Hin, sim_Hout, sim_Qstar in set(zip(h_in[TIFilt], h_out[TIFilt], Qstar[TIFilt])):
+                                TIFilt = np.logical_and(TIFilt, np.logical_and.reduce([h_in==sim_Hin, h_out==sim_Hout, Qstar==sim_Qstar]))
+                                st_TIFilt = np.logical_and(st_TIFilt, np.logical_and.reduce([stMC_Hout==sim_Hout, stMC_Qstar==sim_Qstar]))
+                                filteredStdMCsBetas = stMC_beta[st_TIFilt]
+                                filteredStdMCsTIBetas = stMC_TIbeta[st_TIFilt]
+                                filteredStdMCsMC = stMC_MC[st_TIFilt]
+                                filteredStdMCsBetas, filteredStdMCsTIBetas, filteredStdMCsMC = getUniqueXAndYZAccordingToZ(filteredStdMCsBetas, filteredStdMCsTIBetas, filteredStdMCsMC)
+                                #specifico il tempo
+                                for sim_T in set(T[TIFilt]):
+                                    TIFilt = np.logical_and(TIFilt, T==sim_T)
+                                    filteredBetas = beta[TIFilt]
+                                    filteredTIBetas = TIbeta[TIFilt]
+                                    filteredLastMeasureMC = lastMeasureMC[TIFilt]
+                                    print("PRIMA")
+                                    print(filteredBetas,filteredTIBetas, filteredLastMeasureMC)
+                                    filteredBetas, filteredTIBetas, filteredLastMeasureMC = getUniqueXAndYZAccordingToZ(filteredBetas, filteredTIBetas, filteredLastMeasureMC)
+                                    print("DOPO")
+                                    print(filteredBetas,filteredTIBetas, filteredLastMeasureMC)
+
 
             
             TIbetaMainPlot = plotWithDifferentColorbars(f"TIbeta", x[filt], xName, TIbeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
@@ -468,9 +527,9 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         os.makedirs(plotsFolder, exist_ok=True)
 
         if len(np.unique(beta[runGroupFilter]))>2:
-            folderingArray= [ [t,g, fT, fS] for t, g, fT, fS in list(zip(T, graphID, fieldType, fieldSigma))]
+            folderingArray= [ [t,g] for t, g in list(zip(T, graphID))]
             folderingArray = np.asarray(folderingArray)
-            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar))), "N, Qstar", folderingArray, "T, graphID, fieldSigma")
+            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), "N, Qstar, fieldType"+r"$\sigma$", folderingArray, "T, graphID")
         
         return
         if len(np.unique(T[runGroupFilter]))>2:

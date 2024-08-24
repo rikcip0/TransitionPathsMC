@@ -93,7 +93,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                 ax1.scatter([],[], label=f"{', '.join(map(str, t ))}", color="grey", marker=marker)
             else:
                 ax1.errorbar([],[], label=f"{', '.join(map(str, t))}", color="grey", marker=marker)
-
+    #print(additionalMarkerTypes)
     if additionalMarkerTypes is not None:
             [ax1.errorbar([],[], label=f"{additionalMarkerType[3]}", color="grey", marker=".") for additionalMarkerType in additionalMarkerTypes ]
     
@@ -148,12 +148,12 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     plt.plot(x[fitCondition], c*x[fitCondition]**alpha, linestyle='--', marker='', color=color)
 
                     plt.plot([], [], label=f'c={c:.3g} ' + r'$\alpha$'+f'={alpha:.3g}', linestyle='--', marker=marker, color=color)
-    print(additionalMarkerTypes)
+ 
     if additionalMarkerTypes is not None:
         for additionalMarkerType in additionalMarkerTypes:
-            additional_X = additionalMarkerType[0]
-            additional_Y = additionalMarkerType[1]
-            additional_correspBetaOfExAndQif = additionalMarkerType[2]
+            additional_X = np.asarray(additionalMarkerType[0])
+            additional_Y = np.asarray(additionalMarkerType[1])
+            additional_correspBetaOfExAndQif = np.asarray(additionalMarkerType[2])
 
             additionalXSort = np.argsort(additional_X)
 
@@ -163,7 +163,6 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
             marker = "."
             for BetaOfExAndQif in additional_correspBetaOfExAndQif:
-                    print(BetaOfExAndQif)
                     if BetaOfExAndQif[0] is None:
                         continue
                     BetaOfExAndQif[0] = str(BetaOfExAndQif[0])
