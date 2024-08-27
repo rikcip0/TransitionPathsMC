@@ -55,7 +55,7 @@ void initBetas(string fileName)
     printf("\n");
 }
 
-void initSpin(void)
+void initSpin(vector<double> randomField)
 {
     int ib, i;
 
@@ -66,7 +66,7 @@ void initSpin(void)
         {
             s[ib][i] = pm1;
         }
-        ener[ib] = energy_Graph(s[ib], N, Graph);
+        ener[ib] = energy_Graph(s[ib], N, Graph, 0., randomField);
     }
 }
 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
     fread(&myrand, 4, 1, devran);
     fclose(devran);
     initRandom();
-
+    vector<double> field(N,0);
     string admittibleGraph, folder;
     if (getGraphFromGraphAndStructureID_ForCluster(d, admittibleGraph, structureID, graphID, p, C, N, fracPosJ))
         folder = admittibleGraph + "/";
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
     fileName += graphType + ".txt";
 
     // Open the file for reading
-    if (!initializeGraph(folder, Graph, p, C, N, fracPosJ))
+    if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, field, 0, 0, 0.1))
     {   cout<<"NOO"<<endl;
         cout << "Error in the graph initialization" << endl;
         return 1;
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 
     for (ic = 0; ic < numIC; ic++)
     {
-        initSpin();
+        initSpin(field);
         t = 0;
         do
         {

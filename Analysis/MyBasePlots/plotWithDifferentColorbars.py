@@ -173,7 +173,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40)
                     ax1.plot(additional_X[condition], additional_Y[condition], color=color, marker=" ", linewidth=0.4)
 
-    if yscale!='':
+    if yscale!='' and len(y[y>0])>0:
          plt.yscale(yscale)
     if xscale!='':
          plt.xscale(xscale)
