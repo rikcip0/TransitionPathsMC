@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     int structureID = 0;
     double fracPosJ = -1.;
 
-    if (argc != 6)
+    if (argc != 6 && argc!=4)
     {
         fprintf(stderr, "usage: %s type(-3: DPRRG -2:ER -1:RRG k>0: k-dim sqLatt) <N> <fracPosJ> (<C> <structureID>)\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -46,9 +46,11 @@ int main(int argc, char *argv[])
 
     N = atoi(argv[2]);
     fracPosJ = atof(argv[3]);
-
+    if (argc ==6)
+    {
     C = atoi(argv[4]);
     structureID = atoi(argv[5]);
+    }
 
     int myrand = init_random(0, 0);
 
