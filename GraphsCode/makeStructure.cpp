@@ -101,7 +101,7 @@ int main(int argc, char **argv)
         list[i] = (int)(i / C);
       listLen = C * N;
       graphLen = 0;
-      for (i = 0; i < N*C; i+=p)
+      for (i = 0; i < N * C; i += p)
       {
         t = 0;
         do
@@ -159,10 +159,11 @@ int main(int argc, char **argv)
         }
       }
     } while (i == N + 1);
-    for(int j=0;j<N;j++){
-      cout<<j<<": "<<s2[j]<<endl;
+    for (int j = 0; j < N; j++)
+    {
+      cout << j << ": " << s2[j] << endl;
     }
-    list.assign(0,0);
+    list.assign(0, 0);
     list = graph;
   }
   else if (type == -2)
@@ -295,49 +296,50 @@ int main(int argc, char **argv)
   }
   else
   {
-    int L = (int)(pow(N, 1. / type) + 0.001);
-    if (fabs(pow(N, 1. / type) - ((double)L)) > 0.000000001)
+    int d = type;
+    int L = (int)round(pow(N, 1.0 / d));
+
+    if ((int)pow(L, d) != N)
     {
-      cout << "N=" << N << " value is not allowed for d= " << type << " square lattice!" << endl;
+      cout << "N=" << N << " value is not allowed for d= " << d << " square lattice!" << endl;
       exit(1);
     }
-    int interactingSite;
+
     for (int i = 0; i < N; i++)
     {
-      for (int j = 0; j < type; j++)
+      int x = i;
+      vector<int> coords(d);
+      for (int j = 0; j < d; j++)
       {
-        interactingSite = (i - (i % (int)pow(L, j + 1))) + ((int)(i + pow(L, j))) % ((int)pow(L, j + 1));
-        if (i == 3)
+        coords[j] = x % L;
+        x /= L;
+      }
+
+      for (int sign = 1; sign >= -1; sign -= 2)
+      {
+
+        for (int j = 0; j < d; j++)
         {
-          cout << j << " " << i << " " << interactingSite << endl;
-        }
-        if (interactingSite > i)
-        {
-          list.push_back(i);
-          list.push_back(interactingSite);
-        }
-        if (L > 2)
-        {
-          interactingSite = (i - (i % (int)pow(L, j + 1))) + ((int)(i - pow(L, j) + pow(L, j + 1))) % ((int)pow(L, j + 1));
-          if (i == 3)
-          {
-            cout << j << " " << i << " " << interactingSite << endl;
-          }
-          if (interactingSite > i)
-          {
-            list.push_back(i);
-            list.push_back(interactingSite);
-          }
-          if (interactingSite > i)
+          vector<int> neighborCords = coords;
+          neighborCords[j] += sign;
+          if (neighborCords[j]==L)
+            neighborCords[j]=0;
+          if (neighborCords[j]==-1)
+            neighborCords[j]=L-1;
+
+          int neighbor = 0;
+          for (int k = 0; k < d; k++)
+            neighbor += pow(L, k) * neighborCords[k];
+
+          if (neighbor > i)
           {
             list.push_back(i);
-            list.push_back(interactingSite);
+            list.push_back(neighbor);
           }
         }
       }
     }
   }
-
   createFolder(folder);
   // Open a file for writing
   nomeFile = folder + "/structure.txt";
