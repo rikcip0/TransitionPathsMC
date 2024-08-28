@@ -6,7 +6,7 @@
 #include <ctime>
 #include <vector>
 #include <sys/stat.h>
-#include <filesystem>
+//#include <filesystem> commentato per farlo runnare su Idra che non supporta c++11
 
 #ifndef FILE_SYSTEM_UTIL_H
 #define FILE_SYSTEM_UTIL_H
@@ -24,7 +24,9 @@ using std::endl;
 using std::string;
 using std::to_string;
 using std::vector;
+/*
 namespace fs = std::filesystem;
+*/
 
 std::string getCurrentDateTime()
 {
@@ -88,10 +90,13 @@ void createFolder(const string &folderPath)
   cout << "Folder created successfully or already exists." << endl;
 }
 
+/*
+
 bool folderExists(const std::string &folderPath)
 {
   return fs::is_directory(folderPath);
 }
+
 
 std::vector<std::string> getFolders(const std::string &folderPath, int depth = 1, string wordToInclude = "")
 {
@@ -125,6 +130,8 @@ std::vector<std::string> getFolders(const std::string &folderPath, int depth = 1
   return foldersToReturn;
 }
 
+
+
 string makeFolderNameFromBuffer(string folder, string buffer)
 {
   int i = 0;
@@ -133,24 +140,6 @@ string makeFolderNameFromBuffer(string folder, string buffer)
   while (folderExists(folder + string(buffer) + "_run" + to_string(i)));
   folder += string(buffer) + "_run" + to_string(i);
   return folder;
-}
-
-string makeFolderNameFromBuffer_ForCluster(string folder, string buffer, int timeOfStart)
-{
-  folder += string(buffer) + "_run" + to_string(timeOfStart % 10000);
-  return folder;
-}
-
-void error(string string)
-{
-  cout << "ERROR: " << string << endl;
-  exit(EXIT_FAILURE);
-}
-
-// implementazione in corso::INIZIO
-double getFFromGraphPath(string graphPath)
-{
-  return 0.5;
 }
 
 bool getStructuresFromPCN(vector<string> &folderPathsToFind, int p, int C, int N)
@@ -223,6 +212,30 @@ bool getGraphsFromPCNf(vector<string> &folderPathsToFind, int p, int C, int N, d
   }
 }
 
+*/
+
+
+void error(string string)
+{
+  cout << "ERROR: " << string << endl;
+  exit(EXIT_FAILURE);
+}
+
+// implementazione in corso::INIZIO
+double getFFromGraphPath(string graphPath)
+{
+  return 0.5;
+}
+
+
+
+string makeFolderNameFromBuffer_ForCluster(string folder, string buffer, int timeOfStart)
+{
+  folder += string(buffer) + "_run" + to_string(timeOfStart % 10000);
+  return folder;
+}
+
+
 bool getStructuresFromStructureID(vector<string> &folderPathsToFind, int p = 0, int C = 0, int N = 0, double f = -1.)
 {
   return true;
@@ -231,6 +244,7 @@ bool getStructuresFromStructureID(vector<string> &folderPathsToFind, int p = 0, 
 // returns all graphs of a certain structure.
 // if f is included as argument, takes only graphs with that f.
 // If p, C, N are included as arguments, also check that they match with those of the graph.
+/*
 bool getGraphsFromStructureID(vector<string> &folderPathsToFind, int sID, double f = -1., int p = 0, int C = 0, int N = 0)
 {
   vector<string> matchingStructuresFolders;
@@ -341,6 +355,7 @@ bool getGraphFromGraphID(string &folderPathToFind, int graphID, int p = 0, int C
 
   return true;
 }
+*/
 // implementazione in corso::FINE
 
 bool getGraphFromGraphAndStructureID_ForCluster(int type, string &folderPathToFind, int structureID, int graphID, int p, int C, int N, double f)
