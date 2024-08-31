@@ -10,7 +10,7 @@ import scipy.stats as stats
 from scipy.stats import linregress
 
 simulationCode_version = None
-currentAnalysisVersion = 'singleRunVe1'
+currentAnalysisVersion = 'singleRunAnalysisV000'
 preset_Path='../../Data/Graphs/RRG/p2C3/N100/structure199200/fPosJ1.00/graph8960/1.2e+02_1_0_inf_100_inf_run1' #for a quick single run analysis
 
 matplotlib.use('Agg') 
@@ -36,40 +36,46 @@ def aDiscreteDerivative(xArray, yArray):
     derivative = (((yArray[1:]-yArray[:-1])/(xArray[1:]-xArray[:-1]))[:-2]+2.*((yArray[2:]-yArray[:-2])/(xArray[2:]-xArray[:-2]))[:-1]+((yArray[3:]-yArray[:-3])/(xArray[3:]-xArray[:-3])))/4.
     return xArray[:-3], derivative
 
-def progressiveLinearFit(x, y, threshold_chi_square=10.):
+def progressiveLinearFit(x, y, yerr, threshold_chi_square=1., onlyEnd=False):
 
     par_values = []
-    minimumShifting = np.maximum(len(x)//100, 5)
-
+    minimumShifting = np.maximum(len(x)//150, 5)
+    minimumLength = 3*minimumShifting
     def linear(t, a, b):
         return t*a+b
     
-    iStartIndex=np.maximum(np.argmax(y>0.001),minimumShifting)
+    iStartIndex=np.maximum(np.argmax(y>0.001), minimumShifting)
 
     if iStartIndex+minimumShifting>=len(x)-1:
         return None
-    
+    largestIndexOfTimeLargerThanTminus2 = np.where(x<x[-1]-2.)[0][-1]
 
     for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
-        for j in range(i+minimumShifting, len(x)-1, minimumShifting):
-                    popt, pcov = curve_fit(linear, x[i:j], y[i:j], method='lm', p0=[1/x[-1],0.6])
-                    slope = popt[0]
-                    intercept = popt[1]
-                    chi_value = np.nansum(((y[i:j]-(linear(x[i:j],*popt))))**2./y[i:j])/(j-i)
-                    if chi_value < 3*0.001 and slope*x[-1]>0.1:
-                        par_values.append((chi_value, i, j, slope, intercept))
+        jMin = i+minimumShifting
+        if onlyEnd:
+            jMin = np.maximum(largestIndexOfTimeLargerThanTminus2, i+minimumLength)
+        for j in range(jMin, len(x)-1, minimumShifting):
+            popt, pcov = curve_fit(linear, x[i:j], y[i:j], sigma=yerr[i:j], method='lm', p0=[1/x[-1],0.6])
+            slope = popt[0]
+            intercept = popt[1]
+            chi_r_value = np.nansum(((y[i:j]-(linear(x[i:j],*popt)))/yerr[i:j])**2.)/(j-i)
+            if chi_r_value < threshold_chi_square and intercept+slope*x[-1]>0.02:
+                par_values.append((chi_r_value, i, j, slope, intercept))
 
     if len(par_values)==0:
         return None
-    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**7.5)
+    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**7.4)
     best_Chi = best_segment[0]
-
-    if best_Chi<threshold_chi_square and best_segment[3]>0.00001: #and best_segment[3]*x[-1]+best_segment[4]>0.15
-        return ["a","b"], [best_segment[3], best_segment[4]], [best_segment[1], best_segment[2]], best_Chi, linear
+    terminalParameters= ["m","b"]
+    tauIndex= best_segment[1]
+    if onlyEnd:
+        print(best_segment[4]+best_segment[3]*(x[best_segment[2]]))
+    if not(onlyEnd) or (best_segment[4]+best_segment[3]*x[-1])>0.9:
+        return terminalParameters, [best_segment[3], best_segment[4]], np.sqrt(pcov[0,0]), [best_segment[1], best_segment[2]], best_Chi, linear
     else:
         return None
     
-def provaEmailExp(x, y, threshold_chi_square=10.):
+def provaEmailExp(x, y, yerr, threshold_chi_square=10.):
 
     par_values = []
     minimumShifting = np.maximum(len(x)//100, 5)
@@ -109,7 +115,7 @@ def provaEmailExp(x, y, threshold_chi_square=10.):
     else:
         return None
 
-def provaEmail23(x, y, threshold_chi_square=10.):
+def provaEmail23(x, y, yerr, threshold_chi_square=10.):
 
     par_values = []
     minimumShifting = np.maximum(len(x)//100, 5)
@@ -151,7 +157,7 @@ def provaEmail23(x, y, threshold_chi_square=10.):
     else:
         return None
     
-def provaEmail234(x, y, threshold_chi_square=10.):
+def provaEmail234(x, y, yerr, threshold_chi_square=10.):
 
     par_values = []
     minimumShifting = np.maximum(len(x)//100, 5)
@@ -168,13 +174,11 @@ def provaEmail234(x, y, threshold_chi_square=10.):
     j=len(x)-1
     finalTime=x[-1]
     for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
-
-
         
         def provWrapper(t, b, c,d, a):
             return prov(t, b, c, d, a, iStart=i)
 
-        popt, pcov = curve_fit(provWrapper, x[i:j], y[i:j], method='lm', maxfev=50000)
+        popt, pcov = curve_fit(provWrapper, x[i:j], y[i:j], sigma=yerr[i:j] , method='lm', maxfev=50000)
         b = popt[0]
         c = popt[1]
         d = popt[2]
@@ -193,7 +197,7 @@ def provaEmail234(x, y, threshold_chi_square=10.):
     else:
         return None
     
-def provaEmail2(x, y, threshold_chi_square=10.):
+def provaEmail2(x, y, yerr, threshold_chi_square=10.):
 
     par_values = []
     minimumShifting = np.maximum(len(x)//100, 5)
@@ -236,7 +240,7 @@ def provaEmail2(x, y, threshold_chi_square=10.):
     else:
         return None
     
-def provaEmail3(x, y, threshold_chi_square=10.):
+def provaEmail3(x, y, yerr, threshold_chi_square=10.):
 
     par_values = []
     minimumShifting = np.maximum(len(x)//100, 5)
@@ -254,14 +258,12 @@ def provaEmail3(x, y, threshold_chi_square=10.):
     finalTime=x[-1]
     for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
 
-
-        
         def provWrapper(t, b, d):
             a = y[i]
             iStart = i
             return prov(t, b, d, a=a, iStart=iStart)
 
-        popt, pcov = curve_fit(provWrapper, x[i:j], y[i:j], method='lm', maxfev=50000)
+        popt, pcov = curve_fit(provWrapper, x[i:j], y[i:j], sigma=yerr[i:j] , method='lm', maxfev=50000)
         a = y[i]
         b = popt[0]
         d = popt[1]
@@ -747,13 +749,14 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             results['thermalization'][quantityShortName]['muErr'] = muErr
             results['thermalization'][quantityShortName]['rChi2'] = rChi2
             results['thermalization'][quantityShortName]['dof'] = dof
+            return mu, muErr, rChi2, dof
         else:
             results['thermalization'][quantityShortName]['mu'] = 'nan'
             results['thermalization'][quantityShortName]['muErr'] = 'nan'
             results['thermalization'][quantityShortName]['rChi2'] = 'nan'
             results['thermalization'][quantityShortName]['dof'] = 'nan'
 
-    mcEvolutionAndAutocorrelation(therm_mcMeasures[:len(therm_mcMeasures)], therm_avEnergies[:len(therm_mcMeasures)], firstIndexOfMeasuresAtEq,
+    muAvEnergy, _, _, _ = mcEvolutionAndAutocorrelation(therm_mcMeasures[:len(therm_mcMeasures)], therm_avEnergies[:len(therm_mcMeasures)], firstIndexOfMeasuresAtEq,
                                       'avEnergy', 'trajectory average energy', 'energy', nMusToConsider)
     
     mcEvolutionAndAutocorrelation(therm_mcMeasures, therm_barriers, firstIndexOfMeasuresAtEq,
@@ -1225,20 +1228,35 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             firstConfData = data[:, 5:5+nMileStones ]
             secondConfData = data[:, 5+nMileStones:5+2*nMileStones ]
 
+    effectiveMuToUse = muAvEnergy
+    if muAvEnergy<1500:
+        effectiveMuToUse = 1500
+    avChiErr = np.sqrt(avChi*(1.-avChi)/((lastMeasureMc/mcMeas)/(1.+2.*effectiveMuToUse/mcMeas) ))
 
-    for fitTypeAndName in [["2", provaEmail2], ["3", provaEmail3], ["2e3", provaEmail23], ["exp", provaEmailExp]]:#, ["2e3_4", provaEmail234]]: #:
+    linearFitResults = {}
+    linearFitResults2 = {}
+
+    linearFitResults['tau'] = 'nan'
+    linearFitResults['m'] = 'nan'
+    linearFitResults['m_err'] = 'nan'
+    linearFitResults['c'] = 'nan'
+
+    linearFitResults2['tau'] = 'nan'
+    linearFitResults2['m'] = 'nan'
+    linearFitResults2['m_err'] = 'nan'
+    linearFitResults2['c'] = 'nan'
+
+    for fitTypeAndName in [["", progressiveLinearFit, True], ["1", progressiveLinearFit, False]]:#, ["2", provaEmail2,False], ["3", provaEmail3, False], ["2e3", provaEmail23, False], ["exp", provaEmailExp, False]]:#, ["2e3_4", provaEmail234]]: #:
         plt.figure('Chi'+fitTypeAndName[0])
-        plt.plot(time, avChi)
+        plt.plot(time, avChi, color='black', label=r"$\chi$")
+        plt.errorbar(time, avChi, yerr=avChiErr, color='blue', fmt= ' ', marker='', elinewidth=0.4, alpha=0.3, label='err')
 
-        if fracPosJ==1.:
-            fitOutput = progressiveLinearFit(time, avChi)
-        else:
-            fitOutput = fitTypeAndName[1](time, avChi)
-            #fitOutput = progressiveLinearFit(time, avChi, 'boh2')
+        fitOutput = progressiveLinearFit(time, avChi, avChiErr, onlyEnd=fitTypeAndName[2])
 
-        linearFitResults = {}
+        plt.legend()
+
         if fitOutput is not None:
-            paramsNames, best_fit_params, [linearity_lowerIndex, linearity_upperIndex], chi, funcToPlot = fitOutput
+            paramsNames, best_fit_params, m_err, [linearity_lowerIndex, linearity_upperIndex], chi, funcToPlot = fitOutput
 
             x_limits = plt.xlim()
             y_limits = plt.ylim()
@@ -1252,20 +1270,25 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             plt.xlim(x_limits)
             plt.ylim(y_limits)
             plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-            addInfoLines()
-            linearFitResults['tau'] = time[linearity_lowerIndex]
-            linearFitResults['m'] = best_fit_params[0]
-            linearFitResults['c'] = best_fit_params[1]
-        else:
-            linearFitResults['tau'] = 'nan'
-            linearFitResults['m'] = 'nan'
-            linearFitResults['c'] = 'nan'
+            if fitTypeAndName[0]=="":
+                linearFitResults['tau'] = time[linearity_lowerIndex]
+                linearFitResults['m'] = best_fit_params[0]
+                linearFitResults['m_err'] =m_err
+                linearFitResults['c'] = best_fit_params[1]
+            if fitTypeAndName[0]=="1":
+                linearFitResults2['tau'] = time[linearity_lowerIndex]
+                linearFitResults2['m'] = best_fit_params[0]
+                linearFitResults2['m_err'] = m_err
+                linearFitResults2['c'] = best_fit_params[1]
 
+
+        addInfoLines()
         plt.title(f'$\chi$ vs time\n'+titleSpecification)
         plt.xlabel('time')
         plt.ylabel(r'$\chi$')
 
     results['chiLinearFit'] = linearFitResults
+    results['chiLinearFit_InBetween'] = linearFitResults2
 
     xForDerivative, yDerivative= aDiscreteDerivative(time, avChi)
     plt.figure('ChiDeriv')

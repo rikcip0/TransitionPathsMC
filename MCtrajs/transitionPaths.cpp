@@ -154,22 +154,10 @@ int main(int argc, char **argv)
   else
     randomField.assign(N, 0.);
 
-  int i = 0;
-  for (auto val : randomField)
-  {
-    cout << "f " << i << "= " << val << endl;
-    i++;
-  }
   if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, sigma))
   {
     cout << "Error in the graph initialization" << endl;
     return 1;
-  }
-
-  for (auto val : randomField)
-  {
-    cout << "f " << i << "= " << val << endl;
-    i++;
   }
 
   string graphType;

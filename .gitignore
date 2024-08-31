@@ -3,5 +3,6 @@
 *.dat
 *.png
 *.pdf
+*.pyc
 Data/Graphs
 Data/MultiRun

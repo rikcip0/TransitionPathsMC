@@ -11,7 +11,7 @@ from matplotlib.colors import ListedColormap, Normalize
 def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                                 betaOfExt, Qif,
                                 trajsExtremesInitID, shortDescription, edgeColorPerInitType,
-                                markerShapeVariable, markerShapeVariableName,
+                                markerShapeVariable, markerShapeVariableNames,
                                 additionalMarkerTypes=None,
             yerr=None, fitType= '', xscale='', yscale ='', fittingOverDifferentEdges=True, nGraphs=None):
     
@@ -78,7 +78,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         ax1.scatter([],[], label=f"{key}", color="grey", edgecolors=value)
 
     ax1.scatter([],[], label=f"        ", color="None")
-    ax1.scatter([],[], label=markerShapeVariableName+":", color="None")
+    ax1.scatter([],[], label=', '.join(markerShapeVariableNames)+":", color="None")
     for i, t in enumerate(curveTypes):
         if i>=len(markers):
             continue
@@ -174,8 +174,9 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     ax1.plot(additional_X[condition], additional_Y[condition], color=color, marker=" ", linewidth=0.4)
 
     if yscale!='' and len(y[y>0])>0:
+         print(x,y)
          plt.yscale(yscale)
-    if xscale!='':
+    if xscale!='' and len(x[x>0])>0:
          plt.xscale(xscale)
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
 

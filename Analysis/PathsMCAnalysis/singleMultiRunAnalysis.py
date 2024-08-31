@@ -1,4 +1,3 @@
-from math import comb
 import os
 import sys
 
@@ -13,6 +12,7 @@ from itertools import cycle
 import json
 from matplotlib.colors import LinearSegmentedColormap, to_rgba
 from scipy.integrate import quad
+from scipy.special import comb
 from scipy.optimize import curve_fit
 from uncertainties import ufloat
 
@@ -73,6 +73,19 @@ def ottieni_funzione(structure, param_tuples):
         return current_level
     else:
         return np.nan
+    
+def P_t(n, q, p_up):
+    """
+    print(n,q, p_up)
+    # Calcolo del logaritmo della funzione per maggiore precisione
+    log_comb = np.log(comb(n, (n+q)/2))
+    log_term1 = (n + q) / 2 * np.log(p_up)
+    log_term2 = (n - q) / 2 * np.log(1. - p_up)
+    # Somma dei logaritmi e poi esponenziale per ottenere il risultato finale
+    log_result = log_comb + log_term1 + log_term2
+    return np.exp(log_result)
+    """
+    return comb(n, (n+q)/2)*((p_up)**((n+q)/2))*((1-p_up)**((n-q)/2))
 
 def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
 
@@ -105,8 +118,11 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     h_out = []
     Qstar = []
     chi_tau = []
-    chi_m = []
     chi_c = []
+    chi_m = []
+    chi_tau2 = []
+    chi_m2 = []
+    chi_c2 = []
     TIbeta = []
     TIhout = []
     TIQstar = []
@@ -241,6 +257,15 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             chi_tau.append(item["results"]["chiLinearFit"]['tau'])
             chi_m.append(item["results"]["chiLinearFit"]['m'])
             chi_c.append(item["results"]["chiLinearFit"]['c'])
+
+        if "chiLinearFit_InBetween" not in item["results"]:
+            chi_tau2.append("nan")
+            chi_m2.append("nan")
+            chi_c2.append("nan")
+        else:
+            chi_tau2.append(item["results"]["chiLinearFit_InBetween"]['tau'])
+            chi_m2.append(item["results"]["chiLinearFit_InBetween"]['m'])
+            chi_c2.append(item["results"]["chiLinearFit_InBetween"]['c'])
         
         realTime.append(item["results"]["realTime"]['mean'])
         realTimeErr.append(item["results"]["realTime"]['sigma'])
@@ -321,8 +346,14 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     chi_m = np.array(chi_m, dtype=np.float64)
     chi_c = np.array(chi_c, dtype=np.float64)
 
+    chi_tau2 = np.array(chi_tau2, dtype=np.float64)
+    chi_m2 = np.array(chi_m2, dtype=np.float64)
+    chi_c2 = np.array(chi_c2, dtype=np.float64)
+    scale2 = chi_m2*T+chi_c2
     ZFromTIBeta = np.full_like(N, np.nan, dtype=np.float64) # l'esistenza di questo array è una sconfitta
     kFromChi = np.full_like(N, np.nan, dtype=np.float64)
+    kFromChi_InBetween = np.full_like(N, np.nan, dtype=np.float64)
+    kFromChi_InBetween_Scaled = np.full_like(N, np.nan, dtype=np.float64)
     
     meanBarrier = np.array(meanBarrier, dtype=np.float64)
     stdDevBarrier = np.array(stdDevBarrier, dtype=np.float64)
@@ -371,6 +402,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     edgeColorPerInitType_Dic={ 70: "lightGreen", 71: "black", 72: "purple", 73: "orange", 74: "orange", 740: "red"}
 
     Zdict = {}
+
     def thermodynamicIntegrationAndPlots(filt):
 
         #specifying graph in 2 cycle
@@ -419,23 +451,21 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 #aggiungi controllo che le beta non siano troppo spaziate
                                 f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=3)
 
-                                def ZAtBeta0(n, q_if, q_star, t):
-                                    p_up_0 = (n+q_if)/(2.*n)
-                                    p_up_t = 0.5*(1.+(2.*p_up_0-1.)*np.exp(-2.*t))
-                                    def P_t(q):
-                                        return comb(n, q)*p_up_t**((n+q)/2) * ((1.-2*p_up_t)**((n-q)/2))
-                                    ZAtBet0 =0.
-                                    for this_q_star in range(q_star,n+1):
-                                        ZAtBet0+=P_t(this_q_star)
-                                    return ZAtBet0
+                                p_up_0 = (sim_N+sim_Qif)/(2.*sim_N)
+                                p_up_t = 0.5*(1.+(2.*p_up_0-1.)*np.exp(-2.*sim_T))
+
+                                ZAtBet0 =0.
+                                for this_q_star in range(sim_Qstar, sim_N+1, 2):
+                                    ZAtBet0+=P_t(sim_N, this_q_star, p_up_t)
 
                                 def integral_to_x(x_point, aoF=f_interp, aoTIx=TIx):
                                         if x_point<0 or x_point>aoTIx[-1]:
                                             return np.nan
                                         integral, _ = quad(aoF, aoTIx[0], x_point)
                                         return integral
-                                def exp_integral_to_x(x_point, aoF=f_interp, aoTIx=TIx):
-                                    return ZAtBeta0(sim_N, sim_Qif, sim_Qstar, sim_T) * np.exp(integral_to_x(x_point, aoF, aoTIx))
+                                
+                                def exp_integral_to_x(x_point, aoF=f_interp, aoTIx=TIx, factor=ZAtBet0):
+                                    return factor* np.exp(integral_to_x(x_point, aoF, aoTIx))
                                 
                                 TIfunction= integral_to_x
                                 Zfunction= exp_integral_to_x
@@ -446,19 +476,22 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 for index in indices:
                                     ZFromTIBeta[index] = Zfunction(beta[index])
                                     kFromChi[index] = ZFromTIBeta[index] * chi_m[index]
+                                    kFromChi_InBetween[index] = ZFromTIBeta[index] * chi_m2[index]
+                                    kFromChi_InBetween_Scaled[index] = kFromChi_InBetween[index]/scale2[index]
+
         plt.figure("text")
         x_continuous = np.linspace(0, 1., 1000) 
         for key1 in Zdict.keys():
             for key2 in Zdict[key1]:
                 for key3 in Zdict[key1][key2]:
                     for k in Zdict[key1][key2][key3]:
-                        print(Zdict[key1][key2][key3][k])
+                        #print(Zdict[key1][key2][key3][k])
                         f=Zdict[key1][key2][key3][k]['Zfunction']
                         exp_integrals_continuous = [f(xp) for xp in x_continuous]
                         plt.plot(x_continuous, exp_integrals_continuous, label=f"{key1} {key2} {key3} {k}")
         plt.legend()
 
-    def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableName, markerShapeVariable, markerShapeVariableName):
+    def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableNames, markerShapeVariables, markerShapeVariablesNames):
 
         if len(np.unique(x[filter]))<2:
             return
@@ -483,24 +516,33 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             if len(np.unique(x[filt]))<2:
                 continue
 
-            theseFiguresFolder= os.path.join(thisStudyFolder, f"{subfolderingVariableName}{v}")
+            theseFiguresFolder = os.path.join(
+                thisStudyFolder, 
+                "{}_{}".format(
+                    ''.join([name.replace('\\', '').replace('$', '').capitalize() for name in subfolderingVariableNames]),
+                    '_'.join([str(item) for item in v])
+                )
+            )
+
+            specificationLine = "at "+ ', '.join([f"{k}={v}" for k, v in zip(subfolderingVariableNames, v)])
             if not os.path.exists(theseFiguresFolder):
                 os.makedirs(theseFiguresFolder, exist_ok=True)
             else:
                 delete_files_in_folder(theseFiguresFolder)
 
-            specificationLine =f"at {subfolderingVariableName} = {v}"
-
             additional= []
             tempFilt=filt
             if xName==r"$\beta$":
                 stMC_corrBetaAndQif = np.empty((len(stMC_beta), 2), dtype=object)
-                for sim_N, sim_graphID, sim_betOfEx, sim_SecConfInd, sim_Qif, simQstar in set(zip(N[filt],graphID[filt], betaOfExtraction[filt], secondConfigurationIndex[filt], refConfMutualQ[filt], Qstar[filt])):
+                for sim_N, sim_graphID, sim_FieldType, sim_FieldRealization, sim_FieldSigma, sim_betOfEx, sim_SecConfInd, sim_Qif, simQstar in set(zip(N[filt],graphID[filt], fieldType[filt], fieldRealization[filt], fieldSigma[filt], betaOfExtraction[filt], secondConfigurationIndex[filt], refConfMutualQ[filt], Qstar[filt])):
                     stMCFilt= np.logical_and.reduce([stMC_N == sim_N,
                                                      stMC_graphID==sim_graphID,
                                                      stMC_betaOfExtraction==sim_betOfEx,
                                                      stMC_configurationIndex==sim_SecConfInd,
-                                                     stMC_Qstar==simQstar
+                                                     stMC_Qstar==simQstar,
+                                                     stMC_fieldType==sim_FieldType,
+                                                     stMC_fieldRealization==sim_FieldRealization,
+                                                     stMC_fieldSigma==sim_FieldSigma,
                                                     ])
                     stMC_corrBetaAndQif[stMCFilt]=[sim_betOfEx, sim_Qif]
                     if stMCFilt.sum()>1:
@@ -514,102 +556,120 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             TIbetaMainPlot = plotWithDifferentColorbars(f"TIbeta", x[filt], xName, TIbeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
             betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
             trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
-            markerShapeVariable[filt], markerShapeVariableName,
+            markerShapeVariables[filt], markerShapeVariablesNames,
             nGraphs=len(np.unique(graphID[filt])), 
             additionalMarkerTypes=additional
             )
 
             mainPlot = plotWithDifferentColorbars(f"meanBarrier", x[filt], xName, meanBarrier[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
                         betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                        trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                        trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         yerr=stdDevBarrier[filt], nGraphs=len(np.unique(graphID[filt])))
             
             mainPlot = plotWithDifferentColorbars(f"avEnergy", x[filt], xName, avEnergy[filt], "energy", "Mean average energy over trajectory vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                     yerr=avEnergyStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
             
             mainPlot = plotWithDifferentColorbars(f"muAvEnergy", x[filt], xName, muAvEnergy[filt], r"$\mu$", r"$\mu$"+" vs "+ xName+"\n"+specificationLine,
                             betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                            trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                            trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                             yerr=stdDevBarrier[filt], fitType='', xscale='', 
                             #yscale='log', 
                             nGraphs=len(np.unique(graphID[filt])))
             tempFilt=filt
-            for t in np.unique(markerShapeVariable[filt]):
-                filt = np.logical_and(np.all(markerShapeVariable == t, axis=markerShapeVariable.ndim-1), tempFilt)
+            for t in np.unique(markerShapeVariables[filt]):
+                filt = np.logical_and(np.all(markerShapeVariables == t, axis=markerShapeVariables.ndim-1), tempFilt)
                 if len(ID[filt])>0:
-                    mainPlot = plotWithDifferentColorbars(f"muAvEnergy_{markerShapeVariableName}{t}", x[filt], xName, muAvEnergy[filt], r"$\mu$", r"$\mu$"+" vs "+ xName+"\n"+specificationLine,
+                    mainPlot = plotWithDifferentColorbars(f"muAvEnergy_{markerShapeVariablesNames}{t}", x[filt], xName, muAvEnergy[filt], r"$\mu$", r"$\mu$"+" vs "+ xName+"\n"+specificationLine,
                             betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                            trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                            trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                             yerr=stdDevBarrier[filt], fitType='', xscale='', yscale='', nGraphs=len(np.unique(graphID[filt])))
             filt=tempFilt
 
             mainPlot = plotWithDifferentColorbars(f"nJumps", x[filt], xName, nJumps[filt], "# jumps", "Mean number of jumps per spin over trajectory vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                     yerr=nJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
-            mainPlot = plotWithDifferentColorbars(f"deltaNJumps", x[filt], xName, deltaNJumps[filt], r"$\delta$", "Spins number of jumps over trajectory stdDev (over sistes) vs "+ xName +"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"deltaNJumps", x[filt], xName, deltaNJumps[filt], r"$\delta$", "Spins number of jumps over trajectory stdDev (over sites) vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                     yerr=deltaNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"deltaNOverAvJumps", x[filt], xName, deltaNJumps[filt]**2/nJumps[filt], "ratio", r"($\delta$"+"#jumps)^2/(#jumps)" +" vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                     yerr=deltaNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"qDist", x[filt], xName, qDist[filt], "distance", "Average distance from stfwd path between reference configurations over trajectory vs "+xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                     yerr=qDistStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
             mainPlot = plotWithDifferentColorbars(f"tau", x[filt], xName, chi_tau[filt], r"$\tau_{trans}$", r"transient time $\tau_{trans}$ vs "+ xName+"\n"+specificationLine,
                         betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                        trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                        trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         yerr=stdDevBarrier[filt], nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"realTime", x[filt], xName, realTime[filt], "computer time (seconds)", "Seconds required to perform 10^5 mc sweeps vs "+ xName+"\n"+specificationLine,
                         betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                        trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariable[filt], markerShapeVariableName,
+                        trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         yerr=realTimeErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
             mainPlot = plotWithDifferentColorbars(f"TIhout", x[filt], xName, TIhout[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
-                    markerShapeVariable[filt], markerShapeVariableName,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"TIQstar", x[filt], xName, TIQstar[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
-                    markerShapeVariable[filt], markerShapeVariableName,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"Z", x[filt], xName, ZFromTIBeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
-                    markerShapeVariable[filt], markerShapeVariableName,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])))
 
             mainPlot = plotWithDifferentColorbars(f"Zlog", x[filt], xName, ZFromTIBeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
-                    markerShapeVariable[filt], markerShapeVariableName,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])), yscale='log')
             
             mainPlot = plotWithDifferentColorbars(f"k", x[filt], xName, kFromChi[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
-                    markerShapeVariable[filt], markerShapeVariableName,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
+                    nGraphs=len(np.unique(graphID[filt])))
+            
+            mainPlot = plotWithDifferentColorbars(f"k2", x[filt], xName, kFromChi_InBetween[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])), yscale='log')
-
+            
+            mainPlot = plotWithDifferentColorbars(f"k2_scaled", x[filt], xName, kFromChi_InBetween_Scaled[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
+                    nGraphs=len(np.unique(graphID[filt])), yscale='log')
+            
+            mainPlot = plotWithDifferentColorbars(f"scale", x[filt], xName, scale2[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
+                    nGraphs=len(np.unique(graphID[filt])), yscale='log')
+            
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
             for fig_name in figs:
                 fig = plt.figure(fig_name)
                 filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-                #print(filename)
+                print(filename)
                 fig.savefig(filename, bbox_inches='tight')
             plt.close('all')
 
@@ -632,17 +692,17 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         if len(np.unique(beta[runGroupFilter]))>2:
             folderingArray= [ [t,g] for t, g in list(zip(T, graphID))]
             folderingArray = np.asarray(folderingArray)
-            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), "N, Qstar, fieldType"+r"$\sigma$", folderingArray, "T, graphID")
+            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], folderingArray, ["T", "graphID"])
         
         if len(np.unique(T[runGroupFilter]))>2:
-            myMultiRunStudy(filter=runGroupFilter,studyName="StudyInT", x=T,  xName="T", subfolderingVariable=N, subfolderingVariableName="N", markerShapeVariable=np.array(list(zip(beta, graphID))), markerShapeVariableName="beta, graphID")
+            myMultiRunStudy(runGroupFilter,"StudyInT", T,  "T", np.array(list(zip(N))), ["N"], np.array(list(zip(beta, graphID))), ["beta", "graphID"])
             
         if len(np.unique(N[runGroupFilter]))>2: 
             print(np.unique(N[runGroupFilter]))
             tempQstar= Qstar #così, slice-ando rispetto a N unisco i casi con q_star uguale
             Qstar*=0
             b=np.array(list(zip(h_in, h_out, Qstar)))
-            myMultiRunStudy(runGroupFilter, "StudyInN", N, "N", np.asarray(list(zip(Qstar, beta))), "h_in, h_out, Qstar, beta" , np.array(list(zip(T, graphID))), "T, graphID")
+            myMultiRunStudy(runGroupFilter, "StudyInN", zip(N), "N", np.asarray(list(zip(Qstar, beta))), ["h_in", "h_out", "Qstar", "beta"] , np.array(list(zip(T, graphID))), ["T", "graphID"])
             Qstar=tempQstar
         return
 
