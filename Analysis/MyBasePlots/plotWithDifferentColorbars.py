@@ -13,7 +13,8 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                                 trajsExtremesInitID, shortDescription, edgeColorPerInitType,
                                 markerShapeVariable, markerShapeVariableNames,
                                 additionalMarkerTypes=None,
-            yerr=None, fitType= '', xscale='', yscale ='', fittingOverDifferentEdges=True, nGraphs=None):
+                                yerr=None, fitType= '', xscale='', yscale ='', fittingOverDifferentEdges=True, nGraphs=None,
+                                functionsToPlotContinuously = None):
     
     markers = ['s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h','s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h']
     
@@ -47,11 +48,14 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     trajsExtremesInitID = trajsExtremesInitID[xSort]
     markerShapeVariable = markerShapeVariable[xSort]
     betaOfExt = betaOfExt[xSort]
+    
 
     Qif = Qif[xSort]
     if yerr is not None:
         yerr = yerr[xSort]
-
+    if functionsToPlotContinuously:
+        for i, filter in enumerate(functionsToPlotContinuously[1]):
+            functionsToPlotContinuously[1][i] = functionsToPlotContinuously[1][i][xSort]
     plotToBarRatio = 55
 
     figHeight = 10 + (2.2+(1.9*(nColorbars-1)))*10./plotToBarRatio
@@ -96,7 +100,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     #print(additionalMarkerTypes)
     if additionalMarkerTypes is not None:
             [ax1.errorbar([],[], label=f"{additionalMarkerType[3]}", color="grey", marker=".") for additionalMarkerType in additionalMarkerTypes ]
-    
+    plottedYs=[]
     if fitType!='':
         ax1.scatter([],[], label="", color="None")
     for i, t in enumerate(curveTypes):
@@ -111,6 +115,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                                                     [np.array_equal(t,variable) for variable in markerShapeVariable],
                                                     Qif == q])
                 for betOfEx in np.unique(betaOfExt[outCondition]):
+                    fToPlot=None
                     condition = np.logical_and(outCondition, betaOfExt==betOfEx)
                     if len(x[condition]) == 0:
                         continue
@@ -120,13 +125,26 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                         norm = lambda x: 0.5
                     color = cmaps[betOfEx](norm(q))
 
+                    if functionsToPlotContinuously is not None:
+                        for i, filter in enumerate(functionsToPlotContinuously[1]):
+                            print("A",condition)
+                            print("B",filter)
+                            print("C",filter[condition])
+                            if np.all(filter[condition]):
+                                fToPlot = functionsToPlotContinuously[0][i]
+                                x_continous = np.linspace(0., np.nanmax(x[condition]), 2000)
+                                y_continous = [fToPlot(x) for x in x_continous]
+                                ax1.plot(x_continous, y_continous, color=edgeColorPerInitType[ext], linewidth=1.)
+                                ax1.plot(x_continous, y_continous, color=color, linewidth=0.7)
+                                
                     if yerr is None:
-                            ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2)
-                            ax1.plot(x[condition], y[condition], color=color, marker=" ", linewidth=0.4)
+                        ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2)
+                        ax1.plot(x[condition], y[condition], color=color, marker=" ", linewidth=0.4)
+                        plottedYs.extend(y[condition])
                     else:
-                            ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2)
-                            ax1.plot(x[condition], y[condition], color=color, marker=" ", linewidth=0.4)
-                            ax1.errorbar(x[condition], y[condition], yerr=yerr[condition], color=color, fmt= ' ', marker='')
+                        ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2)
+                        ax1.plot(x[condition], y[condition], color=color, marker=" ", linewidth=0.4)
+                        ax1.errorbar(x[condition], y[condition], yerr=yerr[condition], color=color, fmt= ' ', marker='')
             
             if fittingOverDifferentEdges is False:
                 if fitType=='powerLaw':
@@ -173,8 +191,8 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40)
                     ax1.plot(additional_X[condition], additional_Y[condition], color=color, marker=" ", linewidth=0.4)
 
-    if yscale!='' and len(y[y>0])>0:
-         print(x,y)
+    plottedYs = np.asarray(plottedYs)
+    if yscale!='' and len(plottedYs[plottedYs>0])>0:
          plt.yscale(yscale)
     if xscale!='' and len(x[x>0])>0:
          plt.xscale(xscale)

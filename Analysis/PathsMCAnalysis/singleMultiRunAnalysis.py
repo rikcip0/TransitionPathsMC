@@ -288,7 +288,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
 
     for typeOfSim in np.unique(simulationType):
         # Print the keyword, parameters, and their values
-        print(f"Found {np.count_nonzero(simulationType == typeOfSim)} eGroups of type {typeOfSim}.\n")
+        print(f"Found {np.count_nonzero(simulationType == typeOfSim)} groups of type {typeOfSim}.\n")
 
     ID = np.array(ID)
     simulationType = np.array(simulationType)
@@ -403,7 +403,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
 
     Zdict = {}
 
-    def thermodynamicIntegrationAndPlots(filt):
+    def thermodynamicIntegration(filt):
 
         #specifying graph in 2 cycle
         for sim_N, sim_graphID, sim_Hext in set(zip(N[filt], graphID[filt], h_ext[filt])):
@@ -426,16 +426,20 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         filteredStdMCsMC = stMC_MC[st_TIFilt3]
 
                         filteredStdMCsBetas, filteredStdMCsTIBetas, filteredStdMCsMC = getUniqueXAndYZAccordingToZ(filteredStdMCsBetas, filteredStdMCsTIBetas, filteredStdMCsMC)
+                        
                         #specifico il tempo
                         for sim_T, sim_trajInit in set(zip(T[TIFilt3],trajsExtremesInitID[TIFilt3])):
                             TIFilt_atThisT = np.logical_and.reduce([TIFilt3, T==sim_T, trajsExtremesInitID==sim_trajInit])
                         
                             filteredBetas = beta[TIFilt_atThisT]
-                            if 0. not in filteredStdMCsBetas and 0. not in filteredBetas:
-                                continue
                             filteredTIBetas = TIbeta[TIFilt_atThisT]
                             filteredLastMeasureMC = lastMeasureMC[TIFilt_atThisT]
-
+                            
+                            if (0. not in filteredStdMCsBetas and 0. not in filteredBetas):
+                                continue
+                            if len(filteredStdMCsTIBetas)>0:
+                                if filteredStdMCsTIBetas[-1]-filteredTIBetas[0]>filteredStdMCsTIBetas[0]/15.:
+                                    continue
                             minPathsMCsBeta = np.min(filteredBetas)
                             stMC_FiltForThisT = (filteredStdMCsBetas<minPathsMCsBeta)
                             filteredStdMCsBetasForThisT = filteredStdMCsBetas[stMC_FiltForThisT]
@@ -446,9 +450,10 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             if len(filteredBetas)>4:
                                 TIx=np.concatenate([filteredStdMCsBetasForThisT, filteredBetas])
                                 TIy=np.concatenate([filteredStdMCsTIBetasForThisT, filteredTIBetas])
-
                                 #aggiungi controllo che stdTI del piu grande stdBeta e TI del piu piccolo Beta siano circa uguali
-                                #aggiungi controllo che le beta non siano troppo spaziate
+                                maxBetaNotTooSpaced = max([TIx[i] for i in range(1, len(TIx)) if TIx[i] - TIx[i-1] <= 0.1], default=None)
+                                TIy = TIy[TIx<=maxBetaNotTooSpaced]
+                                TIx = TIx[TIx<=maxBetaNotTooSpaced]
                                 f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=3)
 
                                 p_up_0 = (sim_N+sim_Qif)/(2.*sim_N)
@@ -459,9 +464,9 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     ZAtBet0+=P_t(sim_N, this_q_star, p_up_t)
 
                                 def integral_to_x(x_point, aoF=f_interp, aoTIx=TIx):
-                                        if x_point<0 or x_point>aoTIx[-1]:
+                                        if x_point<0 or x_point>maxBetaNotTooSpaced:
                                             return np.nan
-                                        integral, _ = quad(aoF, aoTIx[0], x_point)
+                                        integral, _ = quad(aoF, 0., x_point, limit=150)
                                         return integral
                                 
                                 def exp_integral_to_x(x_point, aoF=f_interp, aoTIx=TIx, factor=ZAtBet0):
@@ -469,7 +474,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 
                                 TIfunction= integral_to_x
                                 Zfunction= exp_integral_to_x
-                                aggiungi_funzione(Zdict, [(sim_N, sim_graphID, sim_Hext), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_Qstar), (sim_T, sim_trajInit)],
+                                aggiungi_funzione(Zdict, [(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldSigma, sim_fieldRealization), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_Qstar), (sim_T, sim_trajInit)],
                                                   TIx, TIy, TIfunction, Zfunction)
                                 
                                 indices = np.where(TIFilt_atThisT)[0]
@@ -479,17 +484,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     kFromChi_InBetween[index] = ZFromTIBeta[index] * chi_m2[index]
                                     kFromChi_InBetween_Scaled[index] = kFromChi_InBetween[index]/scale2[index]
 
-        plt.figure("text")
-        x_continuous = np.linspace(0, 1., 1000) 
-        for key1 in Zdict.keys():
-            for key2 in Zdict[key1]:
-                for key3 in Zdict[key1][key2]:
-                    for k in Zdict[key1][key2][key3]:
-                        #print(Zdict[key1][key2][key3][k])
-                        f=Zdict[key1][key2][key3][k]['Zfunction']
-                        exp_integrals_continuous = [f(xp) for xp in x_continuous]
-                        plt.plot(x_continuous, exp_integrals_continuous, label=f"{key1} {key2} {key3} {k}")
-        plt.legend()
 
     def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableNames, markerShapeVariables, markerShapeVariablesNames):
 
@@ -502,7 +496,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             os.makedirs(thisStudyFolder, exist_ok=True)
         else:
             delete_files_in_folder(thisStudyFolder)
-
+        thermodynamicIntegration(filter)
+        
         for v in np.unique(subfolderingVariable, axis=0):
             subFolderingFilter = []
             if subfolderingVariable.ndim==1:
@@ -524,7 +519,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 )
             )
 
-            specificationLine = "at "+ ', '.join([f"{k}={v}" for k, v in zip(subfolderingVariableNames, v)])
+            specificationLine = "at "+ ', '.join([f"{k}={v}" for k, v in zip(subfolderingVariableNames, v)]).replace('star', '*')
             if not os.path.exists(theseFiguresFolder):
                 os.makedirs(theseFiguresFolder, exist_ok=True)
             else:
@@ -550,7 +545,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 if len(additional)==0:
                     additional=None
                 
-                thermodynamicIntegrationAndPlots(filt)
 
             filt=tempFilt
             TIbetaMainPlot = plotWithDifferentColorbars(f"TIbeta", x[filt], xName, TIbeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
@@ -645,7 +639,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                    nGraphs=len(np.unique(graphID[filt])))
+                    nGraphs=len(np.unique(graphID[filt])), yscale='log')
             
             mainPlot = plotWithDifferentColorbars(f"k2", x[filt], xName, kFromChi_InBetween[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
@@ -664,6 +658,53 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])), yscale='log')
+            
+            plt.figure("Testoo")
+            filters = []
+            functions = []
+            x_continuous = np.linspace(0, 1., 1000) 
+            for sim_N, sim_graphID, sim_Hext in set(zip(N[filt], graphID[filt], h_ext[filt])):
+                if (sim_N, sim_graphID, sim_Hext) not in Zdict.keys():
+                    continue
+                subdict1 = Zdict[(sim_N, sim_graphID, sim_Hext)]
+                for sim_fieldType, sim_fieldSigma, sim_fieldRealization in set(zip(fieldType[filt], fieldSigma[filt], fieldRealization[filt])):
+                    if (sim_fieldType, sim_fieldSigma, sim_fieldRealization) not in subdict1.keys():
+                        continue
+                    subdict2 = subdict1[(sim_fieldType, sim_fieldSigma, sim_fieldRealization)]
+                    #specifying configurations
+                    for sim_betOfEx, simfirst_ConfIndex, sim_secondConfIndex in set(zip(betaOfExtraction[filt],firstConfigurationIndex[filt], secondConfigurationIndex[filt])):
+                        if (sim_betOfEx, simfirst_ConfIndex, sim_secondConfIndex) not in subdict2.keys():
+                            continue
+                        subdict3 = subdict2[(sim_betOfEx, simfirst_ConfIndex, sim_secondConfIndex)]
+                        #specifying stochastic measure parameters
+                        for sim_Hin, sim_Hout, sim_Qstar in set(zip(h_in[filt], h_out[filt], Qstar[filt])):
+                            if (sim_Hin, sim_Hout, sim_Qstar) not in subdict3.keys():
+                                continue
+                            subdict4 = subdict3[(sim_Hin, sim_Hout, sim_Qstar)]
+                            #specifico il tempo
+                            for sim_T, sim_trajInit in set(zip(T[filt],trajsExtremesInitID[filt])):
+                                if (sim_T, sim_trajInit) not in subdict4.keys():
+                                    continue
+                                folderingVariableFilt = np.logical_and.reduce([
+                                    sim_N==N[filt], sim_graphID==graphID[filt], sim_Hext==h_ext[filt],
+                                    sim_fieldType==fieldType[filt], sim_fieldSigma==fieldSigma[filt], sim_fieldRealization==fieldRealization[filt],
+                                    sim_betOfEx==betaOfExtraction[filt], simfirst_ConfIndex==firstConfigurationIndex[filt], sim_secondConfIndex==secondConfigurationIndex[filt],
+                                    sim_Hin==h_in[filt], sim_Hout==h_out[filt], sim_Qstar==Qstar[filt],
+                                    sim_T==T[filt], sim_trajInit==trajsExtremesInitID[filt]
+                                ])
+                                f= subdict4[(sim_T, sim_trajInit)]['Zfunction']
+                                filters.append(folderingVariableFilt)
+                                functions.append(f)
+                                exp_integrals_continuous = [f(xp) for xp in x_continuous]
+                                plt.plot(x_continuous, exp_integrals_continuous, label=f"{markerShapeVariablesNames} {np.unique(markerShapeVariables[filt][folderingVariableFilt])}")
+                                plt.yscale('log')
+                                plt.legend()
+            
+            mainPlot = plotWithDifferentColorbars(f"proviamo", x[filt], xName, ZFromTIBeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
+                    nGraphs=len(np.unique(graphID[filt])), yscale='log', functionsToPlotContinuously=[functions, filters])
             
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
             for fig_name in figs:
@@ -690,20 +731,15 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         os.makedirs(plotsFolder, exist_ok=True)
 
         if len(np.unique(beta[runGroupFilter]))>2:
-            folderingArray= [ [t,g] for t, g in list(zip(T, graphID))]
-            folderingArray = np.asarray(folderingArray)
-            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], folderingArray, ["T", "graphID"])
+            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, T))), ["graphID", "T"])
         
         if len(np.unique(T[runGroupFilter]))>2:
             myMultiRunStudy(runGroupFilter,"StudyInT", T,  "T", np.array(list(zip(N))), ["N"], np.array(list(zip(beta, graphID))), ["beta", "graphID"])
             
         if len(np.unique(N[runGroupFilter]))>2: 
-            print(np.unique(N[runGroupFilter]))
-            tempQstar= Qstar #così, slice-ando rispetto a N unisco i casi con q_star uguale
-            Qstar*=0
-            b=np.array(list(zip(h_in, h_out, Qstar)))
-            myMultiRunStudy(runGroupFilter, "StudyInN", zip(N), "N", np.asarray(list(zip(Qstar, beta))), ["h_in", "h_out", "Qstar", "beta"] , np.array(list(zip(T, graphID))), ["T", "graphID"])
-            Qstar=tempQstar
+            Qstar #così, slice-ando rispetto a N unisco i casi con q_star uguale
+            normalizedQstar = Qstar/N
+            myMultiRunStudy(runGroupFilter, "StudyInN", N, "N", np.asarray(list(zip(normalizedQstar, beta))), ["Qstar", "beta"] , np.array(list(zip(graphID, T))), ["graphID", "T"])
         return
 
         if len(np.unique(fieldSigma[runGroupFilter]))>1:

@@ -8,18 +8,15 @@ import sys
 from scipy.optimize import curve_fit
 import scipy.stats as stats
 from scipy.stats import linregress
-
-simulationCode_version = None
-currentAnalysisVersion = 'singleRunAnalysisV000'
-preset_Path='../../Data/Graphs/RRG/p2C3/N100/structure199200/fPosJ1.00/graph8960/1.2e+02_1_0_inf_100_inf_run1' #for a quick single run analysis
-
 matplotlib.use('Agg') 
 sys.path.append('../')
 from MyBasePlots.hist import myHist
 from MyBasePlots.autocorrelation import autocorrelationWithExpDecayAndMu
 
+simulationCode_version = None
+currentAnalysisVersion = 'singleRunAnalysisV000'
+fieldTypesDict = {'1': "Bernoulli", '2': "Gaussian"}
 
-fieldTypesDict={'1':"Bernoulli", '2': "Gaussian"}
 
 def meanAndStdErrForParametricPlot(toBecomeX, toBecomeY):
     x_unique_values = np.unique(toBecomeX)
@@ -27,6 +24,7 @@ def meanAndStdErrForParametricPlot(toBecomeX, toBecomeY):
     y_var_values = np.asarray([np.var(toBecomeY[toBecomeX == x_value])**0.5 for x_value in x_unique_values])
     y_median_values = np.asarray([np.median(toBecomeY[toBecomeX == x_value]) for x_value in x_unique_values])
     return x_unique_values, y_mean_values, y_var_values, y_median_values
+
 
 def aDiscreteDerivative(xArray, yArray):
     if len(xArray) < 4 or len(yArray) < 4:
@@ -36,19 +34,21 @@ def aDiscreteDerivative(xArray, yArray):
     derivative = (((yArray[1:]-yArray[:-1])/(xArray[1:]-xArray[:-1]))[:-2]+2.*((yArray[2:]-yArray[:-2])/(xArray[2:]-xArray[:-2]))[:-1]+((yArray[3:]-yArray[:-3])/(xArray[3:]-xArray[:-3])))/4.
     return xArray[:-3], derivative
 
-def progressiveLinearFit(x, y, yerr, threshold_chi_square=1., onlyEnd=False):
+
+def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.8, onlyEnd=False):
 
     par_values = []
     minimumShifting = np.maximum(len(x)//150, 5)
     minimumLength = 3*minimumShifting
+
     def linear(t, a, b):
         return t*a+b
-    
-    iStartIndex=np.maximum(np.argmax(y>0.001), minimumShifting)
 
-    if iStartIndex+minimumShifting>=len(x)-1:
+    iStartIndex = np.maximum(np.argmax(y>0.001), minimumShifting)
+
+    if iStartIndex + minimumShifting >= len(x)-1:
         return None
-    largestIndexOfTimeLargerThanTminus2 = np.where(x<x[-1]-2.)[0][-1]
+    largestIndexOfTimeLargerThanTminus2 = np.where(x<x[-1]-0.3)[0][-1]
 
     for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
         jMin = i+minimumShifting
@@ -64,13 +64,11 @@ def progressiveLinearFit(x, y, yerr, threshold_chi_square=1., onlyEnd=False):
 
     if len(par_values)==0:
         return None
-    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**7.4)
+    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**6.4)
     best_Chi = best_segment[0]
     terminalParameters= ["m","b"]
     tauIndex= best_segment[1]
-    if onlyEnd:
-        print(best_segment[4]+best_segment[3]*(x[best_segment[2]]))
-    if not(onlyEnd) or (best_segment[4]+best_segment[3]*x[-1])>0.9:
+    if not(onlyEnd) or (best_segment[4]+best_segment[3]*x[-1])>0.88:
         return terminalParameters, [best_segment[3], best_segment[4]], np.sqrt(pcov[0,0]), [best_segment[1], best_segment[2]], best_Chi, linear
     else:
         return None
@@ -91,7 +89,6 @@ def provaEmailExp(x, y, yerr, threshold_chi_square=10.):
             return a+(b*t+c*(np.exp(np.clip(d * t, None, np.log(np.finfo(float).max)))-1-d*t-(d*t)**2./2.))-(b*tStart+c*(np.exp(np.clip(d * tStart, None, np.log(np.finfo(float).max)))-1-d*tStart-(d*tStart**2./2.)))
     
     j=len(x)-1
-    finalTime=x[-1]
     bounds = ([0, 0, 0], [np.inf, np.inf, (np.log(2)+80.)/x[-1]])
     for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
         def provExpWrapper(t, b, c,d):

@@ -109,5 +109,6 @@
     "chrono": "cpp",
     "ctime": "cpp",
     "ratio": "cpp"
-  }
+  },
+  "makefile.configureOnOpen": true
 }
