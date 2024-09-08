@@ -2,8 +2,8 @@
 #include <algorithm>
 #include <iostream>
 
-#include "../generic/fileSystemUtil.h"
-#include "../../../generic/random.h"
+#include "../Generic/fileSystemUtil.h"
+#include "../../../Generic/random.h"
 #include "../interaction.h"
 #include "../straj.h"
 #include "../thermodynamicUtilities.h"

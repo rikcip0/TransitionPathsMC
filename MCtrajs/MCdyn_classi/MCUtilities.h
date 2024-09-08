@@ -198,7 +198,7 @@ vector<double> compute_H_av(vector<straj> *Strajs, vector<vector<vector<rInterac
 vector<vector<int>> compute_Q_av(vector<straj> *Strajs, double T, int Np) // returns an Np (eq. spaced times) array with the system overlaps with: initial conf, final conf, 1111 conf
 {
 
-    vector<vector<int>> ris(3, vector(Np, 0));
+    vector<vector<int>> ris(3, vector<int>(Np, 0));
 
     for (int i = 0; i < Strajs->size(); i++)
     {

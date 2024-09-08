@@ -51,6 +51,21 @@ compileAllSims:
 	g++ transitionPaths.cpp -o tp_QuenC_Anneal_FixExt.exe -DQUENCHCONFS -DINITANNEALING -DFIXEDEXT
 	@echo All programs compiled.
 
+compileAllSims_Idra:
+	cd MCtrajs && \
+	g++ -std=c++11 transitionPaths.cpp -o tp.exe && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC.exe -DQUENCHCONFS && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_TrajRan.exe -DINITRANDOM && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_Anneal.exe -DINITANNEALING && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_FixExt.exe -DFIXEDEXT && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_TrajRan_FixExt.exe -DINITRANDOM -DFIXEDEXT && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_Anneal_FixExt.exe -DINITANNEALING -DFIXEDEXT && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_TrajRan.exe -DQUENCHCONFS -DINITRANDOM && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_Anneal.exe -DQUENCHCONFS -DINITANNEALING && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_FixExt.exe -DQUENCHCONFS -DFIXEDEXT && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_TrajRan_FixExt.exe -DQUENCHCONFS -DINITRANDOM -DFIXEDEXT && \
+	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_Anneal_FixExt.exe -DQUENCHCONFS -DINITANNEALING -DFIXEDEXT
+	@echo All programs compiled.
 
 
 

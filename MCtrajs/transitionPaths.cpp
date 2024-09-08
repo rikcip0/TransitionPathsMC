@@ -382,8 +382,8 @@ int main(int argc, char **argv)
   ofstream logfile(nomefile);
   nomefile = folder + "/thermCheck.dat";
   ofstream integratedMeasuringFile(nomefile);
-  vector<vector<int>> ris(3, vector(Np, 0));
-  vector<vector<double>> risQ(3, vector(Np, 0.));
+  vector<vector<int>> ris(3, vector<int>(Np, 0));
+  vector<vector<double>> risQ(3, vector<double>(Np, 0.));
   vector<double> chiQ(Np, 0);
 
   vector<int> mileStones = {mutualQ, 0, (int)(Qstar / 2), Qstar};

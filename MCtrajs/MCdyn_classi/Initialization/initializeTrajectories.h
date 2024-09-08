@@ -3,11 +3,11 @@
 #include <iostream>
 
 #include "../interaction.h"
-#include "../../../generic/random.h"
+#include "../../../Generic/random.h"
 #include "../straj.h"
 
 #include "../field.h"
-#include "../mcutilities.h"
+#include "../MCUtilities.h"
 
 using namespace std;
 
