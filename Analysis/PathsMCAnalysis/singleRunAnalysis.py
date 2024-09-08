@@ -14,7 +14,7 @@ from MyBasePlots.hist import myHist
 from MyBasePlots.autocorrelation import autocorrelationWithExpDecayAndMu
 
 simulationCode_version = None
-currentAnalysisVersion = 'singleRunAnalysisV000'
+currentAnalysisVersion = 'singleRunAnalysisV0001'
 fieldTypesDict = {'1': "Bernoulli", '2': "Gaussian"}
 
 
@@ -146,7 +146,7 @@ def provaEmail23(x, y, yerr, threshold_chi_square=10.):
 
     if len(par_values)==0:
         return None
-    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**7.5)
+    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**7.4)
     best_Chi = best_segment[0]
     print(best_Chi, threshold_chi_square)
     if best_Chi<threshold_chi_square: #and best_segment[3]*x[-1]+best_segment[4]>0.15
@@ -977,12 +977,30 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
     addInfoLines()
 
-    barrier = energy - np.mean(energy[:, [0, -1]], axis=1, keepdims=True)
+    barrier = energy - np.mean(energy[:, [0]], axis=1, keepdims=True)
+    print(energy.shape)
+    barrierIndices = np.argmax(barrier,1)
     barrier = np.max(barrier,1)
+    MOfBarrier = np.asarray([M[i,index] for i,index in enumerate(barrierIndices)])
+    QinOfBarrier = np.asarray([q_in[i,index] for i,index in enumerate(barrierIndices)])
+    QoutOfBarrier = np.asarray([q_out[i,index] for i,index in enumerate(barrierIndices)])
 
     myHist('barriersHistogram', 'Histogram of energy barriers\n'+ titleSpecification, barrier, 'barrier')
     addInfoLines()
 
+    myHist('barriersM', 'Histogram of energy barriers\n'+ titleSpecification, MOfBarrier, 'barrier')
+    addInfoLines()
+
+    myHist('barriersQin', 'Histogram of energy barriers\n'+ titleSpecification, QinOfBarrier, 'barrier')
+    addInfoLines()
+
+    myHist('barriersQout', 'Histogram of energy barriers\n'+ titleSpecification, QoutOfBarrier, 'barrier')
+    addInfoLines()
+
+    plt.figure('provo')
+    plt.plot(MOfBarrier, barrier)
+    addInfoLines()
+    
     plt.figure('barriersEvolution')
     plt.plot(barrier)
     plt.title(f'Energy barriers over sampled trajectories\n'+ titleSpecification)
@@ -993,6 +1011,13 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     results['meanBarrier']= barrier.mean()
     results['deltaBarrier']= barrier.var()**0.5
     results['stdDevBarrier']= (barrier.var()/barrier.size)**0.5
+    
+    results['mOfBarrier']= MOfBarrier.mean()
+    results['deltaMOfBarrier']= MOfBarrier.var()**0.5
+    results['q_inOfBarrier']= QinOfBarrier.mean()
+    results['deltaQ_inOfBarrier']= QinOfBarrier.var()**0.5
+    results['q_outOfBarrier']= QoutOfBarrier.mean()
+    results['deltaQ_outOfBarrier']= QoutOfBarrier.var()**0.5
 
     figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
     for fig_name in figs:
@@ -1026,6 +1051,36 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     plt.xlabel('time')
     plt.ylabel('energy')
     addInfoLines()
+    
+    fig = plt.figure('energyProva')
+    gs = fig.add_gridspec(18, 100)
+    mainPlot = fig.add_subplot(gs[3:, 0:85])
+    [mainPlot.plot(times[t], energy[t], label=f'traj {t}') for t in someTrajs ]
+    mainPlot.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
+    mainPlot.set_title(r'Energy vs time'+'\n'+ titleSpecification)
+    mainPlot.set_xlabel('time')
+    mainPlot.set_ylabel(r'energy')
+    ax_y = fig.add_subplot(gs[3:, 85:100])
+    energy_min, energy_max = np.min(energy), np.max(energy)
+    energy_mean, energy_VarSq = np.mean(energy), np.var(energy)**0.5
+    ax_y.hist(energy.flatten(), orientation='horizontal', color='gray', alpha=0.7)
+    ax_y.yaxis.tick_right()
+    if fracPosJ==1.0:
+        ax_y.set_xscale('log')
+    axYExtremes = ax_y.get_ylim()
+    ax_y.axhline(energy_mean, color='black', linestyle='solid', linewidth=2)
+    ax_y.text(1.9, 1., f'Mean '+ r"$Q_{out}$"+ f': {energy_mean: .3f}  $\sigma$: {energy_VarSq: .3f}   total occurrences: {len(energy.flatten())}', color='black', ha='left', fontsize=7, rotation=270, va='top',transform=ax_y.transAxes)
+    if (energy_mean-energy_VarSq>axYExtremes[0]):
+        ax_y.axhline(energy_mean-energy_VarSq, color='green', linestyle='dashed', linewidth=1)
+    if (energy_mean+energy_VarSq<axYExtremes[1]):
+        ax_y.axhline(energy_mean+energy_VarSq, color='green', linestyle='dashed', linewidth=1)
+    mainPlot.set_ylim(axYExtremes)
+    plt.subplots_adjust(hspace=0.7, wspace=0.7)
+    handles, labels = mainPlot.get_legend_handles_labels()
+    # Create figure-level legend using handles and labels from mainPlot
+    fig.legend(handles, labels, bbox_to_anchor=(-0.13, 0.6), loc='center left')
+    addInfoLines(mainPlot)
+    
 
     fig = plt.figure('Qin')
     gs = fig.add_gridspec(18, 100)
@@ -1272,11 +1327,13 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 linearFitResults['m'] = best_fit_params[0]
                 linearFitResults['m_err'] =m_err
                 linearFitResults['c'] = best_fit_params[1]
+                linearFitResults['Chi'] = chi
             if fitTypeAndName[0]=="1":
                 linearFitResults2['tau'] = time[linearity_lowerIndex]
                 linearFitResults2['m'] = best_fit_params[0]
                 linearFitResults2['m_err'] = m_err
                 linearFitResults2['c'] = best_fit_params[1]
+                linearFitResults2['Chi'] = chi
 
 
         addInfoLines()

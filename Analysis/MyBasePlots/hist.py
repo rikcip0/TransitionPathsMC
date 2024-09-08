@@ -34,7 +34,7 @@ def myHist(name, title, toHist, toHistName, nbins=False):
     max_val = np.max(toHist)
 
     toHist=toHist.flatten()
-
+    totalOccurrences= len(toHist)
     if nbins is False:
         hist, bins = np.histogram(toHist, density=True)
     else:
@@ -50,7 +50,12 @@ def myHist(name, title, toHist, toHistName, nbins=False):
     plt.axvline(mean-sigma, color='red', linestyle='dashed', linewidth=1)
     plt.title(f'{title}\n mean value = {ufloat(mean, sigma)}')
     plt.xlabel(toHistName)
-    plt.ylabel(f'Occurrences')
+    plt.ylabel(f'Density')
+    x_min, x_max = plt.xlim()
+    y_min, y_max = plt.ylim()
+    text_x = x_max + 0.00 * (x_max - x_min)
+    text_y = y_max + 0.04 * (y_max - y_min)  
+    plt.text(text_x, text_y,  f"Total occurrences: {totalOccurrences}", fontsize=7, color='black', ha='right', va='top')
     return mean, sigma
 
 

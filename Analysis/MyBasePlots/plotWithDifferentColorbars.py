@@ -1,3 +1,4 @@
+from copy import copy, deepcopy
 from matplotlib import cm
 from scipy.optimize import curve_fit
 import numpy as np
@@ -49,13 +50,13 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     markerShapeVariable = markerShapeVariable[xSort]
     betaOfExt = betaOfExt[xSort]
     
-
     Qif = Qif[xSort]
     if yerr is not None:
         yerr = yerr[xSort]
-    if functionsToPlotContinuously:
-        for i, filter in enumerate(functionsToPlotContinuously[1]):
-            functionsToPlotContinuously[1][i] = functionsToPlotContinuously[1][i][xSort]
+    if functionsToPlotContinuously is not None:
+        filters = deepcopy(functionsToPlotContinuously[1])
+        for i, filter in enumerate(filters):
+            filters[i] = filters[i][xSort]
     plotToBarRatio = 55
 
     figHeight = 10 + (2.2+(1.9*(nColorbars-1)))*10./plotToBarRatio
@@ -126,25 +127,23 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     color = cmaps[betOfEx](norm(q))
 
                     if functionsToPlotContinuously is not None:
-                        for i, filter in enumerate(functionsToPlotContinuously[1]):
-                            print("A",condition)
-                            print("B",filter)
-                            print("C",filter[condition])
+                        for i, filter in enumerate(filters):
                             if np.all(filter[condition]):
                                 fToPlot = functionsToPlotContinuously[0][i]
                                 x_continous = np.linspace(0., np.nanmax(x[condition]), 2000)
                                 y_continous = [fToPlot(x) for x in x_continous]
-                                ax1.plot(x_continous, y_continous, color=edgeColorPerInitType[ext], linewidth=1.)
-                                ax1.plot(x_continous, y_continous, color=color, linewidth=0.7)
+                                ax1.plot(x_continous, y_continous, color=edgeColorPerInitType[ext], marker=" ", linewidth=1.1)
+                                ax1.plot(x_continous, y_continous, color=color,  marker=" ", linewidth=0.9)
+                    else:
+                        ax1.plot(x[condition], y[condition], color=color, marker=" ", linewidth=0.4)
                                 
                     if yerr is None:
                         ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2)
-                        ax1.plot(x[condition], y[condition], color=color, marker=" ", linewidth=0.4)
                         plottedYs.extend(y[condition])
                     else:
                         ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2)
-                        ax1.plot(x[condition], y[condition], color=color, marker=" ", linewidth=0.4)
                         ax1.errorbar(x[condition], y[condition], yerr=yerr[condition], color=color, fmt= ' ', marker='')
+                        plottedYs.extend(y[condition])
             
             if fittingOverDifferentEdges is False:
                 if fitType=='powerLaw':
@@ -241,8 +240,8 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         x_min, x_max = ax1.get_xlim()
         y_min, y_max = ax1.get_ylim()
         text_x = x_max + 0.00 * (x_max - x_min)
-        if yscale =='log':
-            text_y = y_max + 0.09 * (y_max - y_min)  
+        if yscale =='log' and (y_min >= 0 and y_max >= 0):
+            text_y = y_max * 10 ** (0.04 * (np.log10(y_max) - np.log10(y_min)))
         else:
             text_y = y_max + 0.04 * (y_max - y_min)  
         ax1.text(text_x, text_y,  f"Different graphs: {nGraphs}", fontsize=9, color='black', ha='right', va='top')

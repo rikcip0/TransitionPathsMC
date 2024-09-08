@@ -13,8 +13,7 @@ import json
 from matplotlib.colors import LinearSegmentedColormap, to_rgba
 from scipy.integrate import quad
 from scipy.special import comb
-from scipy.optimize import curve_fit
-from uncertainties import ufloat
+from scipy.optimize import minimize_scalar
 
 from MyBasePlots.plotWithDifferentColorbars import plotWithDifferentColorbars
 minNumberOfSingleRunsToDoAnAnalysis=4
@@ -59,8 +58,14 @@ def aggiungi_funzione(structure, param_tuples, x, y, TIfun, Zfun):
     # Alla fine, salviamo la funzione nel livello corrente
     current_level['TIfunction'] = TIfun
     current_level['Zfunction'] = Zfun
+    current_level['betaMax'] = minimize_scalar(lambda z:-Zfun(z), bounds=(np.nanmin(x), np.nanmax(x))).x
+    betaMax= current_level['betaMax']
+    def rescaledZfunction(z, factor=betaMax):
+        return Zfun(z*factor)
+    current_level['rescaledZfunction'] = rescaledZfunction
     current_level['TIx'] = x
     current_level['TIy'] = y
+    return current_level
 
 def ottieni_funzione(structure, param_tuples):
     current_level = structure
@@ -351,6 +356,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     chi_c2 = np.array(chi_c2, dtype=np.float64)
     scale2 = chi_m2*T+chi_c2
     ZFromTIBeta = np.full_like(N, np.nan, dtype=np.float64) # l'esistenza di questo array è una sconfitta
+    rescaledBetas = np.full_like(N, np.nan, dtype=np.float64) # l'esistenza di questo array è una sconfitta
     kFromChi = np.full_like(N, np.nan, dtype=np.float64)
     kFromChi_InBetween = np.full_like(N, np.nan, dtype=np.float64)
     kFromChi_InBetween_Scaled = np.full_like(N, np.nan, dtype=np.float64)
@@ -437,9 +443,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             
                             if (0. not in filteredStdMCsBetas and 0. not in filteredBetas):
                                 continue
-                            if len(filteredStdMCsTIBetas)>0:
-                                if filteredStdMCsTIBetas[-1]-filteredTIBetas[0]>filteredStdMCsTIBetas[0]/15.:
-                                    continue
                             minPathsMCsBeta = np.min(filteredBetas)
                             stMC_FiltForThisT = (filteredStdMCsBetas<minPathsMCsBeta)
                             filteredStdMCsBetasForThisT = filteredStdMCsBetas[stMC_FiltForThisT]
@@ -447,6 +450,10 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             filteredStdMCsMCForThisT = filteredStdMCsMC[stMC_FiltForThisT]
                             filteredBetas, filteredTIBetas, filteredLastMeasureMC = getUniqueXAndYZAccordingToZ(filteredBetas, filteredTIBetas, filteredLastMeasureMC)
 
+                            if len(filteredStdMCsTIBetasForThisT)>0:
+                                if filteredStdMCsTIBetasForThisT[-1]-filteredTIBetas[0]>filteredStdMCsTIBetasForThisT[0]/8.:
+                                    print(filteredStdMCsTIBetasForThisT[-1], filteredTIBetas[0])
+                                    continue
                             if len(filteredBetas)>4:
                                 TIx=np.concatenate([filteredStdMCsBetasForThisT, filteredBetas])
                                 TIy=np.concatenate([filteredStdMCsTIBetasForThisT, filteredTIBetas])
@@ -454,7 +461,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 maxBetaNotTooSpaced = max([TIx[i] for i in range(1, len(TIx)) if TIx[i] - TIx[i-1] <= 0.1], default=None)
                                 TIy = TIy[TIx<=maxBetaNotTooSpaced]
                                 TIx = TIx[TIx<=maxBetaNotTooSpaced]
-                                f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=3)
+                                f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=4)
 
                                 p_up_0 = (sim_N+sim_Qif)/(2.*sim_N)
                                 p_up_t = 0.5*(1.+(2.*p_up_0-1.)*np.exp(-2.*sim_T))
@@ -474,8 +481,9 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 
                                 TIfunction= integral_to_x
                                 Zfunction= exp_integral_to_x
-                                aggiungi_funzione(Zdict, [(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldSigma, sim_fieldRealization), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_Qstar), (sim_T, sim_trajInit)],
+                                addedLevel = aggiungi_funzione(Zdict, [(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldSigma, sim_fieldRealization), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_Qstar), (sim_T, sim_trajInit)],
                                                   TIx, TIy, TIfunction, Zfunction)
+                                rescaledBetas[TIFilt_atThisT] = beta[TIFilt_atThisT] /addedLevel['betaMax']
                                 
                                 indices = np.where(TIFilt_atThisT)[0]
                                 for index in indices:
@@ -569,7 +577,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                             trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                             yerr=stdDevBarrier[filt], fitType='', xscale='', 
-                            #yscale='log', 
+                            yscale='log', 
                             nGraphs=len(np.unique(graphID[filt])))
             tempFilt=filt
             for t in np.unique(markerShapeVariables[filt]):
@@ -623,19 +631,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])))
                 
-            mainPlot = plotWithDifferentColorbars(f"Z", x[filt], xName, ZFromTIBeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
-                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
-                    markerShapeVariables[filt], markerShapeVariablesNames,
-                    nGraphs=len(np.unique(graphID[filt])))
-
-            mainPlot = plotWithDifferentColorbars(f"Zlog", x[filt], xName, ZFromTIBeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
-                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
-                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
-                    markerShapeVariables[filt], markerShapeVariablesNames,
-                    nGraphs=len(np.unique(graphID[filt])), yscale='log')
-            
-            mainPlot = plotWithDifferentColorbars(f"k", x[filt], xName, kFromChi[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"k", x[filt], xName, kFromChi[filt], "k", "Transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
@@ -659,10 +655,9 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])), yscale='log')
             
-            plt.figure("Testoo")
             filters = []
             functions = []
-            x_continuous = np.linspace(0, 1., 1000) 
+            rescaledFunctions = []
             for sim_N, sim_graphID, sim_Hext in set(zip(N[filt], graphID[filt], h_ext[filt])):
                 if (sim_N, sim_graphID, sim_Hext) not in Zdict.keys():
                     continue
@@ -693,19 +688,37 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     sim_T==T[filt], sim_trajInit==trajsExtremesInitID[filt]
                                 ])
                                 f= subdict4[(sim_T, sim_trajInit)]['Zfunction']
+                                rescaledF= subdict4[(sim_T, sim_trajInit)]['rescaledZfunction']
                                 filters.append(folderingVariableFilt)
                                 functions.append(f)
-                                exp_integrals_continuous = [f(xp) for xp in x_continuous]
-                                plt.plot(x_continuous, exp_integrals_continuous, label=f"{markerShapeVariablesNames} {np.unique(markerShapeVariables[filt][folderingVariableFilt])}")
-                                plt.yscale('log')
-                                plt.legend()
+                                rescaledFunctions.append(rescaledF)
+
             
-            mainPlot = plotWithDifferentColorbars(f"proviamo", x[filt], xName, ZFromTIBeta[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"ZfunctionAndCurve", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
+                    betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                    trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
+                    nGraphs=len(np.unique(graphID[filt])), functionsToPlotContinuously=[functions, filters])
+            
+            mainPlot = plotWithDifferentColorbars(f"ZfunctionAndCurve_log", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])), yscale='log', functionsToPlotContinuously=[functions, filters])
+           
+            if xName==r"$\beta$":
+                mainPlot = plotWithDifferentColorbars(f"ZfunctionAndCurve_rescaled", rescaledBetas[filt], r"$\beta$ / $\beta_{max}$", ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "r"$\beta$ / $\beta_{max}$" +"\n"+specificationLine,
+                        betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                        trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
+                        markerShapeVariables[filt], markerShapeVariablesNames,
+                        nGraphs=len(np.unique(graphID[filt])), yscale='log', functionsToPlotContinuously=[rescaledFunctions, filters])
             
+                mainPlot = plotWithDifferentColorbars(f"k_rescaled", rescaledBetas[filt], r"$\beta$ / $\beta_{max}$", kFromChi[filt], "k", "Transition rate computed from single TI and "+r"$\chi$ vs $\beta$ / $\beta_{max}$" +"\n"+specificationLine,
+                        betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
+                        trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
+                        markerShapeVariables[filt], markerShapeVariablesNames,
+                        nGraphs=len(np.unique(graphID[filt])), yscale='log')
+                
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
             for fig_name in figs:
                 fig = plt.figure(fig_name)

@@ -11,7 +11,6 @@ nameOfFoldersContainingRuns = ["stdMCs",
 
 def findFoldersWithString(parent_dir, target_strings):
     result = []
-    print(target_strings)
     # Funzione ricorsiva per cercare le cartelle
     def search_in_subfolders(directory, livello=1):
         if livello > 10:
