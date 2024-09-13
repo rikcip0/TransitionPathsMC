@@ -14,7 +14,7 @@ from MyBasePlots.hist import myHist
 from MyBasePlots.autocorrelation import autocorrelationWithExpDecayAndMu
 
 simulationCode_version = None
-currentAnalysisVersion = 'singleRunAnalysisV0001'
+currentAnalysisVersion = 'singleRunAnalysisV0002'
 fieldTypesDict = {'1': "Bernoulli", '2': "Gaussian"}
 
 
@@ -35,7 +35,7 @@ def aDiscreteDerivative(xArray, yArray):
     return xArray[:-3], derivative
 
 
-def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.8, onlyEnd=False):
+def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.5, onlyEnd=False):
 
     par_values = []
     minimumShifting = np.maximum(len(x)//150, 5)
@@ -64,7 +64,7 @@ def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.8, onlyEnd=False):
 
     if len(par_values)==0:
         return None
-    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**6.4)
+    best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**5.)
     best_Chi = best_segment[0]
     terminalParameters= ["m","b"]
     tauIndex= best_segment[1]
@@ -988,18 +988,15 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     myHist('barriersHistogram', 'Histogram of energy barriers\n'+ titleSpecification, barrier, 'barrier')
     addInfoLines()
 
-    myHist('barriersM', 'Histogram of energy barriers\n'+ titleSpecification, MOfBarrier, 'barrier')
+    myHist('barriersM', 'Histogram of M of energy barriers\n'+ titleSpecification, MOfBarrier, 'barrier')
     addInfoLines()
 
-    myHist('barriersQin', 'Histogram of energy barriers\n'+ titleSpecification, QinOfBarrier, 'barrier')
+    myHist('barriersQin', 'Histogram of '+r'$Q_{in}$' + 'of energy barriers\n'+ titleSpecification, QinOfBarrier, 'barrier')
     addInfoLines()
 
-    myHist('barriersQout', 'Histogram of energy barriers\n'+ titleSpecification, QoutOfBarrier, 'barrier')
+    myHist('barriersQout', 'Histogram of '+r'$Q_{out}$' + 'of energy barriers\n'+ titleSpecification, QoutOfBarrier, 'barrier')
     addInfoLines()
 
-    plt.figure('provo')
-    plt.plot(MOfBarrier, barrier)
-    addInfoLines()
     
     plt.figure('barriersEvolution')
     plt.plot(barrier)
@@ -1043,16 +1040,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         someTrajs = np.sort(np.append(someTrajs, np.random.choice(np.arange(1, nTrajs-2), nRandomTrajs-1, replace=False)))
     
     titleSpecification = 'considering some sampled trajectories'
-
-    plt.figure('energy')
-    [plt.plot(times[t], energy[t], label=f'traj {t}') for t in someTrajs ]
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.title(f'Energy vs time\n'+ titleSpecification)
-    plt.xlabel('time')
-    plt.ylabel('energy')
-    addInfoLines()
     
-    fig = plt.figure('energyProva')
+    fig = plt.figure('energy')
     gs = fig.add_gridspec(18, 100)
     mainPlot = fig.add_subplot(gs[3:, 0:85])
     [mainPlot.plot(times[t], energy[t], label=f'traj {t}') for t in someTrajs ]
@@ -1292,13 +1281,15 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     linearFitResults['m'] = 'nan'
     linearFitResults['m_err'] = 'nan'
     linearFitResults['c'] = 'nan'
+    linearFitResults['Chi'] = 'nan'
 
     linearFitResults2['tau'] = 'nan'
     linearFitResults2['m'] = 'nan'
     linearFitResults2['m_err'] = 'nan'
     linearFitResults2['c'] = 'nan'
+    linearFitResults2['Chi'] = 'nan'
 
-    for fitTypeAndName in [["", progressiveLinearFit, True], ["1", progressiveLinearFit, False]]:#, ["2", provaEmail2,False], ["3", provaEmail3, False], ["2e3", provaEmail23, False], ["exp", provaEmailExp, False]]:#, ["2e3_4", provaEmail234]]: #:
+    for fitTypeAndName in [["", progressiveLinearFit, True], ["InBetween", progressiveLinearFit, False]]:#, ["2", provaEmail2,False], ["3", provaEmail3, False], ["2e3", provaEmail23, False], ["exp", provaEmailExp, False]]:#, ["2e3_4", provaEmail234]]: #:
         plt.figure('Chi'+fitTypeAndName[0])
         plt.plot(time, avChi, color='black', label=r"$\chi$")
         plt.errorbar(time, avChi, yerr=avChiErr, color='blue', fmt= ' ', marker='', elinewidth=0.4, alpha=0.3, label='err')
@@ -1322,13 +1313,14 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             plt.xlim(x_limits)
             plt.ylim(y_limits)
             plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+            print("CHI", chi)
             if fitTypeAndName[0]=="":
                 linearFitResults['tau'] = time[linearity_lowerIndex]
                 linearFitResults['m'] = best_fit_params[0]
                 linearFitResults['m_err'] =m_err
                 linearFitResults['c'] = best_fit_params[1]
                 linearFitResults['Chi'] = chi
-            if fitTypeAndName[0]=="1":
+            if fitTypeAndName[0]=="_InBetween":
                 linearFitResults2['tau'] = time[linearity_lowerIndex]
                 linearFitResults2['m'] = best_fit_params[0]
                 linearFitResults2['m_err'] = m_err
