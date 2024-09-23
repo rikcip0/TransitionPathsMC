@@ -4,7 +4,7 @@
 #include <sstream>
 #include <math.h>
 #include "../Generic/random.h"
-#include "../MCtrajs/MCdyn_classi/Generic/fileSystemUtil.h"
+#include "../Generic/fileSystemUtil.h"
 #include "../MCtrajs/MCdyn_classi/thermodynamicUtilities.h"
 #include "../MCtrajs/MCdyn_classi/Initialization/initializeGraph.h"
 

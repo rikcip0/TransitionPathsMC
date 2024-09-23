@@ -90,8 +90,8 @@ void createFolder(const string &folderPath)
   cout << "Folder created successfully or already exists." << endl;
 }
 
-/*
 
+/*
 bool folderExists(const std::string &folderPath)
 {
   return fs::is_directory(folderPath);

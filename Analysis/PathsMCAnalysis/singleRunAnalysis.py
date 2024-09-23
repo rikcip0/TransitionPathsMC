@@ -14,7 +14,7 @@ from MyBasePlots.hist import myHist
 from MyBasePlots.autocorrelation import autocorrelationWithExpDecayAndMu
 
 simulationCode_version = None
-currentAnalysisVersion = 'singleRunAnalysisV0002'
+currentAnalysisVersion = 'singleRunAnalysisV0002new'
 fieldTypesDict = {'1': "Bernoulli", '2': "Gaussian"}
 
 
@@ -466,7 +466,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     if parametersSettingID== 210:
         fieldInfoKeysDict = {'fieldType': 'type', 'fieldMean':r'$\mu$', 'fieldSigma': r'$\sigma$'}
-        fieldInfo_Line = ' '.join([str(fieldInfoKeysDict[parameter]) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in fieldInfoKeys])
+        fieldInfo_Line = ' '.join([str(fieldInfoKeysDict[parameter]) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).replace('-','',1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in fieldInfoKeys])
         graphInfo_Line += ", w/ " + fieldTypesDict[simData['configuration']['parameters']['fieldType']]+ " field "+fieldInfo_Line+" (r"+ simData['configuration']['parameters']['fieldRealization'] +")"
         configurationsInfo['ID']+= ''.join([str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in fieldInfoKeys])
     configurationsInfo['ID']+= str(parametersSettingID)+str(refConfSettingID)+''.join([str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in graphInfoKeys]) 
@@ -1143,7 +1143,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     ax_y = fig.add_subplot(gs[3:, 85:100])
     M_min, M_max = np.min(M), np.max(M)
     M_mean, M_VarSq = np.mean(M), np.var(M)**0.5
-    bins = np.arange(M_min, M_max + 2./N, 2./N)
+    bins = np.arange(M_min-1./N, M_max + 2./N, 2./N)
     ax_y.hist(M.flatten(), bins= bins, range=[M_min, M_max], orientation='horizontal', color='gray', alpha=0.7)
     ax_y.yaxis.tick_right()
     if fracPosJ==1.0:
@@ -1320,7 +1320,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 linearFitResults['m_err'] =m_err
                 linearFitResults['c'] = best_fit_params[1]
                 linearFitResults['Chi'] = chi
-            if fitTypeAndName[0]=="_InBetween":
+            if fitTypeAndName[0]=="InBetween":
                 linearFitResults2['tau'] = time[linearity_lowerIndex]
                 linearFitResults2['m'] = best_fit_params[0]
                 linearFitResults2['m_err'] = m_err
@@ -1448,7 +1448,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
 
 def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
-    print('è un normale MC')
+    print('It is a MC over configurations to do thermodynamic integration.')
     simData = {}
     simData['configuration']= configurationInfo
     #getting run infos: END

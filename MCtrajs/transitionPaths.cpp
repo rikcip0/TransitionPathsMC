@@ -42,7 +42,7 @@
 
 #include "../Generic/random.h"
 
-#include "MCdyn_classi/Generic/fileSystemUtil.h"
+#include "MCdyn_classi/Generic/fileSystemUtil_Trajs.h"
 
 #include "MCdyn_classi/interaction.h"
 #include "MCdyn_classi/straj.h"
@@ -285,9 +285,9 @@ int main(int argc, char **argv)
   char buffer[200];
   cout << extremesFixed << endl;
   if (extremesFixed)
-    sprintf(buffer, "%.2g_%.2g_%.2g_inf_%i_inf", T, beta, Hext, Qstar);
+    sprintf(buffer, "%.2g_%.4g_%.2g_inf_%i_inf", T, beta, Hext, Qstar);
   else
-    sprintf(buffer, "%.2g_%.2g_%.2g_%.2g_%i_%.3g", T, beta, Hext, hin, Qstar, hout);
+    sprintf(buffer, "%.2g_%.4g_%.2g_%.2g_%i_%.3g", T, beta, Hext, hin, Qstar, hout);
 
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
   if (argc == 16 || argc == 18)

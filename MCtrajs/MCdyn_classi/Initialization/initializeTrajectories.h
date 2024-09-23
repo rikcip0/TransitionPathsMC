@@ -95,8 +95,8 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
     int Qfin = compute_Q_fin(&Strajs)[1]; // It should be N..., but why not to check!?
 
     double annealingBeta = startingBeta;
-    int MCAtBetaStart = 30;
-    int MCToArrive = 3000;
+    int MCAtBetaStart = 100;
+    int MCToArrive = 5000;
     double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - startingBeta));
     double MCAtBetaAnn = MCAtBetaStart;
 
@@ -158,8 +158,8 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
     int Qfin = compute_Q_fin(&Strajs)[1]; // It should be N..., but why not to check!?
 
     double annealingBeta = startingBeta;
-    int MCAtBetaStart = 30;
-    int MCToArrive = 3000;
+    int MCAtBetaStart = 100;
+    int MCToArrive = 5000;
     double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - startingBeta));
     double MCAtBetaAnn = MCAtBetaStart;
 

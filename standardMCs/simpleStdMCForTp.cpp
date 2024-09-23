@@ -14,7 +14,7 @@
 
 #include "../Generic/random.h"
 
-#include "../McTrajs/MCdyn_classi/generic/fileSystemUtil.h"
+#include "../McTrajs/MCdyn_classi/generic/fileSystemUtil_Trajs.h"
 #include "../McTrajs/MCdyn_classi/interaction.h"
 #include "../McTrajs/MCdyn_classi/initialization/initializeGraph.h"
 #include "../McTrajs/MCdyn_classi/thermodynamicUtilities.h"
@@ -208,11 +208,11 @@ int main(int argc, char *argv[])
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
   if (argc == 14 || argc == 16)
   {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "/DataForPathsMC/stdMCs/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/stdMCs/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
   }
   else
   {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "/DataForPathsMC/stdMCs/", string(buffer), sstart); // For Cluster
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/stdMCs/", string(buffer), sstart); // For Cluster
   }
 
   createFolder(folder);

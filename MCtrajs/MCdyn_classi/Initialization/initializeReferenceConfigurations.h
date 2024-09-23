@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include "../Generic/fileSystemUtil.h"
+#include "../Generic/fileSystemUtil_Trajs.h"
 #include "../../../Generic/random.h"
 #include "../interaction.h"
 #include "../straj.h"

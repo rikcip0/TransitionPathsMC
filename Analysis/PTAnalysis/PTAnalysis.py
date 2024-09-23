@@ -5,19 +5,38 @@ import sys
 
 from singlePTAnalysis import singlePTAnalysis
 
+nameOfFoldersContainingRuns=["graph4675"]#,"graph1149","graph5492","graph9450","graph5508","graph3991","graph2473", "graph9351", "graph9366", "graph5657"]
 
-def find_directories_with_strings(parent_dir, target_strings):
-    matching_dirs = []
-    # Traverse through all subdirectories recursively
-    for root, dirs, files in os.walk(parent_dir):
-        for directory in dirs:
-            # Check if the directory name contains the first target string
-            if target_strings[0] in directory:
-                # Check if any of the eventual other strings are in any part of the full name
-                if all(string in os.path.join(root,directory) for string in target_strings[1:]):
-                    matching_dirs.append(os.path.join(root, directory))
+def findFoldersWithString(parent_dir, target_strings):
+    result = []
+    # Funzione ricorsiva per cercare le cartelle
+    def search_in_subfolders(directory, livello=1):
+        if livello > 10:
+            return
+        for root, dirs, _ in os.walk(directory):
+            rightLevelReached=False
+            for dir_name in dirs:
+                full_path = os.path.join(root, dir_name)
+                # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
+                if dir_name in nameOfFoldersContainingRuns:
+                    # Cerca le cartelle che contengono "_run" nel loro nome
+                    rightLevelReached=True
+                    for subdir in os.listdir(full_path):
+                        if all(string in os.path.join(full_path, subdir) for string in target_strings):
+                            result.append(os.path.join(full_path, subdir))
+                
+            if rightLevelReached:
+                return  # Evita di cercare ancora più in profondità
+                
+            # Se non troviamo "stdMCs" o "PathsMCs", passiamo al livello successivo
+            for dir_name in dirs:
+                search_in_subfolders(os.path.join(root, dir_name), livello+1)
+            break  # Si processa solo il primo livello di cartelle per evitare ricorsione non necessaria
     
-    return matching_dirs
+    # Inizia la ricerca dalla directory di base
+    search_in_subfolders(parent_dir)
+    
+    return result
 
 def get_substring_up_to_first_slash(input_string):
     index = input_string.find('/')
@@ -46,7 +65,7 @@ if len(sys.argv) > 1:
         exit()
 
         
-    selected_PTs = find_directories_with_strings(archive_path, ['configurations', *additional_strings])
+    selected_PTs = findFoldersWithString(archive_path, additional_strings)
 
     if not selected_PTs:
         raise FileNotFoundError(f"No files of type  found in the specified path.")

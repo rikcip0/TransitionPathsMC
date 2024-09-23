@@ -4,5 +4,8 @@
 *.png
 *.pdf
 *.pyc
+*.sh
+.vscode
+DataTemp
 Data/Graphs
 Data/MultiRun

@@ -139,14 +139,14 @@ bool initializeGraph(string &sourceFolder, vector<vector<vector<rInteraction>>> 
     // inizializzazione del campo random
     if (randomFieldType != 0)
     {
-        sourceFolder += "/randomFieldStructures/";
+        sourceFolder += "randomFieldStructures/";
         if (randomFieldType == 1)
         {
-            sourceFolder += "/stdBernoulli/";
+            sourceFolder += "stdBernoulli/";
         }
         else if (randomFieldType == 2)
         {
-            sourceFolder += "/stdGaussian/";
+            sourceFolder += "stdGaussian/";
         }
         else
         {

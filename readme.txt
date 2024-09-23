@@ -1,19 +1,30 @@
 TODO:
 
-PathsMCAnalysis
--sistema i 2 fit
+Graphs:
+-implement power-law graphs generation and acquisition by simulation code
 
-multiRunAnalysis
--implementa correttamente l archivio dei paths per non doverli riaggiornare
+Parallel tempering:
+-study what are characteristic quantities to check and implement relative code
+
+PathsMCAnalysis/singleRunAnalysis:
+-improve linear fits to take only linear parts and all the linear parts
+-see autocorrelation of energy for thermodynamic integration
+
+PathsMCAnalysis/singleMultiRunAnalysis:
+-correct the plot of Z curves in terms of rescaled betas
+-plot thermodynamic integration data curve by curve to better check used data
+-do a check on the Chi square of quantities to be plotted
 
 
 
-Input parameters:
-N p C T beta h_in h_out fPosJ
-optional:
-graphID, Qstar
+Possible improvements:
 
-Hidden parameters:
+TransitionPath:
+-Study possible relevant topological quantities relative to trajectories to sample
+
+
+
+HARD CODED PARAMETERS (not in input):
 START: MC PARAMETERS
 MC (mc length),
 MCeq (expect equilibration duration time, or larger),
@@ -32,7 +43,3 @@ averagingMCForTherm (on how many mcsweeps to average quantities to check therm)
 nIntervalsForThermCheckQuantities (how many time intervals to average quantities depending on time to check therm)
 resolutionForThermCheckQuantities (how many points i ntime are considered for each time interval)
 END: THERM. CHECK QUANTITIES
-
-things to do:
-Fare routine per controllare termalizzazione.
-Implementare l'analisi dati.
