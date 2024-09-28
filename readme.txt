@@ -1,10 +1,14 @@
 TODO:
 
+SpinGlass:
+runna con q* oltre la soglia dello stato piu esterno (mi pare 0.75=45)
+
 Graphs:
 -implement power-law graphs generation and acquisition by simulation code
 
 Parallel tempering:
 -study what are characteristic quantities to check and implement relative code
+-change filesystem data structure
 
 PathsMCAnalysis/singleRunAnalysis:
 -improve linear fits to take only linear parts and all the linear parts

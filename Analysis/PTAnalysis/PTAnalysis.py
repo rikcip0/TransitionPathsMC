@@ -5,7 +5,7 @@ import sys
 
 from singlePTAnalysis import singlePTAnalysis
 
-nameOfFoldersContainingRuns=["graph4675"]#,"graph1149","graph5492","graph9450","graph5508","graph3991","graph2473", "graph9351", "graph9366", "graph5657"]
+nameOfFoldersContainingRuns=["graph8400","graph8412", "graph8415","graph8417"]#,"graph1149","graph5492","graph9450","graph5508","graph3991","graph2473", "graph9351", "graph9366", "graph5657"]
 
 def findFoldersWithString(parent_dir, target_strings):
     result = []

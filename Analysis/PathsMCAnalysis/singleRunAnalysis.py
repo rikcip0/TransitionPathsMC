@@ -475,8 +475,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     measuresInfo_Line = r'MC$_{eq}$='+f'{mcEq:.2g}'+' '+ r'MC$_{pr}$='+f'{mcPrint:.2g}'+' '+r'MC$_{meas}$='+f'{mcMeas:.2g}'
     settingInfo_Line = parametersInfo_Line+'\n'+ graphInfo_Line+'\n'+measuresInfo_Line
 
-    if refConfSettingID== 54:
-        refConInfo_Line = 'refConf:'+(simData['configuration']['referenceConfigurationsInfo']['shortDescription'])+'Q'+simData['configuration']['referenceConfigurationsInfo']['mutualOverlap']
+    if refConfSettingID in [53, 54]:
+        refConInfo_Line = 'refConf:'+(simData['configuration']['referenceConfigurationsInfo']['shortDescription'])+r' $\beta$'+f"{(float)(simData['configuration']['referenceConfigurationsInfo']['betaOfExtraction']):.2g}"+'Q'+simData['configuration']['referenceConfigurationsInfo']['mutualOverlap']
     elif refConfSettingID== 53:
         refConInfo_Line = 'refConf:'+(simData['configuration']['referenceConfigurationsInfo']['shortDescription'])+r' $\beta$'+f"{(float)(simData['configuration']['referenceConfigurationsInfo']['betaOfExtraction']):.2g}"+' Q'+simData['configuration']['referenceConfigurationsInfo']['mutualOverlapBeforeQuenching']+'->'+simData['configuration']['referenceConfigurationsInfo']['mutualOverlap']
     elif refConfSettingID== 51:
@@ -547,7 +547,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     lastMeasureMc = (int)(np.max(mcSteps))
     simData['lastMeasureMC'] = lastMeasureMc
-
+    
     if currentAnalysisVersion==analysisVersionOfLastAnalysis and lastMeasureMc==lastMeasureMcOfLastAnalysis:
         print('Nor the analysis or the data changed from last analysis.\n\n')
         return None
@@ -1594,12 +1594,11 @@ def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
     simData['results']=results
     writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
 
-def singleRunAnalysis(run_Path='', goFast=False):
+def singleRunAnalysis(run_Path):
 
     standardMCSimIDs = [15]
     pathMCSimIDs = [10,100,11,110]
-    if run_Path=='':
-        run_Path=preset_Path
+
     print('Analysis of '+run_Path+'\n\n')
 
     #getting run infos: START

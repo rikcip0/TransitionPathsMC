@@ -192,7 +192,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
     plottedYs = np.asarray(plottedYs)
     if yscale!='' and len(plottedYs[plottedYs>0])>0:
-        print(name, len(plottedYs[plottedYs>0]))
+        #print(name, len(plottedYs[plottedYs>0]))
         plt.yscale(yscale)
     if xscale!='' and len(x[x>0])>0:
          plt.xscale(xscale)

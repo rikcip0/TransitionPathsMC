@@ -9,6 +9,8 @@ nameOfFoldersContainingRuns = ["stdMCs",
     "PathsMCs"
                                ]
 
+presetPath = "somePath"
+
 def findFoldersWithString(parent_dir, target_strings):
     result = []
     # Funzione ricorsiva per cercare le cartelle
@@ -76,4 +78,4 @@ if len(sys.argv) > 1:
     print("Analysis completed.\n")
     
 else:
-    singleRunAnalysis("")
+    singleRunAnalysis(presetPath)
