@@ -10,15 +10,16 @@ import scipy.stats as stats
 from scipy.stats import linregress
 matplotlib.use('Agg') 
 sys.path.append('../')
+from MyBasePlots.multipleCurvesAndHist import multipleCurvesAndHist
 from MyBasePlots.hist import myHist
 from MyBasePlots.autocorrelation import autocorrelationWithExpDecayAndMu
 
 simulationCode_version = None
 currentAnalysisVersion = 'singleRunAnalysisV0002new'
 fieldTypesDict = {'1': "Bernoulli", '2': "Gaussian"}
+nMaxTrajsToPlot = 5
 
-
-def meanAndStdErrForParametricPlot(toBecomeX, toBecomeY):
+def meanAndSigmaForParametricPlot(toBecomeX, toBecomeY):
     x_unique_values = np.unique(toBecomeX)
     y_mean_values = np.asarray([np.mean(toBecomeY[toBecomeX == x_value]) for x_value in x_unique_values])
     y_var_values = np.asarray([np.var(toBecomeY[toBecomeX == x_value])**0.5 for x_value in x_unique_values])
@@ -441,7 +442,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     hext =  (float)(simData['configuration']['parameters']['hext'])
     h_in = simData['configuration']['parameters']['h_in']
     h_out = simData['configuration']['parameters']['h_out']
-    Qstar = (int)(simData['configuration']['parameters']['Qstar']) 
+    Qstar = (int)(simData['configuration']['parameters']['Qstar'])
+    Qstar/=N
     
     totalMC = (int)(simData['configuration']['mcParameters']['MC'])
     mcEq = (int)(simData['configuration']['mcParameters']['MCeq'])
@@ -455,14 +457,23 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     graphInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in graphInfoKeys])
     
     
+    M_RedLine=None
+    Qin_RedLine=None
+    Qout_RedLine=None
+    
     parametersSettingID = simData['configuration']['parameters']['ID']
+    areConfigurationsFM=False
     refConfSettingID = simData['configuration']['referenceConfigurationsInfo']['ID']
     if refConfSettingID== 50 or refConfSettingID== 56:
-        Qif = -N
+        Qif = -1
         graphInfo_Line = 'FM '+graphInfo_Line
+        areConfigurationsFM=True
+        M_RedLine = [Qstar, 'M*']
     else:
         Qif = (int)(simData['configuration']['referenceConfigurationsInfo']['mutualOverlap'])
-
+        Qif/=N
+        Qout_RedLine = [Qstar, 'Q*']
+        
 
     if parametersSettingID== 210:
         fieldInfoKeysDict = {'fieldType': 'type', 'fieldMean':r'$\mu$', 'fieldSigma': r'$\sigma$'}
@@ -475,7 +486,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     measuresInfo_Line = r'MC$_{eq}$='+f'{mcEq:.2g}'+' '+ r'MC$_{pr}$='+f'{mcPrint:.2g}'+' '+r'MC$_{meas}$='+f'{mcMeas:.2g}'
     settingInfo_Line = parametersInfo_Line+'\n'+ graphInfo_Line+'\n'+measuresInfo_Line
 
-    if refConfSettingID in [53, 54]:
+    if refConfSettingID==54:
         refConInfo_Line = 'refConf:'+(simData['configuration']['referenceConfigurationsInfo']['shortDescription'])+r' $\beta$'+f"{(float)(simData['configuration']['referenceConfigurationsInfo']['betaOfExtraction']):.2g}"+'Q'+simData['configuration']['referenceConfigurationsInfo']['mutualOverlap']
     elif refConfSettingID== 53:
         refConInfo_Line = 'refConf:'+(simData['configuration']['referenceConfigurationsInfo']['shortDescription'])+r' $\beta$'+f"{(float)(simData['configuration']['referenceConfigurationsInfo']['betaOfExtraction']):.2g}"+' Q'+simData['configuration']['referenceConfigurationsInfo']['mutualOverlapBeforeQuenching']+'->'+simData['configuration']['referenceConfigurationsInfo']['mutualOverlap']
@@ -483,6 +494,46 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         refConInfo_Line = 'refConf:'+(simData['configuration']['referenceConfigurationsInfo']['shortDescription'])+' Q'+simData['configuration']['referenceConfigurationsInfo']['mutualOverlap']
     else:
         refConInfo_Line = 'refConf:'+(simData['configuration']['referenceConfigurationsInfo']['shortDescription'])
+    
+    Qin_AdditionalHists = None
+    Qout_AdditionalHists = None
+    M_AdditionalHists = None
+    
+    if refConfSettingID in [51,53,54]:
+        absolute_path2 = os.path.abspath(os.path.join(run_Path, simData['configuration']['referenceConfigurationsInfo']['fileOfExtractionName']))
+        absolute_path = os.path.abspath(os.path.join("..", simData['configuration']['referenceConfigurationsInfo']['fileOfExtractionName']))
+        absolute_path = absolute_path.replace('confs','Qs')
+        # Now you can use the absolute_path to access the file
+        print(absolute_path)
+        if os.path.exists(absolute_path):
+            print("File exists")
+            areConfsFromPT=True
+
+            with open(absolute_path, 'r') as file:
+                lines = file.readlines()
+                lines=lines[1:]  #first line is header
+                firstConfigurationIndex = (int) (simData['configuration']['referenceConfigurationsInfo']["firstConfigurationIndex"])
+                secondConfigurationIndex = (int) (simData['configuration']['referenceConfigurationsInfo']["secondConfigurationIndex"])
+
+            # Check if the line exists in the file
+            if len(lines) >= np.min([firstConfigurationIndex, secondConfigurationIndex]):
+                firstConfigurationQ = lines[firstConfigurationIndex].strip()
+                firstConfigurationQ = firstConfigurationQ.split()  
+                secondConfigurationQ = lines[secondConfigurationIndex].strip()
+                secondConfigurationQ = secondConfigurationQ.split() 
+                
+                firstConfigurationQs = [int(entry) for entry in firstConfigurationQ]
+                firstConfigurationQs = np.asarray(firstConfigurationQs)/N
+                secondConfigurationQs = [int(entry) for entry in secondConfigurationQ]
+                secondConfigurationQs = np.asarray(secondConfigurationQs)/N
+                
+                Qin_AdditionalHists = [(firstConfigurationQs, "PT")]
+                Qout_AdditionalHists = [(secondConfigurationQs, "PT")]
+                
+                
+        else:
+            print(f"The file does not have enough lines.")
+
     
     if simData['configuration']['simulationTypeId']<100:   #so, no annealing
         trajsInitInfo_Line = 'ext_init:'+(simData['configuration']['trajs_Initialization']['shortDescription'])+'\n'
@@ -500,9 +551,12 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             trajsInitInfo_Line += fr"MC$_{{start}}$" + simData['configuration']['trajs_Initialization']['startingMC']+' '
             trajsInitInfo_Line += fr"MC$_{{end}}$"+simData['configuration']['trajs_Initialization']['finalMC']
 
+
+
     initInfo_Line = refConInfo_Line + '\n' + trajsInitInfo_Line
 
-    def addInfoLines(whereToAddLines=None):       #useful for following plots
+    
+    def addInfoLinesVecchio(whereToAddLines=None):       #useful for following plots
         if whereToAddLines is None:
             xlabel_position = plt.gca().xaxis.label.get_position()
             plt.text(0, xlabel_position[1] - 0.18, settingInfo_Line, fontsize=7, ha='left', va='center', transform=plt.gca().transAxes)
@@ -517,6 +571,26 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 whereToAddLines.text(0, xlabel_position[1] - 0.20, settingInfo_Line, fontsize=6, ha='left', va='center', transform=whereToAddLines.gca().transAxes)
                 whereToAddLines.text(1, xlabel_position[1] - 0.20, initInfo_Line, fontsize=6, ha='right', va='center', transform=whereToAddLines.gca().transAxes)
 
+    def addInfoLines(whereToAddLines=None):
+        # Get the figure object
+        fig = plt.gcf() if whereToAddLines is None else whereToAddLines.figure
+
+        # Get all the axes in the figure
+        axes = fig.get_axes()
+
+        # Find the leftmost and rightmost positions of all axes
+        leftmost = min(ax.get_position().x0 for ax in axes)  # Left boundary of the main plot
+        rightmost = max(ax.get_position().x1 for ax in axes)  # Right boundary of the last subplot (histogram)
+
+        # Find the bottom of the axes (to avoid overlap with x-axis labels)
+        lowest_position = min(ax.get_position().y0 for ax in axes)
+        
+        # Adjust the vertical position to be slightly below the x-axis labels
+        vertical_position = lowest_position - 0.145  # Adjust this value to control the distance
+
+        # Add text at the bottom of the combined plot, spanning from leftmost to rightmost
+        fig.text(leftmost, vertical_position, settingInfo_Line, fontsize=7, ha='left', va='center', transform=fig.transFigure)
+        fig.text(rightmost, vertical_position, initInfo_Line, fontsize=7, ha='right', va='center', transform=fig.transFigure)
     
 
     simData['analysisVersion'] = currentAnalysisVersion
@@ -548,9 +622,11 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     lastMeasureMc = (int)(np.max(mcSteps))
     simData['lastMeasureMC'] = lastMeasureMc
     
+    """
     if currentAnalysisVersion==analysisVersionOfLastAnalysis and lastMeasureMc==lastMeasureMcOfLastAnalysis:
         print('Nor the analysis or the data changed from last analysis.\n\n')
         return None
+    """
     
     results['realTime']={}
     theseFiguresFolder= os.path.join(plotsFolder, 'runRealTime')
@@ -801,8 +877,6 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     q_in/=N
     q_out/=N
     M/=N
-    Qif/=N
-    Qstar/=N
     energy/=N
 
     nTrajs=times.shape[0]
@@ -828,82 +902,62 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     else:
         delete_files_in_folder(theseFiguresSubFolder)
 
-    plt.figure('energy')
-    plt.plot(times[0], energy[0])
-    plt.title(f'Energy vs time\n'+ titleSpecification)
-    plt.xlabel('time')
-    plt.ylabel('energy')
-    addInfoLines()
+    histScale = ''
+    if fracPosJ==1.0:
+        histScale='log'
+    
+    figure, mainPlot = multipleCurvesAndHist('energy', r'Energy vs time'+'\n'+ titleSpecification,
+                                times[0], 'time',  energy[0], r'$energy$', N, histScale=histScale)
+    addInfoLines(figure)
 
-    plt.figure('Qin')
-    plt.plot(times[0], q_in[0])
-    plt.title(r'$Q_{in}$ vs time'+'\n'+ titleSpecification)
-    plt.xlabel('time')
-    plt.ylabel(r'$Q_{in}$')
-    addInfoLines()
+    figure, mainPlot = multipleCurvesAndHist('M', r'm vs time'+'\n'+ titleSpecification,
+                                times[0], 'time',  M[0], 'm', N, redLineAtYValueAndName=M_RedLine, histScale=histScale)
+    addInfoLines(figure)
+    
+    figure, mainPlot = multipleCurvesAndHist('EnergyVsM', r'Energy vs m'+'\n'+ titleSpecification,
+                                    M[0], 'm',  energy[0], 'energy', N, redLineAtXValueAndName=M_RedLine, histScale=histScale)
+    addInfoLines(figure)
+    
+    if not areConfigurationsFM:
+        figure, mainPlot = multipleCurvesAndHist('Qin', r'$q_{in}$ vs time'+'\n'+ titleSpecification,
+                                    times[0], 'time',  q_in[0], r'$q_{in}$', N, 
+                                    additionalYHistogramsArraysAndLabels=Qin_AdditionalHists, redLineAtYValueAndName=Qin_RedLine, histScale=histScale)
+        addInfoLines(figure)
 
-    plt.figure('Qout')
-    plt.plot(times[0], q_out[0])
-    plt.title(r'$Q_{out}$ vs time'+'\n'+ titleSpecification)
-    plt.xlabel('time')
-    plt.ylabel(r'$Q_{out}$')
-    plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
-    addInfoLines()
+        figure, mainPlot = multipleCurvesAndHist('Qout', r'$q_{out}$ vs time'+'\n'+ titleSpecification,
+                                    times[0], 'time',  q_out[0],r'$q_{out}$', N, 
+                                    additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=Qout_RedLine, histScale=histScale)
+        addInfoLines(figure)
+        
+        
+        plt.figure('QoutVsQin')
+        plt.plot(q_in[0], q_out[0])
+        plt.title(r'$q_{out}$ vs $q_{in}$' +'\n'+ titleSpecification)
+        plt.xlabel(r'$q_{in}$')
+        plt.ylabel(r'$q_{out}$')
+        plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
+        plt.scatter([1.],[Qif], marker= '*', s=45, color='black')
+        if(np.max(q_out)>=0.85):
+            plt.scatter([Qif], [1.], marker= '*', s=45, color='black')
+        addInfoLines()
 
-    plt.figure('M')
-    plt.plot(times[0], M[0])
-    plt.title(f'M vs time'+'\n'+ titleSpecification)
-    plt.xlabel('time')
-    plt.ylabel('M')
-    addInfoLines()
-
-    plt.figure('QoutVsQin')
-    plt.plot(q_in[0], q_out[0])
-    plt.title(r'$Q_{out}$ vs $Q_{in}$' +'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
-    plt.ylabel(r'$Q_{out}$')
-    plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
-    plt.scatter([1.],[Qif], marker= '*', s=45, color='black')
-    if(np.max(q_out)>=0.85):
-        plt.scatter([Qif], [1.], marker= '*', s=45, color='black')
-    addInfoLines()
-
-    plt.figure('MVsQin')
-    plt.plot(q_in[0], M[0])
-    plt.title(r'M vs $Q_{in}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
-    plt.ylabel(r'M')
-    addInfoLines()
-
-    plt.figure('MVsQout')
-    plt.plot(q_out[0], M[0])
-    plt.title(f'M vs' +r'Q_{out}'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{out}$')
-    plt.ylabel(r'M')
-    plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
-    addInfoLines()
-
-    plt.figure('EnergyVsQin')
-    plt.plot(q_in[0], energy[0])
-    plt.title(f'energy vs ' +r'$Q_{in}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
-    plt.ylabel(r'M')
-    addInfoLines()
-
-    plt.figure('EnergyVsQout')
-    plt.plot(q_out[0], energy[0])
-    plt.title(f'energy vs ' +r'$Q_{out}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{out}$')
-    plt.ylabel(r'energy')
-    plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
-    addInfoLines()
-
-    plt.figure('EnergyVsM')
-    plt.plot(M[0], energy[0])
-    plt.title(f'energy vs M\n'+ titleSpecification)
-    plt.xlabel('M')
-    plt.ylabel('Energy')
-    addInfoLines()
+        figure, mainPlot = multipleCurvesAndHist('MVsQin', r'M vs $q_{in}$'+'\n'+ titleSpecification,
+                                    q_in[0], r'$q_{in}$',  M[0],'m', N, 
+                                    additionalYHistogramsArraysAndLabels=M_AdditionalHists, redLineAtXValueAndName=Qin_RedLine, redLineAtYValueAndName=M_RedLine, histScale=histScale)
+        addInfoLines(figure)
+        
+        figure, mainPlot = multipleCurvesAndHist('MVsQout', r'M vs $q_{out}$'+'\n'+ titleSpecification,
+                                    q_out[0], r'$q_{out}$',  M[0],'m', N, 
+                                    additionalYHistogramsArraysAndLabels=M_AdditionalHists, redLineAtXValueAndName=Qout_RedLine, redLineAtYValueAndName=M_RedLine, histScale=histScale)
+        addInfoLines(figure)
+        
+        figure, mainPlot = multipleCurvesAndHist('EnergyVsQin', 'energy vs ' +r'$q_{in}$'+'\n'+ titleSpecification,
+                                    q_in[0], r'$q_{in}$',  energy[0], 'energy', N, redLineAtXValueAndName=Qin_RedLine)
+        addInfoLines(figure)
+        
+        figure, mainPlot = multipleCurvesAndHist('EnergyVsQout', 'energy vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
+                                    q_out[0], r'$q_{out}$',  energy[0], 'energy', N, redLineAtXValueAndName=Qout_RedLine)
+        addInfoLines(figure)
 
     figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
     for fig_name in figs:
@@ -941,36 +995,31 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     plt.plot(times.mean(0), np.sqrt(energy.var(0)))
     addInfoLines()
 
-    valori_unici_M = np.unique(M)
-    medie_di_y_corrispondenti = [np.mean(energy[M == valore_x]) for valore_x in valori_unici_M]
-
     plt.figure('energyVsM')
     plt.title(f'Mean of energy vs M\n'+ titleSpecification)
     plt.xlabel(r'M')
     plt.ylabel(r'$energy$')
-    a = meanAndStdErrForParametricPlot(M, energy)
+    a = meanAndSigmaForParametricPlot(M, energy)
     plt.errorbar(a[0],a[1],a[2], label='mean')
     plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     addInfoLines()
 
-    valori_unici_M = np.unique(q_in)
-    medie_di_y_corrispondenti = [np.mean(energy[q_in == valore_x]) for valore_x in valori_unici_M]
     plt.figure('energyVsQin')
-    plt.title(f'Mean of energy vs '+r'$Q_{in}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
+    plt.title(f'Mean of energy vs '+r'$q_{in}$'+'\n'+ titleSpecification)
+    plt.xlabel(r'$q_{in}$')
     plt.ylabel(r'$energy$')
-    a = meanAndStdErrForParametricPlot(q_in, energy)
+    a = meanAndSigmaForParametricPlot(q_in, energy)
     plt.errorbar(a[0],a[1],a[2], label='mean')
     plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     addInfoLines()
 
     plt.figure('energyVsQout')
-    plt.title(f'Mean of energy vs '+r'$Q_{out}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{out}$')
+    plt.title(f'Mean of energy vs '+r'$q_{out}$'+'\n'+ titleSpecification)
+    plt.xlabel(r'$q_{out}$')
     plt.ylabel(r'$energy$')
-    a = meanAndStdErrForParametricPlot(q_out, energy)
+    a = meanAndSigmaForParametricPlot(q_out, energy)
     plt.errorbar(a[0],a[1],a[2], label='mean')
     plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
@@ -978,7 +1027,6 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     addInfoLines()
 
     barrier = energy - np.mean(energy[:, [0]], axis=1, keepdims=True)
-    print(energy.shape)
     barrierIndices = np.argmax(barrier,1)
     barrier = np.max(barrier,1)
     MOfBarrier = np.asarray([M[i,index] for i,index in enumerate(barrierIndices)])
@@ -991,10 +1039,10 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     myHist('barriersM', 'Histogram of M of energy barriers\n'+ titleSpecification, MOfBarrier, 'barrier')
     addInfoLines()
 
-    myHist('barriersQin', 'Histogram of '+r'$Q_{in}$' + 'of energy barriers\n'+ titleSpecification, QinOfBarrier, 'barrier')
+    myHist('barriersQin', 'Histogram of '+r'$q_{in}$' + 'of energy barriers\n'+ titleSpecification, QinOfBarrier, 'barrier')
     addInfoLines()
 
-    myHist('barriersQout', 'Histogram of '+r'$Q_{out}$' + 'of energy barriers\n'+ titleSpecification, QoutOfBarrier, 'barrier')
+    myHist('barriersQout', 'Histogram of '+r'$q_{out}$' + 'of energy barriers\n'+ titleSpecification, QoutOfBarrier, 'barrier')
     addInfoLines()
 
     
@@ -1033,191 +1081,79 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     else:
         delete_files_in_folder(theseFiguresSubFolder)
 
-    nRandomTrajs= np.min([5, nTrajs-1])-1
-    someTrajs= np.array([0])
+    nRandomTrajs= np.min([nMaxTrajsToPlot, nTrajs-1])-1
+    someTrajs= np.array([0]) #non è quella dell'inizializzazione, ma quella subito dopo
     if nRandomTrajs>0:
         someTrajs = np.append(someTrajs, np.asarray([nTrajs-2]))
         someTrajs = np.sort(np.append(someTrajs, np.random.choice(np.arange(1, nTrajs-2), nRandomTrajs-1, replace=False)))
     
     titleSpecification = 'considering some sampled trajectories'
     
-    fig = plt.figure('energy')
-    gs = fig.add_gridspec(18, 100)
-    mainPlot = fig.add_subplot(gs[3:, 0:85])
-    [mainPlot.plot(times[t], energy[t], label=f'traj {t}') for t in someTrajs ]
-    mainPlot.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
-    mainPlot.set_title(r'Energy vs time'+'\n'+ titleSpecification)
-    mainPlot.set_xlabel('time')
-    mainPlot.set_ylabel(r'energy')
-    ax_y = fig.add_subplot(gs[3:, 85:100])
-    energy_min, energy_max = np.min(energy), np.max(energy)
-    energy_mean, energy_VarSq = np.mean(energy), np.var(energy)**0.5
-    ax_y.hist(energy.flatten(), orientation='horizontal', color='gray', alpha=0.7)
-    ax_y.yaxis.tick_right()
-    if fracPosJ==1.0:
-        ax_y.set_xscale('log')
-    axYExtremes = ax_y.get_ylim()
-    ax_y.axhline(energy_mean, color='black', linestyle='solid', linewidth=2)
-    ax_y.text(1.9, 1., f'Mean '+ r"$Q_{out}$"+ f': {energy_mean: .3f}  $\sigma$: {energy_VarSq: .3f}   total occurrences: {len(energy.flatten())}', color='black', ha='left', fontsize=7, rotation=270, va='top',transform=ax_y.transAxes)
-    if (energy_mean-energy_VarSq>axYExtremes[0]):
-        ax_y.axhline(energy_mean-energy_VarSq, color='green', linestyle='dashed', linewidth=1)
-    if (energy_mean+energy_VarSq<axYExtremes[1]):
-        ax_y.axhline(energy_mean+energy_VarSq, color='green', linestyle='dashed', linewidth=1)
-    mainPlot.set_ylim(axYExtremes)
-    plt.subplots_adjust(hspace=0.7, wspace=0.7)
-    handles, labels = mainPlot.get_legend_handles_labels()
-    # Create figure-level legend using handles and labels from mainPlot
-    fig.legend(handles, labels, bbox_to_anchor=(-0.13, 0.6), loc='center left')
-    addInfoLines(mainPlot)
+    figure, mainPlot = multipleCurvesAndHist('energy', r'Energy vs time'+'\n'+ titleSpecification,
+                                times, 'time', energy, r'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, histScale=histScale)
+    addInfoLines(figure)
     
+    figure, mainPlot = multipleCurvesAndHist('Qin', r'$q_{in}$ vs time'+'\n'+ titleSpecification,
+                                times, 'time', q_in, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, additionalYHistogramsArraysAndLabels=Qin_AdditionalHists, redLineAtYValueAndName=[Qstar,'Q*'], histScale=histScale)
+    addInfoLines(figure)
+    
+    
+    figure, mainPlot = multipleCurvesAndHist('Qout', r'$q_{out}$ vs time'+'\n'+ titleSpecification,
+                                times, 'time', q_out, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=[Qstar,'Q*'], histScale=histScale)
+    addInfoLines(figure)
+    
+    figure, mainPlot = multipleCurvesAndHist('M', 'M vs time'+'\n'+ titleSpecification,
+                                times, 'time', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, histScale=histScale)
+    addInfoLines(figure)
 
-    fig = plt.figure('Qin')
-    gs = fig.add_gridspec(18, 100)
-    mainPlot = fig.add_subplot(gs[3:, 0:85])
-    [mainPlot.plot(times[t], q_in[t], label=f'traj {t}') for t in someTrajs ]
-    mainPlot.set_title(r'$Q_{in}$ vs time'+'\n'+ titleSpecification)
-    mainPlot.set_xlabel('time')
-    mainPlot.set_ylabel(r'$Q_{in}$')
-    ax_y = fig.add_subplot(gs[3:, 85:100])
-    q_in_min, q_in_max = np.min(q_in), np.max(q_in)
-    q_in_mean, q_in_VarSq = np.mean(q_in), np.var(q_in)**0.5
-    bins = np.arange(q_in_min-1./N, q_in_max + 2./N, 2./N)
-    ax_y.hist(q_in.flatten(), bins= bins, orientation='horizontal', color='gray', alpha=0.7)
-    ax_y.yaxis.tick_right()
-    if fracPosJ==1.0:
-        ax_y.set_xscale('log')
-    axYExtremes = ax_y.get_ylim()
-    ax_y.axhline(q_in_mean, color='black', linestyle='solid', linewidth=2)
-    ax_y.text(1.9, 1., f'Mean '+ r"$Q_{in}$"+ f': {q_in_mean: .3f}  $\sigma$: {q_in_VarSq: .3f}   total occurrences: {len(q_in.flatten())}', color='black', ha='left', fontsize=7, rotation=270, va='top',transform=ax_y.transAxes)
-    if (q_in_mean-q_in_VarSq>axYExtremes[0]):
-        ax_y.axhline(q_in_mean-q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
-    if (q_in_mean+q_in_VarSq<axYExtremes[1]):
-        ax_y.axhline(q_in_mean+q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
-    mainPlot.set_ylim(axYExtremes)
-    plt.subplots_adjust(hspace=0.7, wspace=0.7)
-    handles, labels = mainPlot.get_legend_handles_labels()
-    # Create figure-level legend using handles and labels from mainPlot
-    fig.legend(handles, labels, bbox_to_anchor=(-0.13, 0.6), loc='center left')
-    addInfoLines(mainPlot)
-
-    fig = plt.figure('Qout')
-    gs = fig.add_gridspec(18, 100)
-    mainPlot = fig.add_subplot(gs[3:, 0:85])
-    [mainPlot.plot(times[t], q_out[t], label=f'traj {t}') for t in someTrajs ]
-    mainPlot.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
-    mainPlot.set_title(r'$Q_{out}$ vs time'+'\n'+ titleSpecification)
-    mainPlot.set_xlabel('time')
-    mainPlot.set_ylabel(r'$Q_{out}$')
-    ax_y = fig.add_subplot(gs[3:, 85:100])
-    q_out_min, q_out_max = np.min(q_out), np.max(q_out)
-    q_out_mean, q_out_VarSq = np.mean(q_out), np.var(q_out)**0.5
-    bins = np.arange(q_out_min-1./N, q_out_max+2./N, 2./N)
-    ax_y.hist(q_out.flatten(), bins= bins, orientation='horizontal', color='gray', alpha=0.7)
-    ax_y.yaxis.tick_right()
-    if fracPosJ==1.0:
-        ax_y.set_xscale('log')
-    axYExtremes = ax_y.get_ylim()
-    ax_y.axhline(q_out_mean, color='black', linestyle='solid', linewidth=2)
-    ax_y.text(1.9, 1., f'Mean '+ r"$Q_{out}$"+ f': {q_out_mean: .3f}  $\sigma$: {q_out_VarSq: .3f}   total occurrences: {len(q_out.flatten())}', color='black', ha='left', fontsize=7, rotation=270, va='top',transform=ax_y.transAxes)
-    ax_y.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
-    if (q_out_mean-q_out_VarSq>axYExtremes[0]):
-        ax_y.axhline(q_out_mean-q_out_VarSq, color='green', linestyle='dashed', linewidth=1)
-    if (q_out_mean+q_out_VarSq<axYExtremes[1]):
-        ax_y.axhline(q_out_mean+q_out_VarSq, color='green', linestyle='dashed', linewidth=1)
-    mainPlot.set_ylim(axYExtremes)
-    plt.subplots_adjust(hspace=0.7, wspace=0.7)
-    handles, labels = mainPlot.get_legend_handles_labels()
-    # Create figure-level legend using handles and labels from mainPlot
-    fig.legend(handles, labels, bbox_to_anchor=(-0.13, 0.6), loc='center left')
-    addInfoLines(mainPlot)
-
-    fig = plt.figure('M')
-    gs = fig.add_gridspec(18, 100)
-    mainPlot = fig.add_subplot(gs[3:, 0:85])
-    [mainPlot.plot(times[t], M[t], label=f'traj {t}') for t in someTrajs ]
-    if np.array_equal(M,q_out):
-        mainPlot.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
-    mainPlot.set_title(r'M vs time'+'\n'+ titleSpecification)
-    mainPlot.set_xlabel('time')
-    mainPlot.set_ylabel(r'M')
-    ax_y = fig.add_subplot(gs[3:, 85:100])
-    M_min, M_max = np.min(M), np.max(M)
-    M_mean, M_VarSq = np.mean(M), np.var(M)**0.5
-    bins = np.arange(M_min-1./N, M_max + 2./N, 2./N)
-    ax_y.hist(M.flatten(), bins= bins, range=[M_min, M_max], orientation='horizontal', color='gray', alpha=0.7)
-    ax_y.yaxis.tick_right()
-    if fracPosJ==1.0:
-        ax_y.set_xscale('log')
-    axYExtremes = ax_y.get_ylim()
-    ax_y.axhline(q_out_mean, color='black', linestyle='solid', linewidth=2)
-    ax_y.text(1.9, 1., f'Mean M: {M_mean: .3f}  $\sigma$: {M_VarSq: .3f}   total occurrences: {len(M.flatten())}', color='black', ha='left', fontsize=7, rotation=270, va='top',transform=ax_y.transAxes)
-    if np.array_equal(M,q_out):
-        ax_y.axhline(Qstar, color='red', linestyle='dashed', linewidth=1)
-    if (M_mean-M_VarSq>axYExtremes[0]):
-        ax_y.axhline(M_mean-M_VarSq, color='green', linestyle='dashed', linewidth=1)
-    if (M_mean+M_VarSq<axYExtremes[1]):
-        ax_y.axhline(M_mean+M_VarSq, color='green', linestyle='dashed', linewidth=1)
-    mainPlot.set_ylim(axYExtremes)
-    plt.subplots_adjust(hspace=0.7, wspace=0.7)
-    handles, labels = mainPlot.get_legend_handles_labels()
-    # Create figure-level legend using handles and labels from mainPlot
-    fig.legend(handles, labels, bbox_to_anchor=(-0.13, 0.6), loc='center left')
-    addInfoLines(mainPlot)
+    figure, mainPlot = multipleCurvesAndHist('QoutVsQinProva', 'M vs time'+'\n'+ titleSpecification,
+                                q_in, r'$q_{in}$', q_out, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isXToHist=True, additionalXHistogramsArraysAndLabels=Qin_AdditionalHists,
+                                isYToHist=True, additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=[Qstar,'Q*'], histScale=histScale)
+    addInfoLines(figure)
 
 
     plt.figure('QoutVsQin')
     [plt.plot(q_in[t], q_out[t], label=f'traj {t}') for t in someTrajs ]
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.title(r'$Q_{out}$ vs $Q_{in}$' +'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
-    plt.ylabel(r'$Q_{out}$')
+    plt.title(r'$q_{out}$ vs $q_{in}$' +'\n'+ titleSpecification)
+    plt.xlabel(r'$q_{in}$')
+    plt.ylabel(r'$q_{out}$')
     plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
     plt.scatter([1.],[Qif], marker= '*', s=45, color='black')
     if(np.max(q_out)>=0.85):
         plt.scatter([Qif], [1.], marker= '*', s=45, color='black')
     addInfoLines()
 
-    plt.figure('MVsQin')
-    [plt.plot(q_in[t], M[t], label=f'traj {t}') for t in someTrajs ]
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.title(r'M vs $Q_{in}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
-    plt.ylabel(r'M')
-    addInfoLines()
+    figure, mainPlot = multipleCurvesAndHist('MVsQin', r'M vs $q_{in}$'+'\n'+ titleSpecification,
+                                q_in, r'$q_{in}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True)
+    addInfoLines(figure)
+    
+    figure, mainPlot = multipleCurvesAndHist('MVsQout', f'M vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
+                                q_in, r'$q_{out}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, histScale=histScale)
+    addInfoLines(figure)
 
-    plt.figure('MVsQout')
-    [plt.plot(q_out[t], M[t], label=f'traj {t}') for t in someTrajs ]
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.title(f'M vs ' +r'$Q_{out}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{out}$')
-    plt.ylabel(r'M')
-    plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
-    addInfoLines()
+    figure, mainPlot = multipleCurvesAndHist('EnergyVsQin', f'energy vs ' +r'$q_{in}$'+'\n'+ titleSpecification,
+                                q_in, r'$q_{in}$', energy, 'ebergt', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, histScale=histScale)
+    addInfoLines(figure)
 
-    plt.figure('EnergyVsQin')
-    [plt.plot(q_in[t], energy[t], label=f'traj {t}') for t in someTrajs ]
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.title(f'energy vs ' +r'$Q_{in}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
-    plt.ylabel(r'energy')
-    addInfoLines()
+    figure, mainPlot = multipleCurvesAndHist('EnergyVsQout', f'energy vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
+                                q_out, r'$q_{out}$', energy, 'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, histScale=histScale)
+    addInfoLines(figure)
 
-    plt.figure('EnergyVsQout')
-    [plt.plot(q_out[t], energy[t], label=f'traj {t}') for t in someTrajs ]
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.title(f'energy vs ' +r'$Q_{out}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$Q_{out}$')
-    plt.ylabel(r'energy')
-    plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
-    addInfoLines()
+    figure, mainPlot = multipleCurvesAndHist('EnergyVsM', f'energy vs M'+'\n'+ titleSpecification,
+                                M, r'M', energy, 'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, histScale=histScale)
+    addInfoLines(figure)
 
-    plt.figure('EnergyVsM')
-    [plt.plot(M[t], energy[t], label=f'traj {t}') for t in someTrajs ]
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.title(f'energy vs M\n'+ titleSpecification)
-    plt.xlabel('M')
-    plt.ylabel('Energy')
-    addInfoLines()
 
     figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
     for fig_name in figs:
@@ -1354,8 +1290,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     plt.figure('ChiVsQout')
     plt.plot(avQout, avChi)
-    plt.title(f'$\chi$ vs '+r'$Q_{out}$'+'\n'+titleSpecification)
-    plt.xlabel(r'$Q_{out}$')
+    plt.title(f'$\chi$ vs '+r'$q_{out}$'+'\n'+titleSpecification)
+    plt.xlabel(r'$q_{out}$')
     plt.ylabel(r'$\chi$')
     plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
     addInfoLines()
@@ -1368,8 +1304,13 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
         plt.figure('milestones_in')
         for i, milestone in enumerate(mileStones):
-            plt.plot(time, firstConfData[i], label=r'$\tilde{Q}$'+f'={milestone:.2g}')
-        plt.title(f'Fraction of trajectories with overlap with final configuration '+r'$Q_i>\tilde{Q}$'+'\n'+titleSpecification)
+            specialMileStoneString = ''
+            if milestone==Qstar:
+                specialMileStoneString += '= q*'
+            if milestone==Qif:
+                specialMileStoneString += r'= $q_{if}$'
+            plt.plot(time, firstConfData[i], label=r'$\tilde{q}$'+f'={milestone:.2g}'+specialMileStoneString)
+        plt.title(f'Fraction of trajectories with overlap with final configuration '+r'$q_i>\tilde{q}$'+'\n'+titleSpecification)
         plt.xlabel(r'$t$')
         plt.ylabel(r'$fraction$')
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
@@ -1377,8 +1318,13 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
         plt.figure('milestones_out')
         for i, milestone in enumerate(mileStones):
-            plt.plot(time, secondConfData[i], label=r'$\tilde{Q}$'+f'={milestone}')
-        plt.title(f'Fraction of trajectories with overlap with final configuration '+r'$Q_f>\tilde{Q}$'+'\n'+titleSpecification)
+            specialMileStoneString = ''
+            if milestone==Qstar:
+                specialMileStoneString += ' = q*'
+            if milestone==Qif:
+                specialMileStoneString += r' = $q_{if}$'
+            plt.plot(time, secondConfData[i], label=r'$\tilde{q}$'+f' = {milestone:.2g}'+specialMileStoneString)
+        plt.title(f'Fraction of trajectories with overlap with final configuration '+r'$q_f>\tilde{q}$'+'\n'+titleSpecification)
         plt.xlabel(r'$t$')
         plt.ylabel(r'$fraction$')
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
@@ -1386,8 +1332,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     plt.figure('ChiVsQin')
     plt.plot(avQin, avChi)
-    plt.title(f'$\chi$ vs '+r'$Q_{in}$'+'\n'+titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
+    plt.title(f'$\chi$ vs '+r'$q_{in}$'+'\n'+titleSpecification)
+    plt.xlabel(r'$q_{in}$')
     plt.ylabel(r'$\chi$')
     addInfoLines()
 
@@ -1399,8 +1345,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     addInfoLines()
 
     plt.figure('Qs')
-    plt.plot(time, avQin, label=r'$Q_{in}$')
-    plt.plot(time, avQout, label=r'$Q_{out}$')
+    plt.plot(time, avQin, label=r'$q_{in}$')
+    plt.plot(time, avQout, label=r'$q_{out}$')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     plt.title(f'Qs vs time\n'+titleSpecification)
     plt.xlabel('time')
@@ -1417,9 +1363,9 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     plt.figure('QoutVsQin')
     plt.plot(avQin, avQout)
-    plt.title(r'$Q_{out}$'+' vs '+ r'$Q_{in}$'+'\n'+titleSpecification)
-    plt.xlabel(r'$Q_{in}$')
-    plt.ylabel(r'$Q_{out}$')
+    plt.title(r'$q_{out}$'+' vs '+ r'$q_{in}$'+'\n'+titleSpecification)
+    plt.xlabel(r'$q_{in}$')
+    plt.ylabel(r'$q_{out}$')
     plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
     plt.scatter([1],[Qif], marker= '*', s=45, color='black')
     if(np.max(q_out)>=0.85):
@@ -1427,8 +1373,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     addInfoLines()
 
     plt.figure('QsVsM')
-    plt.plot(avM, avQin, label=r'$Q_{in}$')
-    plt.plot(avM, avQout, label=r'$Q_{out}$')
+    plt.plot(avM, avQin, label=r'$q_{in}$')
+    plt.plot(avM, avQout, label=r'$q_{out}$')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     plt.title(f'Qs vs M.\n'+titleSpecification)
     plt.xlabel('M')
