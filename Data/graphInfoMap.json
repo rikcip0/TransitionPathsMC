@@ -1,0 +1,25 @@
+{
+    "graphTypes": {
+        "31": {
+            "ID": 31,
+            "name": "random graph",
+            "shortName": "RG",
+            "versions": {
+                "0": {
+                    "ID": 0,
+                    "nAdditionalParameters": 7,
+                    "additionalParameters": [
+                        "N",
+                        "p",
+                        "C",
+                        "nInteractions",
+                        "fPosJ",
+                        "nPosInteractions",
+                        "seed"
+                    ],
+                    "nAdditionalLines": 0
+                }
+            }
+        }
+    }
+}

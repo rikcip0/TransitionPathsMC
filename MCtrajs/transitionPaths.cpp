@@ -72,7 +72,7 @@
 #define printconf false
 #define MCconf 100000
 
-#define mcForIntegratedMeasuring 5000
+#define mcForIntegratedMeasuring 10000
 #define averagingMCForIntegratedMeasuring 1
 #define nPointsForDistanceFromStfwdPathComputation 50
 

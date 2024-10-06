@@ -8,37 +8,34 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, Normalize
 
-topPad= 0
-mainPlotGSLen=96
+topPad= 3
+mainPlotGSLen=114
 mainPlotGSHeight=72
-histogramGSLen= 12
+histogramGSLen= 18
 histogramGSPad=1
 
 def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayErr=None,
                            curvesIndeces=None, nameForCurve=None, 
-                           isYToHist=False, additionalYHistogramsArraysAndLabels=None, redLineAtYValueAndName=None,
-                           isXToHist=False, additionalXHistogramsArraysAndLabels=None, redLineAtXValueAndName=None, histScale=''):
+                           isYToHist=False, additionalYHistogramsArraysAndLabels=[], redLineAtYValueAndName=None,
+                           isXToHist=False, additionalXHistogramsArraysAndLabels=[], redLineAtXValueAndName=None, histScale=''):
     
     if curvesIndeces is None and np.ndim(xArray)>1:
         print("Provided array is more than 1d but no specification about what to plot was given.")
         return
     
-    fig = plt.figure(name)
     
     nTotalXHistograms = 0
     if isXToHist:
-        nTotalXHistograms += 1
-    
-    if additionalXHistogramsArraysAndLabels is not None:
-        nTotalXHistograms += len(additionalXHistogramsArraysAndLabels)
+        additionalXHistogramsArraysAndLabels = [ [xArray, ''], *additionalXHistogramsArraysAndLabels]
+    nTotalXHistograms = len(additionalXHistogramsArraysAndLabels)
         
     nTotalYHistograms = 0
     if isYToHist:
-        nTotalYHistograms += 1
+        additionalYHistogramsArraysAndLabels = [ [yArray, ''], *additionalYHistogramsArraysAndLabels]
     
-    if additionalYHistogramsArraysAndLabels is not None:
-        nTotalYHistograms += len(additionalYHistogramsArraysAndLabels)
+    nTotalYHistograms = len(additionalYHistogramsArraysAndLabels)
     
+    fig = plt.figure(name)
     gs = fig.add_gridspec(topPad+ mainPlotGSHeight+ (nTotalXHistograms) * (histogramGSLen+histogramGSPad), mainPlotGSLen+ (nTotalYHistograms) * (histogramGSLen+histogramGSPad))
 
     mainPlot = fig.add_subplot(gs[topPad:topPad+mainPlotGSHeight, 0:mainPlotGSLen])
@@ -77,54 +74,6 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
         
     nPlottedXHistograms=0
     nPlottedYHistograms=0
-    
-    if isXToHist:
-        ax_x = fig.add_subplot(gs[topPad+mainPlotGSHeight+histogramGSPad: topPad+mainPlotGSHeight+ (histogramGSLen+histogramGSPad), 0:mainPlotGSLen ])
-        
-        x_min, x_max = np.min(xArray), np.max(xArray)
-        x_mean, x_VarSq = np.mean(xArray), np.var(xArray)**0.5
-        bins = np.arange(x_min - 1. / N, x_max + 2. / N, 2. / N)
-        ax_x.hist(xArray.flatten(), bins=bins, color='gray', alpha=0.7, density=True)
-        if histScale != '':
-            ax_x.set_xscale(histScale)
-            
-        nPlottedXHistograms+=1
-        ax_x.xaxis.tick_bottom()
-        if nPlottedXHistograms<nTotalYHistograms:
-            ax_x.tick_params(color='gray')
-
-        axXExtremes = ax_x.get_xlim()
-        
-        mean_line = ax_x.axvline(x_mean, color='black', linestyle='solid', linewidth=2)
-        sigma_lower = ax_x.axvline(x_mean - x_VarSq, color='green', linestyle='dashed', linewidth=1)
-        sigma_upper = ax_x.axvline(x_mean + x_VarSq, color='green', linestyle='dashed', linewidth=1)
-        if redLineAtXValueAndName is not None:
-            ax_x.axvline(redLineAtXValue_Value, color='red', linestyle='dashed', linewidth=1)
-        mainPlot.set_xlim(axXExtremes)
-        
-    if isYToHist:
-        ax_y = fig.add_subplot(gs[topPad:topPad+ mainPlotGSHeight, mainPlotGSLen+histogramGSPad:mainPlotGSLen+histogramGSPad+histogramGSLen])
-        
-        y_min, y_max = np.min(yArray), np.max(yArray)
-        y_mean, y_VarSq = np.mean(yArray), np.var(yArray)**0.5
-        bins = np.arange(y_min - 1. / N, y_max + 2. / N, 2. / N)
-        ax_y.hist(yArray.flatten(), bins=bins, orientation='horizontal', color='gray', alpha=0.7, density=True)
-        if histScale != '':
-            ax_y.set_xscale(histScale)
-            
-        nPlottedYHistograms+=1
-        ax_y.yaxis.tick_right()
-        if nPlottedYHistograms<nTotalYHistograms:
-            ax_y.tick_params(color='gray')
-
-        axYExtremes = ax_y.get_ylim()
-        
-        mean_line = ax_y.axhline(y_mean, color='black', linestyle='solid', linewidth=2)
-        sigma_lower = ax_y.axhline(y_mean - y_VarSq, color='green', linestyle='dashed', linewidth=1)
-        sigma_upper = ax_y.axhline(y_mean + y_VarSq, color='green', linestyle='dashed', linewidth=1)
-        if redLineAtYValueAndName is not None:
-            ax_y.axhline(redLineAtYValue_Value, color='red', linestyle='dashed', linewidth=1)
-        mainPlot.set_ylim(axYExtremes)
     
     # Keep track of legend handles and labels for histograms
     if additionalXHistogramsArraysAndLabels is not None:
@@ -196,7 +145,7 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
     plt.subplots_adjust(hspace=0.7, wspace=0.7)
 
     # Create curve legend on the left
-    verticalPosition=0.735
+    verticalPosition=0.775
     if len(curve_labels)>0:
         fig.legend(curve_handles, curve_labels, loc='upper left', bbox_to_anchor=(-0.13, verticalPosition), frameon=True)
 

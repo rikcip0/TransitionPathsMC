@@ -653,6 +653,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             yerr=stdDevBarrier[filt], fitType='', xscale='', 
                             yscale='log', 
                             nGraphs=len(np.unique(graphID[filt])))
+            """
             tempFilt=filt
             for t in np.unique(markerShapeVariables[filt]):
                 filt = np.logical_and(np.all(markerShapeVariables == t, axis=markerShapeVariables.ndim-1), tempFilt)
@@ -662,6 +663,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                             yerr=stdDevBarrier[filt], fitType='', xscale='', yscale='', nGraphs=len(np.unique(graphID[filt])))
             filt=tempFilt
+            """
 
             mainPlot = plotWithDifferentColorbars(f"nJumps", x[filt], xName, nJumps[filt], "# jumps", "Mean number of jumps per spin over trajectory vs "+ xName +"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],

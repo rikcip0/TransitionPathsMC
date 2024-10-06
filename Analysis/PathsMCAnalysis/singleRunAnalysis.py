@@ -495,18 +495,17 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     else:
         refConInfo_Line = 'refConf:'+(simData['configuration']['referenceConfigurationsInfo']['shortDescription'])
     
-    Qin_AdditionalHists = None
-    Qout_AdditionalHists = None
-    M_AdditionalHists = None
+    Qin_AdditionalHists = []
+    Qout_AdditionalHists = []
+    M_AdditionalHists = []
     
     if refConfSettingID in [51,53,54]:
         absolute_path2 = os.path.abspath(os.path.join(run_Path, simData['configuration']['referenceConfigurationsInfo']['fileOfExtractionName']))
         absolute_path = os.path.abspath(os.path.join("..", simData['configuration']['referenceConfigurationsInfo']['fileOfExtractionName']))
         absolute_path = absolute_path.replace('confs','Qs')
         # Now you can use the absolute_path to access the file
-        print(absolute_path)
+        #print(absolute_path)
         if os.path.exists(absolute_path):
-            print("File exists")
             areConfsFromPT=True
 
             with open(absolute_path, 'r') as file:
@@ -622,11 +621,11 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     lastMeasureMc = (int)(np.max(mcSteps))
     simData['lastMeasureMC'] = lastMeasureMc
     
-    """
+
     if currentAnalysisVersion==analysisVersionOfLastAnalysis and lastMeasureMc==lastMeasureMcOfLastAnalysis:
         print('Nor the analysis or the data changed from last analysis.\n\n')
         return None
-    """
+
     
     results['realTime']={}
     theseFiguresFolder= os.path.join(plotsFolder, 'runRealTime')
@@ -903,8 +902,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         delete_files_in_folder(theseFiguresSubFolder)
 
     histScale = ''
-    if fracPosJ==1.0:
-        histScale='log'
+    #if fracPosJ==1.0:
+    #    histScale='log'
     
     figure, mainPlot = multipleCurvesAndHist('energy', r'Energy vs time'+'\n'+ titleSpecification,
                                 times[0], 'time',  energy[0], r'$energy$', N, histScale=histScale)
@@ -1135,7 +1134,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     addInfoLines(figure)
     
     figure, mainPlot = multipleCurvesAndHist('MVsQout', f'M vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
-                                q_in, r'$q_{out}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                q_out, r'$q_{out}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                 isYToHist=True, histScale=histScale)
     addInfoLines(figure)
 
@@ -1249,7 +1248,6 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             plt.xlim(x_limits)
             plt.ylim(y_limits)
             plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-            print("CHI", chi)
             if fitTypeAndName[0]=="":
                 linearFitResults['tau'] = time[linearity_lowerIndex]
                 linearFitResults['m'] = best_fit_params[0]
