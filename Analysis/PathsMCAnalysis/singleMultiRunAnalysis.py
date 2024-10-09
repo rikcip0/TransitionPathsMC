@@ -29,12 +29,15 @@ def delete_files_in_folder(folder_path):
             # Dopo aver eliminato i file, elimina la cartella stessa
             os.rmdir(item_path)
 
-def getUniqueXAndYZAccordingToZ(x, y, criterion):
+def getUniqueXAndYZAccordingToZ(x, y, criterion, preliminaryFilter=None):
+    if preliminaryFilter is None:
+        preliminaryFilter = np.full_like(x, True)
     best_indices = {}
+    filterToReturn = np.full_like(x, False)
     # Iteriamo su ogni valore unico in filteredStdMCsBetas
-    for value in np.sort(np.unique(x)):
+    for value in np.sort(np.unique(x[preliminaryFilter])):
         # Trova gli indici corrispondenti a questo valore unico
-        indices = np.where(x == value)[0]
+        indices = np.where(np.logical_and(x == value, preliminaryFilter))[0]
 
         if len(indices) > 1:
             # Se ci sono più di un indice, scegli quello con il valore massimo in lastMeasureMC
@@ -44,36 +47,22 @@ def getUniqueXAndYZAccordingToZ(x, y, criterion):
             best_index = indices[0]          
         # Memorizza l'indice migliore
         best_indices[value] = best_index
+        filterToReturn[best_index]=True
     filtered_x = np.asarray(x[list(best_indices.values())])
     filtered_y = np.asarray(y[list(best_indices.values())])
     filtered_criterion = np.asarray(criterion[list(best_indices.values())])
-    return filtered_x, filtered_y, filtered_criterion
+    return filtered_x, filtered_y, filtered_criterion, filterToReturn
 
-def addLevelOnNestedDictionary(dictType, structure, param_tuples, data):
+def addLevelOnNestedDictionary( structure, param_tuples, levelToAdd):
     current_level = structure
     for param_tuple in param_tuples:
         if param_tuple not in current_level:
             current_level[param_tuple] = {}
         current_level = current_level[param_tuple]
-    # Alla fine, salviamo la funzione nel livello corrente
-    if dictType=="Z":
-        x, y, TIfun, Zfun = data
-        current_level['TIfunction'] = TIfun
-        current_level['Zfunction'] = Zfun
-        current_level['betaMax'] = minimize_scalar(lambda z:-Zfun(z), bounds=(np.nanmin(x), np.nanmax(x))).x
-        #current_level['TIx'] = x
-        #current_level['TIy'] = y
         
-    elif dictType=='betaMax':
-        if 'nBetas' in current_level.keys():
-            current_level['nBetas'] = current_level['nBetas'] + 1
-            current_level['betaMax'] = current_level['betaMax'] + data
-        else:
-            current_level['nBetas'] = 1
-            current_level['betaMax'] = data
-    else:
-        print("uknown nested dictionary to implement.")
-        return None
+    for key, value in levelToAdd.items():
+        current_level[key] = value
+        
     return current_level
 
 def getLevelFromNestedStructureAndKeyName(structure, param_tuples, keyName):
@@ -454,101 +443,121 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         for sim_graphID, sim_fieldRealization in set(zip(graphID[TIFilt3], fieldRealization[TIFilt3])):
                             TIFilt4 = np.logical_and(TIFilt3, np.logical_and.reduce([graphID==sim_graphID, fieldRealization==sim_fieldRealization]))
                             st_TIFilt4 = np.logical_and(st_TIFilt3, np.logical_and.reduce([stMC_graphID==sim_graphID, stMC_fieldRealization==sim_fieldRealization]))
-                            
-                            filteredStdMCsBetas = stMC_beta[st_TIFilt4]
-                            filteredStdMCsTIBetas = stMC_TIbeta[st_TIFilt4]
-                            filteredStdMCsMC = stMC_MC[st_TIFilt4]
 
-                            filteredStdMCsBetas, filteredStdMCsTIBetas, filteredStdMCsMC = getUniqueXAndYZAccordingToZ(filteredStdMCsBetas, filteredStdMCsTIBetas, filteredStdMCsMC)
+                            stdMCsBetas_forThisTDSetting, stdMCsTIBetas_forThisTDSetting, stdMCsMC_forThisTDSetting, filterForStdMCs_forThisTDSetting = getUniqueXAndYZAccordingToZ(stMC_beta, stMC_TIbeta, stMC_MC, preliminaryFilter=st_TIFilt4)
                             
                             #specifico il tempo
                             betaMaxForThisRealization=0.
                             betaMaxForThisRealizationCounter=0
                             for sim_T, sim_trajInit in set(zip(T[TIFilt4], trajsExtremesInitID[TIFilt4])):
-                                TIFilt_forThisCurve = np.logical_and.reduce([TIFilt4, T==sim_T, trajsExtremesInitID==sim_trajInit])
+                                pathMCFilt_forThisTAndInit = np.logical_and.reduce([TIFilt4, T==sim_T, trajsExtremesInitID==sim_trajInit])
                             
-                                filteredBetas = beta[TIFilt_forThisCurve]
-                                filteredTIBetas = TIbeta[TIFilt_forThisCurve]
-                                filteredLastMeasureMC = lastMeasureMC[TIFilt_forThisCurve]
                                 
-                                if (0. not in filteredStdMCsBetas and 0. not in filteredBetas):
+                                if (0. not in stdMCsBetas_forThisTDSetting and 0. not in beta[pathMCFilt_forThisTAndInit]):
                                     continue
-                                maxPathsMCsBeta = np.max(filteredBetas)
-                                stMC_FiltForThisT = (filteredStdMCsBetas<maxPathsMCsBeta)
-                                filteredStdMCsBetasForThisT = filteredStdMCsBetas[stMC_FiltForThisT]
-                                filteredStdMCsTIBetasForThisT = filteredStdMCsTIBetas[stMC_FiltForThisT]
-                                filteredStdMCsMCForThisT = filteredStdMCsMC[stMC_FiltForThisT]
-                                filteredBetas, filteredTIBetas, filteredLastMeasureMC = getUniqueXAndYZAccordingToZ(filteredBetas, filteredTIBetas, filteredLastMeasureMC)
+                                
+                                maxPathsMCsBeta = np.nanmax(beta[pathMCFilt_forThisTAndInit])
+                                stdMC_filtForThisTAndInit = np.logical_and(filterForStdMCs_forThisTDSetting, stMC_beta<maxPathsMCsBeta)
+                                
+                                pathMCBetas_forThisTAndInit, pathMCTIs_forThisTAndInit, pathMCMCs_forThisTAndInit, pathMCFilter_forThisTAndInit = getUniqueXAndYZAccordingToZ(beta, TIbeta, lastMeasureMC, preliminaryFilter=pathMCFilt_forThisTAndInit)
 
-                                if len(filteredStdMCsTIBetasForThisT)==0:
-                                    continue
-                                smallestPathsMCBetaToConsider = np.nanmin(filteredBetas)
-                                for i, stMCbeta in enumerate(filteredStdMCsBetasForThisT):
-                                    if stMCbeta in filteredBetas:
-                                        if abs(filteredStdMCsTIBetasForThisT[i]-filteredTIBetas[filteredBetas==stMCbeta])<=0:#filteredStdMCsTIBetasForThisT[0]/40.:
+                                smallestPathsMCBetaToConsider = np.nanmin(pathMCBetas_forThisTAndInit)
+                                for i, stMCbeta in enumerate(stMC_beta[stdMC_filtForThisTAndInit]):
+                                    if stMCbeta in pathMCBetas_forThisTAndInit:
+                                        if abs(stMC_beta[stdMC_filtForThisTAndInit][i]-pathMCTIs_forThisTAndInit[pathMCBetas_forThisTAndInit==stMCbeta])<=0:#filteredStdMCsTIBetasForThisT[0]/40.:
                                             smallestPathsMCBetaToConsider = stMCbeta
                                             break
                                         
-                                stdMCFilt = filteredStdMCsBetasForThisT < smallestPathsMCBetaToConsider
-                                filteredStdMCsBetasForThisT = filteredStdMCsBetasForThisT[stdMCFilt]
-                                filteredStdMCsTIBetasForThisT = filteredStdMCsTIBetasForThisT[stdMCFilt]
-                                filteredStdMCsMCForThisT = filteredStdMCsMCForThisT[stdMCFilt]
+                                stdMC_filtForThisTAndInit_used = np.logical_and(stdMC_filtForThisTAndInit, stMC_beta < smallestPathsMCBetaToConsider)
+                                pathsMC_filtForThisTAndInit_used = np.logical_and(pathMCFilter_forThisTAndInit, beta >= smallestPathsMCBetaToConsider)
+                                temp = np.concatenate([stMC_beta[stdMC_filtForThisTAndInit_used], beta[pathsMC_filtForThisTAndInit_used]])
+
+                                maxBetaNotTooSpaced = np.max([temp[i] for i in range(1, len(temp)) if temp[i] - temp[i-1] <= 0.1])
+                                stdMC_filtForThisTAndInit_used = np.logical_and(stdMC_filtForThisTAndInit_used, stMC_beta <= maxBetaNotTooSpaced)
+                                pathsMC_filtForThisTAndInit_used = np.logical_and(pathsMC_filtForThisTAndInit_used, beta <= maxBetaNotTooSpaced)
                                 
-                                pathsMCFilt = filteredBetas >= smallestPathsMCBetaToConsider
-                                filteredBetas = filteredBetas[pathsMCFilt]
-                                filteredTIBetas = filteredTIBetas[pathsMCFilt]
-                                filteredLastMeasureMC = filteredLastMeasureMC[pathsMCFilt]
+                                stdMC_filtForThisTAndInit_unused = np.logical_and(stdMC_filtForThisTAndInit, ~stdMC_filtForThisTAndInit_used)
+                                pathsMC_filtForThisTAndInit_unused = np.logical_and(pathMCFilter_forThisTAndInit, ~pathsMC_filtForThisTAndInit_used)
+                                
+                                stdMCBetas_forThisTAndInit_used = stMC_beta[stdMC_filtForThisTAndInit_used]
+                                stdMCTIBetas_forThisTAndInit_used = stMC_TIbeta[stdMC_filtForThisTAndInit_used]
+                                stdMCsMC_forThisTAndInit_used = stMC_MC[stdMC_filtForThisTAndInit_used]
+                                
+                                pathMCBetas_forThisTAndInit_used = beta[pathsMC_filtForThisTAndInit_used]
+                                pathMCTIs_forThisTAndInit_used = TIbeta[pathsMC_filtForThisTAndInit_used]
+                                pathMCMCs_forThisTAndInit_used = lastMeasureMC[pathsMC_filtForThisTAndInit_used]
+                                
                                 #print(filteredStdMCsBetasForThisT, filteredBetas)
-                                if len(filteredBetas)>4:
-                                    TIx=np.concatenate([filteredStdMCsBetasForThisT, filteredBetas])
-                                    TIy=np.concatenate([filteredStdMCsTIBetasForThisT, filteredTIBetas])
-                                    #aggiungi controllo che stdTI del piu grande stdBeta e TI del piu piccolo Beta siano circa uguali
-                                    maxBetaNotTooSpaced = np.max([TIx[i] for i in range(1, len(TIx)) if TIx[i] - TIx[i-1] <= 0.1])
-                                    TIy = TIy[TIx<=maxBetaNotTooSpaced]
-                                    TIx = TIx[TIx<=maxBetaNotTooSpaced]
-                                    f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=4)
+                                if len(pathMCBetas_forThisTAndInit_used)<4:
+                                    continue
+                                stdMCBetas_forThisTAndInit_used_sort = np.argsort(stdMCBetas_forThisTAndInit_used)
+                                pathMCBetas_forThisTAndInit_used_sort = np.argsort(pathMCBetas_forThisTAndInit_used)
+                                
+                                TIx=np.concatenate([stdMCBetas_forThisTAndInit_used[stdMCBetas_forThisTAndInit_used_sort],
+                                                    pathMCBetas_forThisTAndInit_used[pathMCBetas_forThisTAndInit_used_sort]])
+                                
+                                TIy=np.concatenate([stdMCTIBetas_forThisTAndInit_used[stdMCBetas_forThisTAndInit_used_sort],
+                                                    pathMCTIs_forThisTAndInit_used[pathMCBetas_forThisTAndInit_used_sort]])
+                                
+                                f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=4)
 
-                                    p_up_0 = (sim_N+sim_Qif)/(2.*sim_N)
-                                    p_up_t = 0.5*(1.+(2.*p_up_0-1.)*np.exp(-2.*sim_T))
+                                p_up_0 = (sim_N+sim_Qif)/(2.*sim_N)
+                                p_up_t = 0.5*(1.+(2.*p_up_0-1.)*np.exp(-2.*sim_T))
 
-                                    ZAtBet0 =0.
-                                    for this_q_star in range(sim_Qstar, sim_N+1, 2):
-                                        ZAtBet0+=P_t(sim_N, this_q_star, p_up_t)
+                                ZAtBet0 =0.
+                                for this_q_star in range(sim_Qstar, sim_N+1, 2):
+                                    ZAtBet0+=P_t(sim_N, this_q_star, p_up_t)
+                                
+                                def integral_to_x(x_point, aoF=f_interp, maxValue = maxBetaNotTooSpaced):
+                                    if np.isscalar(x_point):  # Check if it's a scalar
+                                        if x_point < 0 or x_point > maxValue:
+                                            return np.nan
+                                        integral, _ = quad(aoF, 0., x_point, limit=150)
+                                        return integral
+                                    else:
+                                        return np.array([integral_to_x(x, aoF, maxValue) for x in x_point]) 
                                     
-                                    def integral_to_x(x_point, aoF=f_interp, maxValue = maxBetaNotTooSpaced):
-                                        if np.isscalar(x_point):  # Check if it's a scalar
-                                            if x_point < 0 or x_point > maxValue:
-                                                return np.nan
-                                            integral, _ = quad(aoF, 0., x_point, limit=150)
-                                            return integral
-                                        else:
-                                            return np.array([integral_to_x(x, aoF, maxValue) for x in x_point]) 
+                                def exp_integral_to_x(x_point, aoF=f_interp, factor=ZAtBet0,  maxValue = maxBetaNotTooSpaced):
+                                    return factor* np.exp(integral_to_x(x_point, aoF, maxValue))
                                     
-                                    def exp_integral_to_x(x_point, aoF=f_interp, factor=ZAtBet0,  maxValue = maxBetaNotTooSpaced):
-                                        return factor* np.exp(integral_to_x(x_point, aoF, maxValue))
-                                    
-                                    TIfunction= integral_to_x
-                                    Zfunction= exp_integral_to_x
-                                    
-                                    addedLevel = addLevelOnNestedDictionary("Z", Zdict, [(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldSigma, sim_fieldRealization), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_Qstar), (sim_T, sim_trajInit)],
-                                                    [TIx, TIy, TIfunction, Zfunction])
-                                    
-                                    if 'betaMax' in addedLevel.keys():
-                                        betaMaxForThisRealizationCounter+=1
-                                        betaMaxForThisRealization+=addedLevel['betaMax']
-                                    
-                                    indices = np.where(TIFilt_forThisCurve)[0]
-                                    for index in indices:
-                                        ZFromTIBeta[index] = Zfunction(beta[index])
-                                        kFromChi[index] = ZFromTIBeta[index] * chi_m[index]
-                                        kFromChi_InBetween[index] = ZFromTIBeta[index] * chi_m2[index]
-                                        kFromChi_InBetween_Scaled[index] = kFromChi_InBetween[index]/scale2[index]
-                                        tentativeBarrier[index] = -np.log(kFromChi[index])/(N[index])
-                                        tentativeBarrier_2[index] = -np.log(kFromChi_InBetween[index])/(N[index])
-                                        tentativeBarrier_2Scaled[index] = -np.log(kFromChi_InBetween_Scaled[index])/(N[index])
-                                    tentativeBarrier[indices]-=np.nanmin(tentativeBarrier[indices])
-                                    tentativeBarrier_2[indices]-=np.nanmin(tentativeBarrier_2[indices])
-                                    tentativeBarrier_2Scaled[indices]-=np.nanmin(tentativeBarrier_2Scaled[indices])
+                                TIfunction= integral_to_x
+                                Zfunction= exp_integral_to_x
+                                #beta_l = 
+                                
+                                levelToAdd = {}
+                                levelToAdd['TIfunction'] = TIfunction
+                                levelToAdd['Zfunction'] = Zfunction
+                                levelToAdd['betaMax'] = minimize_scalar(lambda z:-Zfunction(z), bounds=(np.nanmin(TIx), np.nanmax(TIx))).x
+                                #levelToAdd['betaL'] = find_fo
+                                
+                                TIdata={}
+                                TIdata['usedStMCsFilter'] = stdMC_filtForThisTAndInit_used
+                                TIdata['usedPathsMCsFilter'] = pathsMC_filtForThisTAndInit_used
+                                TIdata['unusedStMCsFilter'] = stdMC_filtForThisTAndInit_unused
+                                TIdata['unusedPathsMCsFilter'] = pathsMC_filtForThisTAndInit_unused
+                                levelToAdd['TIdata'] = TIdata
+                                
+                                addedLevel = addLevelOnNestedDictionary(Zdict, [(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldSigma, sim_fieldRealization), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_Qstar), (sim_T, sim_trajInit)],
+                                                levelToAdd)
+                                
+                                #addedLevel = addLevelOnNestedDictionary(filtDict, [(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldSigma, sim_fieldRealization), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_Qstar), (sim_T, sim_trajInit)],
+                                #                levelToAdd)
+                                
+                                indices = np.where(pathsMC_filtForThisTAndInit_used)[0]
+                                for index in indices:
+                                    ZFromTIBeta[index] = Zfunction(beta[index])
+                                    kFromChi[index] = ZFromTIBeta[index] * chi_m[index]
+                                    kFromChi_InBetween[index] = ZFromTIBeta[index] * chi_m2[index]
+                                    kFromChi_InBetween_Scaled[index] = kFromChi_InBetween[index]/scale2[index]
+                                    tentativeBarrier[index] = -np.log(kFromChi[index])/(N[index])
+                                    tentativeBarrier_2[index] = -np.log(kFromChi_InBetween[index])/(N[index])
+                                    tentativeBarrier_2Scaled[index] = -np.log(kFromChi_InBetween_Scaled[index])/(N[index])
+                                tentativeBarrier_2[indices]-=np.nanmin(tentativeBarrier_2[indices])
+                                tentativeBarrier_2Scaled[indices]-=np.nanmin(tentativeBarrier_2Scaled[indices])
+                                
+                                if 'betaMax' in addedLevel.keys():
+                                    betaMaxForThisRealizationCounter+=1
+                                    betaMaxForThisRealization+=addedLevel['betaMax']
 
                             if betaMaxForThisRealizationCounter>0:
                                 betaMaxOverRealizations += betaMaxForThisRealization/betaMaxForThisRealizationCounter
@@ -560,12 +569,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         for sim_graphID, sim_fieldRealization in set(zip(graphID[TIFilt3], fieldRealization[TIFilt3])):
                             TIFilt4 = np.logical_and(TIFilt3, np.logical_and.reduce([graphID==sim_graphID, fieldRealization==sim_fieldRealization]))
                             for sim_T, sim_trajInit in set(zip(T[TIFilt4],trajsExtremesInitID[TIFilt4])):
-                                TIFilt_forThisCurve = np.logical_and.reduce([TIFilt4, T==sim_T, trajsExtremesInitID==sim_trajInit])
+                                TIFilt_forThisTAndInit = np.logical_and.reduce([TIFilt4, T==sim_T, trajsExtremesInitID==sim_trajInit])
                                 level = getLevelFromNestedStructureAndKeyName(Zdict, [(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldSigma, sim_fieldRealization), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_Qstar), (sim_T, sim_trajInit)], 'Zfunction')
                                 if level is not None:
                                     originalZfunction = level['Zfunction']
                                     thisCurveBetaMax = level['betaMax']
-                                    rescaledBetas[TIFilt_forThisCurve] = beta[TIFilt_forThisCurve]*betaMaxOverRealizations/thisCurveBetaMax
+                                    rescaledBetas[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]*betaMaxOverRealizations/thisCurveBetaMax
                                     def rescaledZfunction(bet, numBet=betaMaxOverRealizations, denBet=thisCurveBetaMax, function=originalZfunction):
                                         return function(bet*denBet/numBet)
                                     level['rescaledZfunction']=rescaledZfunction
@@ -711,7 +720,25 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
                     nGraphs=len(np.unique(graphID[filt])))
+ 
+ 
+            figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
+            for fig_name in figs:
+                fig = plt.figure(fig_name)
+                if studyName == "StudyInBetaOverBetaMax":
+                    for val in np.unique(averageBetaMax[filt][~np.isnan(averageBetaMax[filt])]):
+                        plt.axvline(val, 0, 1, color='black', linestyle='--', linewidth=3)
+                    for val in np.unique(betaMax[filt][~np.isnan(betaMax[filt])]):
+                        plt.axvline(val, 0, 1, color='red', linewidth=3,  linestyle='--')
+                    fig.canvas.draw() 
                 
+                filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
+                print(filename)
+                fig.savefig(filename, bbox_inches='tight')
+
+            plt.close('all')
+            
+            
             mainPlot = plotWithDifferentColorbars(f"k", x[filt], xName, kFromChi[filt], "k", "Transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                     betaOfExtraction[filt], normalizedRefConfMutualQ[filt],
                     trajsExtremesInitID[filt], annealingShortDescription_Dic, edgeColorPerInitType_Dic,
