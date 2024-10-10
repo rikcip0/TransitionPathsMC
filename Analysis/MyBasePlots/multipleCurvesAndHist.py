@@ -51,6 +51,8 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
     histogram_handles = []
     histogram_labels = [r'$\mu$', r'$\mu \pm \sigma$']
     
+    minimumYToPlot = None
+    maximumYToPlot = None
     # Plot each curve and store handles and labels
     if curvesIndeces is not None:
         for t in curvesIndeces:
@@ -71,9 +73,13 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
         redLine = mainPlot.axhline(redLineAtYValue_Value, color='red', linestyle='dashed', linewidth=1)
         histogram_labels.extend([redLineAtYValue_Name])
         
-        
+    (minimumXToPlot, maximumXToPlot) = mainPlot.get_xlim()
+    (minimumYToPlot, maximumYToPlot) = mainPlot.get_ylim()
     nPlottedXHistograms=0
     nPlottedYHistograms=0
+    
+    
+    xHistAxes= []
     
     # Keep track of legend handles and labels for histograms
     if additionalXHistogramsArraysAndLabels is not None:
@@ -93,49 +99,78 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
                 if nPlottedXHistograms<nTotalYHistograms:
                     ax_x.tick_params(color='gray')
 
-                axXExtremes = ax_x.get_xlim()
+                (thisHistMinimumX, thisHistMaximumX) = ax_x.get_xlim()
+                if minimumXToPlot is None:
+                    minimumXToPlot= thisHistMinimumX
+                elif minimumXToPlot>thisHistMinimumX:
+                    minimumXToPlot=thisHistMinimumX
+                    
+                if maximumXToPlot is None:
+                    maximumXToPlot= thisHistMaximumX
+                elif maximumXToPlot<thisHistMaximumX:
+                    maximumXToPlot=thisHistMaximumX
                 
                 mean_line = ax_x.axvline(x_mean, color='black', linestyle='solid', linewidth=2)
                 sigma_lower = ax_x.axvline(x_mean - x_VarSq, color='green', linestyle='dashed', linewidth=1)
                 sigma_upper = ax_x.axvline(x_mean + x_VarSq, color='green', linestyle='dashed', linewidth=1)
                 if redLineAtXValueAndName is not None:
                     ax_x.axvline(redLineAtXValue_Value, color='red', linestyle='dashed', linewidth=1)
-                mainPlot.set_xlim(axXExtremes)
-        
+                    
+                xHistAxes.append(ax_x)
+                
+    for ax in xHistAxes:
+        ax.set_xlim((minimumXToPlot, maximumXToPlot))
+    mainPlot.set_xlim((minimumXToPlot, maximumXToPlot))
+    
+    minimumYToPlot = None
+    maximumYToPlot = None
+    yHistAxes = []
+    
     if additionalYHistogramsArraysAndLabels is not None:
         for i, histArrayAndLabel in enumerate(additionalYHistogramsArraysAndLabels):
             histArray, label = histArrayAndLabel
             
-            ax_y2 = fig.add_subplot(gs[topPad:topPad+ mainPlotGSHeight, mainPlotGSLen+nPlottedYHistograms*(histogramGSPad+histogramGSLen)+histogramGSPad:mainPlotGSLen+(nPlottedYHistograms+1)*(histogramGSPad+histogramGSLen)])
+            ax_y = fig.add_subplot(gs[topPad:topPad+ mainPlotGSHeight, mainPlotGSLen+nPlottedYHistograms*(histogramGSPad+histogramGSLen)+histogramGSPad:mainPlotGSLen+(nPlottedYHistograms+1)*(histogramGSPad+histogramGSLen)])
             
             q_in_min, q_in_max = np.min(histArray), np.max(histArray)
             q_in_mean, q_in_VarSq = np.mean(histArray), np.var(histArray)**0.5
             bins = np.arange(q_in_min - 1. / N, q_in_max + 2. / N, 2. / N)
-            ax_y2.hist(histArray.flatten(), bins=bins, orientation='horizontal', color='gray', alpha=0.7, density=True)
+            ax_y.hist(histArray.flatten(), bins=bins, orientation='horizontal', color='gray', alpha=0.7, density=True)
             
             if histScale != '':
-                ax_y2.set_xscale(histScale)
+                ax_y.set_xscale(histScale)
                 
             nPlottedYHistograms+=1
-            ax_y2.yaxis.tick_right()
+            ax_y.yaxis.tick_right()
             if nPlottedYHistograms<=nTotalYHistograms:
-                ax_y2.tick_params(color='gray')
+                ax_y.tick_params(color='gray')
 
-            mean_line = ax_y2.axhline(q_in_mean, color='black', linestyle='solid', linewidth=2)
-            sigma_lower = ax_y2.axhline(q_in_mean - q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
-            sigma_upper = ax_y2.axhline(q_in_mean + q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
+            mean_line = ax_y.axhline(q_in_mean, color='black', linestyle='solid', linewidth=2)
+            sigma_lower = ax_y.axhline(q_in_mean - q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
+            sigma_upper = ax_y.axhline(q_in_mean + q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
             if redLineAtYValueAndName is not None:
-                ax_y2.axhline(redLineAtYValue_Value, color='red', linestyle='dashed', linewidth=1)
+                ax_y.axhline(redLineAtYValue_Value, color='red', linestyle='dashed', linewidth=1)
 
-            ax_y2.text(0.5, 1.02, label, color='black', ha='center', va='bottom', 
-                fontsize=9, transform=ax_y2.transAxes) 
+            ax_y.text(0.5, 1.02, label, color='black', ha='center', va='bottom', 
+                fontsize=9, transform=ax_y.transAxes) 
             
             # Add histogram legend handles
-
-            axYExtremes = ax_y2.get_ylim()
-            mainPlot.set_ylim(axYExtremes)
-            ax_y2.set_ylim(axYExtremes)
+            (thisHistMinimumY, thisHistMaximumY) = ax_y.get_ylim()
+            if minimumYToPlot is None:
+                minimumYToPlot= thisHistMinimumY
+            elif minimumYToPlot>thisHistMinimumY:
+                minimumYToPlot=thisHistMinimumY
+                
+            if maximumYToPlot is None:
+                maximumYToPlot= thisHistMaximumY
+            elif maximumYToPlot<thisHistMaximumY:
+                maximumYToPlot=thisHistMaximumY
+            yHistAxes.append(ax_y)
             
+    for ax in yHistAxes:
+        ax.set_ylim((minimumYToPlot, maximumYToPlot))
+    mainPlot.set_ylim((minimumYToPlot, maximumYToPlot))
+    
     if nTotalYHistograms>0:
         histogram_handles = [mean_line, sigma_upper]
         
