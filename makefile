@@ -31,7 +31,7 @@ compileSimpleStdMC:
 	@echo .
 
 compileMC2:
-	@cd standardMCs && g++ MCWithEnAndQ.cpp -o MCWithEnAndQ.exe -DFIXEDEXT
+	@cd standardMCs && g++ MCMC.cpp -o MCWithEnAndQ.exe -DFIXEDEXT
 	@echo Program compiled in MCWithEnAndQ
 	@echo .
 
