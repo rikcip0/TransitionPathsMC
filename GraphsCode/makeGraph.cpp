@@ -3,7 +3,7 @@
 #include <sstream>
 #include <math.h>
 #include "../Generic/random.h"
-#include "../Mctrajs/MCdyn_classi/Generic/fileSystemUtil.h"
+#include "../Generic/fileSystemUtil.h"
 
 #define p 2
 #define MCSperSWAP 600
@@ -26,13 +26,8 @@ int main(int argc, char *argv[])
     try
     {
         type = std::stoi(argv[1]);
-        if (type == -3 || type == -2 || type == -1 || type >= 0)
-        {
-            // Input valido
-            std::cout << "Input valido: " << type << std::endl;
-        }
-        else
-        {
+        if (type == -3 || type == -2 || type == -1 || type >= 0){}
+        else{
             // Input non valido
             std::cerr << "Errore: Input non valido." << std::endl;
             return 1;
@@ -117,8 +112,8 @@ int main(int argc, char *argv[])
     folder += ("/fPosJ" + std::to_string(fracPosJ).substr(0, 4));
     folder += ("/graph" + std::to_string(myrand % 10000));
     createFolder(folder);
-
     fileName = folder + "/graph.txt";
+    cout<<fileName;
 
     std::ofstream fileO(fileName);
 
