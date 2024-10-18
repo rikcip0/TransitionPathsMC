@@ -155,7 +155,7 @@ bool initializeSingleConfigurationFromParTemp(const string sourceFolder, int N, 
 
     vector<int> s = conf;
     // We read the Betas used in PT from PTRates.txt
-    string fileName = sourceFolder + "configurations/PTInfo.txt";
+    string fileName = sourceFolder + "configurations/SwapRates.txt";
     std::ifstream PTFile(fileName); // Open the file
     if (!PTFile.is_open())
     {
@@ -203,12 +203,13 @@ bool initializeSingleConfigurationFromParTemp(const string sourceFolder, int N, 
     if (!initializeVectorFromLine(fileName, nConfigurationToCopy + 1, N, s))
         return false;
     details.first += "Taking configuration " + to_string(nConfigurationToCopy) + " from " + fileName + ".\n\n";
-    details.second += to_string(initRefConfCode) + " " + to_string(nConfigurationToCopy) + " " + to_string(usedPTBeta) + " " + fileName + "\n";
+    details.second +=  to_string(nConfigurationToCopy) + " " + to_string(usedPTBeta) + " " + fileName + "\n";
 
     conf = s;
     return true;
 }
 
+/*
 bool initializeReferenceConfigurationsFromParTemp_Random(const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta = -1.)
 {
 
@@ -315,6 +316,7 @@ bool initializeReferenceConfigurationsFromParTemp_Random(const string sourceFold
     refConfs = {s1, s2};
     return true;
 }
+*/
 
 bool initializeReferenceConfigurationsSeqQuenchingFromParTemp(vector<vector<vector<rInteraction>>> graph, const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta, int configurationsChoiceOption)
 {

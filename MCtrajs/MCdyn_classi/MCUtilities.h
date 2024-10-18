@@ -195,7 +195,7 @@ vector<double> compute_H_av(vector<straj> *Strajs, vector<vector<vector<rInterac
     return ris;
 }
 
-vector<vector<int>> compute_Q_av(vector<straj> *Strajs, double T, int Np) // returns an Np (eq. spaced times) array with the system overlaps with: initial conf, final conf, 1111 conf
+vector<vector<int>> compute_Q_av(vector<straj> *Strajs, double T, int Np, vector<int > s_in, vector<int> s_out) // returns an Np (eq. spaced times) array with the system overlaps with: initial conf, final conf, 1111 conf
 {
 
     vector<vector<int>> ris(3, vector<int>(Np, 0));
@@ -227,7 +227,7 @@ vector<vector<int>> compute_Q_av(vector<straj> *Strajs, double T, int Np) // ret
     return ris;
 }
 
-vector<int> compute_Q_fin(vector<straj> *Strajs) // gives final magnetization of a set of traejctories
+vector<int> compute_Q_fin(vector<straj> *Strajs, vector<int> s_in, vector<int> s_out) // gives final magnetization of a set of traejctories
 {
 
     vector<int> qfin(3, 0);

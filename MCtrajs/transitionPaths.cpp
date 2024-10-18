@@ -325,7 +325,7 @@ int main(int argc, char **argv)
   }
   // END of initialization of graph, reference configurations and trajectories.
 
-  vector<int> Qfin = compute_Q_fin(&Strajs);
+  vector<int> Qfin = compute_Q_fin(&Strajs, s_in, s_out);
 
   // START of the proper MC simulation
 
@@ -413,7 +413,7 @@ int main(int argc, char **argv)
     // just measuring the magnetization
     if (mc % MCmeas == 0)
     {
-      ris = compute_Q_av(&Strajs, T, Np);
+      ris = compute_Q_av(&Strajs, T, Np, s_in, s_out);
       if (mc > MCeq)
       {
         for (int k = 0; k < Np; k++)
@@ -450,7 +450,7 @@ int main(int argc, char **argv)
       vector<double> risH = compute_H_av(&Strajs, &Graph, Np, T, Hext, randomField);
 
       if (mc % MCmeas != 0)
-        ris = compute_Q_av(&Strajs, T, Np);
+        ris = compute_Q_av(&Strajs, T, Np, s_in, s_out);
 
       logfile << W10 << time(NULL) - sstart << W10 << mc << W10 << j[0] << W10 << j[1] << W10 << j[2] << W10;
 
@@ -546,7 +546,7 @@ int main(int argc, char **argv)
       ther_meanMaxEner += maxEner;
 
       double qDistFromStFw = 0.;
-      vector<vector<int>> risQ = compute_Q_av(&Strajs, T, nPointsForDistanceFromStfwdPathComputation);
+      vector<vector<int>> risQ = compute_Q_av(&Strajs, T, nPointsForDistanceFromStfwdPathComputation, s_in, s_out);
       for (int i = 0; i < nPointsForDistanceFromStfwdPathComputation; i++)
       {
         qDistFromStFw += fabs(risQ[0][i] + risQ[1][i] - (N + mutualQ));

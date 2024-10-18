@@ -92,7 +92,7 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
     s1 = refConfs.first;
     s2 = refConfs.second;
 
-    int Qfin = compute_Q_fin(&Strajs)[1]; // It should be N..., but why not to check!?
+    int Qfin = compute_Q_fin(&Strajs, s1, s2)[1]; // It should be N..., but why not to check!?
 
     double annealingBeta = startingBeta;
     int MCAtBetaStart = 100;
@@ -155,7 +155,7 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
     s1 = refConfs.first;
     s2 = refConfs.second;
 
-    int Qfin = compute_Q_fin(&Strajs)[1]; // It should be N..., but why not to check!?
+    int Qfin = compute_Q_fin(&Strajs, s1, s2)[1]; // It should be N..., but why not to check!?
 
     double annealingBeta = startingBeta;
     int MCAtBetaStart = 100;
