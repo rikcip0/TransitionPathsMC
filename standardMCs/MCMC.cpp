@@ -36,11 +36,14 @@ int main(int argc, char **argv)
 
   // START of input management
 
-  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 9 && argc != 11 && argc != 12 && argc != 14))
+  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 10 && argc != 12 && argc != 13 && argc != 15))
   {
     cout << "Probable desired usage: ";
-    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N beta Hext\nC structureID fracPosJ graphID (requiredBetaOfSExtraction requiredQif)[if not present, FM(all +) conf.is considered]\n (randomFieldType(1: Bernoulli, 2:Gaussian), realization, sigma)" << endl;
-    cout << "If d is a lattice, C and structureID are required but ignored." << endl;
+    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N beta Hext\nC structureID fracPosJ graphID"<<endl;
+    cout << "flipped(if 1 flips desired reference configurations)"<<endl;
+    cout << "(requiredBetaOfSExtraction requiredQif)[if not present, FM(all +) conf.is considered]"<<endl;
+    cout << "(randomFieldType(1 : Bernoulli, 2 : Gaussian), realization, sigma) " << endl;
+    cout<< "If d is a lattice, C and structureID are required but ignored." << endl;
     exit(1);
   }
 
@@ -63,6 +66,7 @@ int main(int argc, char **argv)
 
   double fracPosJ = atof(argv[7]);
   int graphID = atoi(argv[8]);
+  int flipped = atoi(argv[9]);
 
   vector<vector<vector<rInteraction>>> Graph;
 
@@ -78,7 +82,7 @@ int main(int argc, char **argv)
   double sigma = 1.;
 
   vector<double> randomField(N);
-  if (argc == 12 || argc == 14)
+  if (argc == 13 || argc == 15)
   {
     randomFieldType = atoi(argv[argc - 3]);
     fieldStructureRealization = atoi(argv[argc - 2]);
@@ -124,12 +128,12 @@ int main(int argc, char **argv)
   info.first += (string)("Simulation run on: ") + ugnm.nodename + ", with seed " + to_string(sstart) + ", started at " + getCurrentDateTime() + "\n\n";
   info.second += (string)("1 2 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
 
-  if (argc == 11 || argc == 14)
+  if (argc == 12 || argc == 15)
   {
     double requiredBetaOfSExtraction = 0.;
-    int requiredIndex = atoi(argv[argc - 1]);
+    int requiredIndex = atoi(argv[10]);
 
-    std::string input(argv[argc - 2]);
+    std::string input(argv[11]);
 
     if (input == "inf")
     {
@@ -156,17 +160,23 @@ int main(int argc, char **argv)
     s_in.assign(N, 1);
   }
 
+  if (flipped == 1)
+  {
+    for (int i = 0; i < N; i++)
+      s_in[i] = -s_in[i];
+  }
+
   char buffer[200];
-  sprintf(buffer, "%.4g_%.4g", beta, Hext);
+  sprintf(buffer, "%.4g_%.4g_%d_%d", beta, Hext, MC, stories);
 
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  if (argc == 12 || argc == 14)
+  if (argc == 13 || argc == 15)
   {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "std/std/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "MCMC/stdMCMC/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
   }
   else
   {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "std/std/", string(buffer), sstart); // For Cluster
+    folder = makeFolderNameFromBuffer_ForCluster(folder + "MCMC/stdMCMC/", string(buffer), sstart); // For Cluster
   }
 
   createFolder(folder);
@@ -210,10 +220,9 @@ int main(int argc, char **argv)
   detFile << info.second;
   detFile.close();
 
-
-  vector<int> permanenceAtQ(N+1,0);
-  int nMeasures=0;
-  double energy=0;
+  vector<int> permanenceAtQ(N + 1, 0);
+  int nMeasures = 0;
+  double energy = 0;
   for (int story = 0; story < stories; story++)
   {
     s = s_in;
@@ -230,8 +239,8 @@ int main(int argc, char **argv)
           {
             q_in += s_in[i] * s[i];
           }
-          permanenceAtQ[(q_in+N)/2]++;
-          energy+= energy_Graph(s, N, Graph, Hext, randomField);
+          permanenceAtQ[(q_in + N) / 2]++;
+          energy += energy_Graph(s, N, Graph, Hext, randomField);
           nMeasures++;
         }
       }
@@ -239,7 +248,7 @@ int main(int argc, char **argv)
       if (printEv && (mc % MCprintEv == 0))
       {
         nomefile = folder + "conf_." + to_string(mc);
-//print_conf(&Strajs, T, nomefile);
+        // print_conf(&Strajs, T, nomefile);
       }
 
       // MC move
@@ -250,14 +259,15 @@ int main(int argc, char **argv)
 
   nomefile = folder + "/av.dat";
   detFile.open(nomefile);
-  for(int i=0;i<N+1;i++){
+  for (int i = 0; i < N + 1; i++)
+  {
 
-  detFile << permanenceAtQ[i]/((double)nMeasures)<<endl;
+    detFile << permanenceAtQ[i] / ((double)nMeasures) << endl;
   }
   detFile.close();
   nomefile = folder + "/ener.dat";
   detFile.open(nomefile);
-detFile<<energy;
+  detFile << (energy/N/nMeasures);
   detFile.close();
 
   // END of the proper MC simulation
