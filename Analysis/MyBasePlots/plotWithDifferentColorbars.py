@@ -15,7 +15,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                                 markerShapeVariable, markerShapeVariableNames,
                                 additionalMarkerTypes=None,
                                 yerr=None, fitType= '', xscale='', yscale ='', fittingOverDifferentEdges=True, nGraphs=None,
-                                functionsToPlotContinuously = None):
+                                functionsToPlotContinuously = None, theoreticalX=None, theoreticalY=None):
     
     markers = ['s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h','s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h']
     
@@ -74,6 +74,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     ax1.set_ylabel(yName)
     edgeColorMap = {}
 
+    ax1.scatter([],[], label=f"traj init:", color="None")
     for key, value in edgeColorPerInitType.items():
         for key2, value2 in shortDescription.items():
             if key == key2 and (key in trajsExtInitIDs):
@@ -196,8 +197,13 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         plt.yscale(yscale)
     if xscale!='' and len(x[x>0])>0:
          plt.xscale(xscale)
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
 
+    if theoreticalX is not None:
+        plt.plot([],[], label=f"          ", marker=None, color="None")
+        plt.plot(theoreticalX, theoreticalY, linestyle='--', marker=' ', label='cavity')
+        
+    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+    
     totalTicks = []
     sm = ['']*nColorbars
     ax = ['']*nColorbars

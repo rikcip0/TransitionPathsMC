@@ -468,11 +468,12 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         Qif = -1
         graphInfo_Line = 'FM '+graphInfo_Line
         areConfigurationsFM=True
-        M_RedLine = [Qstar, 'M*']
+        M_RedLine = [0.6, 'm*']
+        Qout_RedLine = [Qstar, 'q*']
     else:
         Qif = (int)(simData['configuration']['referenceConfigurationsInfo']['mutualOverlap'])
         Qif/=N
-        Qout_RedLine = [Qstar, 'Q*']
+        Qout_RedLine = [Qstar, 'q*']
         
 
     if parametersSettingID== 210:
@@ -624,7 +625,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     if currentAnalysisVersion==analysisVersionOfLastAnalysis and lastMeasureMc==lastMeasureMcOfLastAnalysis:
         print('Nor the analysis or the data changed from last analysis.\n\n')
-        return None
+        #return None
 
     
     results['realTime']={}
@@ -902,15 +903,15 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         delete_files_in_folder(theseFiguresSubFolder)
 
     histScale = ''
-    #if fracPosJ==1.0:
-    #    histScale='log'
+    if areConfigurationsFM:
+        histScale='log'
     
     figure, mainPlot = multipleCurvesAndHist('energy', r'Energy vs time'+'\n'+ titleSpecification,
-                                times[0], 'time',  energy[0], r'$energy$', N, histScale=histScale)
+                                times[0], 't',  energy[0], r'$energy$', N, histScale=histScale)
     addInfoLines(figure)
 
     figure, mainPlot = multipleCurvesAndHist('M', r'm vs time'+'\n'+ titleSpecification,
-                                times[0], 'time',  M[0], 'm', N, redLineAtYValueAndName=M_RedLine, histScale=histScale)
+                                times[0], 't',  M[0], 'm', N, redLineAtYValueAndName=M_RedLine, histScale=histScale)
     addInfoLines(figure)
     
     figure, mainPlot = multipleCurvesAndHist('EnergyVsM', r'Energy vs m'+'\n'+ titleSpecification,
@@ -919,12 +920,12 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     
     if not areConfigurationsFM:
         figure, mainPlot = multipleCurvesAndHist('Qin', r'$q_{in}$ vs time'+'\n'+ titleSpecification,
-                                    times[0], 'time',  q_in[0], r'$q_{in}$', N, 
+                                    times[0], 't',  q_in[0], r'$q_{in}$', N, 
                                     additionalYHistogramsArraysAndLabels=Qin_AdditionalHists, redLineAtYValueAndName=Qin_RedLine, histScale=histScale)
         addInfoLines(figure)
 
         figure, mainPlot = multipleCurvesAndHist('Qout', r'$q_{out}$ vs time'+'\n'+ titleSpecification,
-                                    times[0], 'time',  q_out[0],r'$q_{out}$', N, 
+                                    times[0], 't',  q_out[0],r'$q_{out}$', N, 
                                     additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=Qout_RedLine, histScale=histScale)
         addInfoLines(figure)
         
@@ -982,14 +983,14 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     plt.figure('energyMean')
     plt.title(f'Mean of energy vs time\n'+ titleSpecification)
-    plt.xlabel(r'time')
+    plt.xlabel(r't')
     plt.ylabel(r'$mean energy$')
     plt.plot(times.mean(0), energy.mean(0))
     addInfoLines()
 
     plt.figure('energyStdDev')
     plt.title(r'$\Delta$'+f' energy vs time\n'+ titleSpecification)
-    plt.xlabel(r'time')
+    plt.xlabel(r't')
     plt.ylabel(r'$\Delta$E')
     plt.plot(times.mean(0), np.sqrt(energy.var(0)))
     addInfoLines()
@@ -1003,27 +1004,28 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     addInfoLines()
+    
+    if not areConfigurationsFM:
+        plt.figure('energyVsQin')
+        plt.title(f'Mean of energy vs '+r'$q_{in}$'+'\n'+ titleSpecification)
+        plt.xlabel(r'$q_{in}$')
+        plt.ylabel(r'$energy$')
+        a = meanAndSigmaForParametricPlot(q_in, energy)
+        plt.errorbar(a[0],a[1],a[2], label='mean')
+        plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
+        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+        addInfoLines()
 
-    plt.figure('energyVsQin')
-    plt.title(f'Mean of energy vs '+r'$q_{in}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$q_{in}$')
-    plt.ylabel(r'$energy$')
-    a = meanAndSigmaForParametricPlot(q_in, energy)
-    plt.errorbar(a[0],a[1],a[2], label='mean')
-    plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    addInfoLines()
-
-    plt.figure('energyVsQout')
-    plt.title(f'Mean of energy vs '+r'$q_{out}$'+'\n'+ titleSpecification)
-    plt.xlabel(r'$q_{out}$')
-    plt.ylabel(r'$energy$')
-    a = meanAndSigmaForParametricPlot(q_out, energy)
-    plt.errorbar(a[0],a[1],a[2], label='mean')
-    plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
-    addInfoLines()
+        plt.figure('energyVsQout')
+        plt.title(f'Mean of energy vs '+r'$q_{out}$'+'\n'+ titleSpecification)
+        plt.xlabel(r'$q_{out}$')
+        plt.ylabel(r'$energy$')
+        a = meanAndSigmaForParametricPlot(q_out, energy)
+        plt.errorbar(a[0],a[1],a[2], label='mean')
+        plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
+        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+        plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
+        addInfoLines()
 
     barrier = energy - np.mean(energy[:, [0]], axis=1, keepdims=True)
     barrierIndices = np.argmax(barrier,1)
@@ -1038,11 +1040,12 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     myHist('barriersM', 'Histogram of M of energy barriers\n'+ titleSpecification, MOfBarrier, 'barrier')
     addInfoLines()
 
-    myHist('barriersQin', 'Histogram of '+r'$q_{in}$' + 'of energy barriers\n'+ titleSpecification, QinOfBarrier, 'barrier')
-    addInfoLines()
+    if not areConfigurationsFM:
+        myHist('barriersQin', 'Histogram of '+r'$q_{in}$' + 'of energy barriers\n'+ titleSpecification, QinOfBarrier, 'barrier')
+        addInfoLines()
 
-    myHist('barriersQout', 'Histogram of '+r'$q_{out}$' + 'of energy barriers\n'+ titleSpecification, QoutOfBarrier, 'barrier')
-    addInfoLines()
+        myHist('barriersQout', 'Histogram of '+r'$q_{out}$' + 'of energy barriers\n'+ titleSpecification, QoutOfBarrier, 'barrier')
+        addInfoLines()
 
     
     plt.figure('barriersEvolution')
@@ -1089,69 +1092,71 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     titleSpecification = 'considering some sampled trajectories'
     
     figure, mainPlot = multipleCurvesAndHist('energy', r'Energy vs time'+'\n'+ titleSpecification,
-                                times, 'time', energy, r'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                times, 't', energy, r'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                 isYToHist=True, histScale=histScale)
     addInfoLines(figure)
     
-    figure, mainPlot = multipleCurvesAndHist('Qin', r'$q_{in}$ vs time'+'\n'+ titleSpecification,
-                                times, 'time', q_in, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isYToHist=True, additionalYHistogramsArraysAndLabels=Qin_AdditionalHists, redLineAtYValueAndName=[Qstar,'Q*'], histScale=histScale)
-    addInfoLines(figure)
-    
-    
-    figure, mainPlot = multipleCurvesAndHist('Qout', r'$q_{out}$ vs time'+'\n'+ titleSpecification,
-                                times, 'time', q_out, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isYToHist=True, additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=[Qstar,'Q*'], histScale=histScale)
-    addInfoLines(figure)
     
     figure, mainPlot = multipleCurvesAndHist('M', 'M vs time'+'\n'+ titleSpecification,
-                                times, 'time', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isYToHist=True, histScale=histScale)
-    addInfoLines(figure)
-
-    figure, mainPlot = multipleCurvesAndHist('QoutVsQinProva', 'M vs time'+'\n'+ titleSpecification,
-                                q_in, r'$q_{in}$', q_out, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isXToHist=True, additionalXHistogramsArraysAndLabels=Qin_AdditionalHists,
-                                isYToHist=True, additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=[Qstar,'Q*'], histScale=histScale)
-    addInfoLines(figure)
-
-
-    plt.figure('QoutVsQin')
-    [plt.plot(q_in[t], q_out[t], label=f'traj {t}') for t in someTrajs ]
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    plt.title(r'$q_{out}$ vs $q_{in}$' +'\n'+ titleSpecification)
-    plt.xlabel(r'$q_{in}$')
-    plt.ylabel(r'$q_{out}$')
-    plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
-    plt.scatter([1.],[Qif], marker= '*', s=45, color='black')
-    if(np.max(q_out)>=0.85):
-        plt.scatter([Qif], [1.], marker= '*', s=45, color='black')
-    addInfoLines()
-
-    figure, mainPlot = multipleCurvesAndHist('MVsQin', r'M vs $q_{in}$'+'\n'+ titleSpecification,
-                                q_in, r'$q_{in}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isYToHist=True)
+                                times, 't', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                isYToHist=True, histScale=histScale,  redLineAtYValueAndName=M_RedLine)
     addInfoLines(figure)
     
-    figure, mainPlot = multipleCurvesAndHist('MVsQout', f'M vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
-                                q_out, r'$q_{out}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isYToHist=True, histScale=histScale)
-    addInfoLines(figure)
-
-    figure, mainPlot = multipleCurvesAndHist('EnergyVsQin', f'energy vs ' +r'$q_{in}$'+'\n'+ titleSpecification,
-                                q_in, r'$q_{in}$', energy, 'ebergt', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isYToHist=True, histScale=histScale)
-    addInfoLines(figure)
-
-    figure, mainPlot = multipleCurvesAndHist('EnergyVsQout', f'energy vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
-                                q_out, r'$q_{out}$', energy, 'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isYToHist=True, histScale=histScale)
-    addInfoLines(figure)
-
     figure, mainPlot = multipleCurvesAndHist('EnergyVsM', f'energy vs M'+'\n'+ titleSpecification,
                                 M, r'M', energy, 'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                 isYToHist=True, histScale=histScale)
     addInfoLines(figure)
+    
+    if not areConfigurationsFM:
+        figure, mainPlot = multipleCurvesAndHist('Qin', r'$q_{in}$ vs time'+'\n'+ titleSpecification,
+                                    times, 't', q_in, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    isYToHist=True, additionalYHistogramsArraysAndLabels=Qin_AdditionalHists, redLineAtYValueAndName=Qin_RedLine, histScale=histScale)
+        addInfoLines(figure)
+        
+        
+        figure, mainPlot = multipleCurvesAndHist('Qout', r'$q_{out}$ vs time'+'\n'+ titleSpecification,
+                                    times, 't', q_out, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    isYToHist=True, additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=Qout_RedLine, histScale=histScale)
+        addInfoLines(figure)
+
+        figure, mainPlot = multipleCurvesAndHist('QoutVsQinProva', r'$q_{out}$ vs $q_{in}$'+'\n'+ titleSpecification,
+                                    q_in, r'$q_{in}$', q_out, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    isXToHist=True, additionalXHistogramsArraysAndLabels=Qin_AdditionalHists,
+                                    isYToHist=True, additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=M_RedLine, histScale=histScale)
+        addInfoLines(figure)
+
+
+        plt.figure('QoutVsQin')
+        [plt.plot(q_in[t], q_out[t], label=f'traj {t}') for t in someTrajs ]
+        plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+        plt.title(r'$q_{out}$ vs $q_{in}$' +'\n'+ titleSpecification)
+        plt.xlabel(r'$q_{in}$')
+        plt.ylabel(r'$q_{out}$')
+        plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
+        plt.scatter([1.],[Qif], marker= '*', s=45, color='black')
+        if(np.max(q_out)>=0.85):
+            plt.scatter([Qif], [1.], marker= '*', s=45, color='black')
+        addInfoLines()
+
+        figure, mainPlot = multipleCurvesAndHist('MVsQin', r'M vs $q_{in}$'+'\n'+ titleSpecification,
+                                    q_in, r'$q_{in}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    isYToHist=True)
+        addInfoLines(figure)
+        
+        figure, mainPlot = multipleCurvesAndHist('MVsQout', f'M vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
+                                    q_out, r'$q_{out}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    isYToHist=True, histScale=histScale)
+        addInfoLines(figure)
+
+        figure, mainPlot = multipleCurvesAndHist('EnergyVsQin', f'energy vs ' +r'$q_{in}$'+'\n'+ titleSpecification,
+                                    q_in, r'$q_{in}$', energy, 'ebergt', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    isYToHist=True, histScale=histScale)
+        addInfoLines(figure)
+
+        figure, mainPlot = multipleCurvesAndHist('EnergyVsQout', f'energy vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
+                                    q_out, r'$q_{out}$', energy, 'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    isYToHist=True, histScale=histScale)
+        addInfoLines(figure)
 
 
     figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
@@ -1264,7 +1269,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
         addInfoLines()
         plt.title(f'$\chi$ vs time\n'+titleSpecification)
-        plt.xlabel('time')
+        plt.xlabel('t')
         plt.ylabel(r'$\chi$')
 
     results['chiLinearFit'] = linearFitResults
@@ -1273,16 +1278,16 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     xForDerivative, yDerivative= aDiscreteDerivative(time, avChi)
     plt.figure('ChiDeriv')
     plt.plot(xForDerivative, yDerivative)
-    plt.title(f'Derivative of $\chi$ vs '+r'time'+'\n'+titleSpecification)
-    plt.xlabel(r'time')
+    plt.title(f'Derivative of $\chi$ vs '+r't'+'\n'+titleSpecification)
+    plt.xlabel(r't')
     plt.ylabel(r'$\chi$'+'\'')
     addInfoLines()
 
     xForDerivative2, yDerivative2= aDiscreteDerivative(xForDerivative, yDerivative)
     plt.figure('ChiDeriv2')
     plt.plot(xForDerivative2, yDerivative2)
-    plt.title(f'Second derivative of $\chi$ vs '+r'time'+'\n'+titleSpecification)
-    plt.xlabel(r'time')
+    plt.title(f'Second derivative of $\chi$ vs '+r't'+'\n'+titleSpecification)
+    plt.xlabel(r't')
     plt.ylabel(r'$\chi$'+'\'\'')
     addInfoLines()
 
@@ -1347,7 +1352,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     plt.plot(time, avQout, label=r'$q_{out}$')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     plt.title(f'Qs vs time\n'+titleSpecification)
-    plt.xlabel('time')
+    plt.xlabel('t')
     plt.ylabel(r'$Q$')
     plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
     addInfoLines()
@@ -1355,7 +1360,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     plt.figure('M')
     plt.plot(time, avM)
     plt.title(f'Magnetization conf. vs time\n'+titleSpecification)
-    plt.xlabel('time')
+    plt.xlabel('t')
     plt.ylabel('M')
     addInfoLines()
 
