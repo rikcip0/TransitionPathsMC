@@ -3,6 +3,9 @@ import random
 import sys
 import networkx as nx
 
+
+
+
 from matplotlib.colors import LinearSegmentedColormap
 sys.path.append('../')
 from matplotlib import pyplot as plt
@@ -10,7 +13,8 @@ import matplotlib
 import numpy as np
 import os
 import json
-
+from scipy.sparse.linalg import eigs
+from scipy.sparse import csr_matrix
 from MyBasePlots.hist import myHist
 from MyBasePlots.hist import myHistForOverlaps2
 from MyBasePlots.hist import myHistForOverlaps_notLog
@@ -35,6 +39,7 @@ def writeJsonResult(data, filePath):
     json_data = json.dumps(data, indent=4)
     with open(filePath, 'w') as output_file:
         output_file.write(json_data)
+
 
 def txtToInfo(file_path, mappa):
     with open(file_path, 'r') as file:
@@ -144,6 +149,7 @@ def singleStructureAnalysis( folder=""):
     print(graphFile_path)
     N=0
     list=[]
+    orientedEdges=[]
     G = nx.Graph()
     with open(graphFile_path, 'r') as file:
         #print("analizzando ", nome_file)
@@ -157,12 +163,63 @@ def singleStructureAnalysis( folder=""):
         for i in range(0,2,1):
             list.append(data[:,i])
         for i in range(np.shape(data)[0]):
-            G.add_edge(*data[i,0:2])
-    fig=plt.figure(figsize=(10, 5))  # Dimensione della figura
-    nx.draw(G, with_labels=True, font_weight='bold')  # Assicurati di passare 'ax=subax1'
-    fig.savefig(os.path.join(resultsFolder,'graph.png'))  
-    plt.show()
+            color='black'
+            if data[i,2]==-1:
+                color='red'
+            G.add_edge(*data[i,0:2], color=color)
+            orientedEdges.append((tuple)(data[i,0:2]))
+            orientedEdges.append((data[i,1], data[i,0]))
+            
+    colors = nx.get_edge_attributes(G,'color').values()
+    
+    fig=plt.figure(figsize=(10, 7))  # Dimensione della figura
+     # Se non è un reticolo, usiamo un layout automatico
+    pos = nx.spring_layout(G)
 
+    nx.draw(G, pos,
+        edge_color=colors, 
+        with_labels=True,
+        width=2.)
+    fig.savefig(os.path.join(resultsFolder,'graph.png'))  
+    fig=plt.figure(figsize=(10, 9))  # Dimensione della figura
+    G = nx.grid_2d_graph(8, 8)
+
+    # Crea le posizioni dei nodi come una griglia regolare
+    pos = {(i, j): (j, 7-i) for i, j in G.nodes()}
+    mapping = {node: i for i, node in enumerate(G.nodes())}
+    #mapping2 = [i for i, node in enumerate(G.nodes())]
+    #label
+    #G = nx.relabel_nodes(G, mapping)
+    print(mapping)
+    # Plotta il grafo con posizioni specifiche
+    nx.draw(G, pos, labels=mapping, with_labels=True, width=2)
+    fig.savefig(os.path.join(resultsFolder,'64SqLatt.png'))  
+ 
+    
+    NBT=[]
+    
+    for edge1 in orientedEdges:
+        row =[]
+        for edge2 in orientedEdges:
+            if edge1[1]==edge2[0] and edge1[0]!=edge2[1]: 
+                row.append(1)
+            else:
+                row.append(0)
+        NBT.append(row)
+    #for i,r in enumerate(NBT):
+        #print("r ",i,np.sum(r))
+    NBT = np.asarray(NBT, dtype=np.float64)  # Use float64 for higher precision
+    sparse_matrix = csr_matrix(NBT, dtype=np.float64)
+    values, vectors = eigs(sparse_matrix, k=1, which='LM', tol=1e-10) 
+    
+
+        
+    # The largest eigenvalue
+    largest_eigenvalue = values[0].real
+    #print("val", values)
+    #print("vec", vectors)
+    #print("lar", largest_eigenvalue)
+    #print("bet", np.arctanh(1/largest_eigenvalue))
     list=np.asarray(list).flatten()
     degrees = []
     for i in range(0, N):
@@ -174,5 +231,6 @@ def singleStructureAnalysis( folder=""):
     simData = {}
     simData['beta_c']= {}
     simData['beta_c']['localApproach'] = np.arctanh(quantity)
+    simData['beta_c']['globalApproach'] = np.arctanh(1/largest_eigenvalue)
 
     writeJsonResult(simData, jsonResultsPath)
