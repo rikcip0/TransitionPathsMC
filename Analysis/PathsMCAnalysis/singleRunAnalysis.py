@@ -500,6 +500,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     Qout_AdditionalHists = []
     M_AdditionalHists = []
     
+    Hist2D_Data = []
+    
     if refConfSettingID in [51,53,54]:
         absolute_path2 = os.path.abspath(os.path.join(run_Path, simData['configuration']['referenceConfigurationsInfo']['fileOfExtractionName']))
         absolute_path = os.path.abspath(os.path.join("..", simData['configuration']['referenceConfigurationsInfo']['fileOfExtractionName']))
@@ -529,6 +531,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 
                 Qin_AdditionalHists = [(firstConfigurationQs, "PT")]
                 Qout_AdditionalHists = [(secondConfigurationQs, "PT")]
+                Hist2D_Data = [[(firstConfigurationQs, secondConfigurationQs), "PT"]]
                 
                 
         else:
@@ -625,7 +628,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     if currentAnalysisVersion==analysisVersionOfLastAnalysis and lastMeasureMc==lastMeasureMcOfLastAnalysis:
         print('Nor the analysis or the data changed from last analysis.\n\n')
-        #return None
+        return None
 
     
     results['realTime']={}
@@ -796,7 +799,6 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     #defining a function to plot quantities evolution over mc iterations and the respective autocorrelation
     def mcEvolutionAndAutocorrelation(mcSweeps, quantity, firstIndexForEquilibrium,
                                       quantityShortName, quantityFullName, quantityLabelName, nMus):
-        
         results['thermalization'][quantityShortName] = {}
 
         plt.figure(quantityShortName)
@@ -811,6 +813,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         addInfoLines()
 
         results['thermalization'][quantityShortName]['mean'] = np.mean(quantity[firstIndexForEquilibrium:])
+        if((int)(therm_mcMeasures[-1])==mcPrint):
+            return None        
         results['thermalization'][quantityShortName]['stdErr'] = stats.sem(quantity[firstIndexForEquilibrium:])
 
         if (len(np.unique(quantity[firstIndexForEquilibrium:])) > 1): #i.e., if it s not a constant
@@ -829,6 +833,10 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             results['thermalization'][quantityShortName]['rChi2'] = 'nan'
             results['thermalization'][quantityShortName]['dof'] = 'nan'
 
+    if((int)(therm_mcMeasures[-1])==mcPrint):
+        simData['results'] = results
+        return None     
+           
     muAvEnergy, _, _, _ = mcEvolutionAndAutocorrelation(therm_mcMeasures[:len(therm_mcMeasures)], therm_avEnergies[:len(therm_mcMeasures)], firstIndexOfMeasuresAtEq,
                                       'avEnergy', 'trajectory average energy', 'energy', nMusToConsider)
     
@@ -887,6 +895,33 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
         return None
     
+    if len(Hist2D_Data):
+        theseFiguresFolder= os.path.join(plotsFolder, 'additionalRelevantData')
+        if not os.path.exists(theseFiguresFolder):
+            os.makedirs(theseFiguresFolder)
+        else:
+            delete_files_in_folder(theseFiguresFolder)
+            
+        plt.figure('referenceConfigurations_OverlapWithPT')
+        plt.title('Overlap between reference configurations and the others at same temperature from PT')
+        auto_bins_x = np.histogram_bin_edges(Hist2D_Data[0][0][0], bins='auto')
+        auto_bins_y = np.histogram_bin_edges(Hist2D_Data[0][0][1], bins='auto')
+
+        # Imposta i nuovi bin raddoppiando quelli automatici
+        bins_x = (int)(len(auto_bins_x) * 1.1)
+        bins_y = (int)(len(auto_bins_y) * 1.1)
+        plt.hist2d(Hist2D_Data[0][0][0], Hist2D_Data[0][0][1], bins=[bins_x, bins_y], cmap='Blues', density=True)
+        plt.xlabel('q_in')
+        plt.ylabel('q_out')
+        # Add a colorbar for reference
+        plt.colorbar()
+        figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
+        for fig_name in figs:
+            fig = plt.figure(fig_name)
+            filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
+            fig.savefig(filename, bbox_inches='tight')
+        plt.close('all')
+
     theseFiguresFolder= os.path.join(plotsFolder, 'sampledTrajs')
     if not os.path.exists(theseFiguresFolder):
         os.makedirs(theseFiguresFolder)
@@ -928,6 +963,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                                     times[0], 't',  q_out[0],r'$q_{out}$', N, 
                                     additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=Qout_RedLine, histScale=histScale)
         addInfoLines(figure)
+        
         
         
         plt.figure('QoutVsQin')
@@ -1025,6 +1061,21 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
         plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
+        addInfoLines()
+        
+        plt.figure('trajectories_OverlapWithRefConfs')
+        plt.title('Overlap between reference configurations and the others at same temperature from PT')
+        auto_bins_x = np.histogram_bin_edges(q_in, bins='auto')
+        auto_bins_y = np.histogram_bin_edges( q_out.flatten(), bins='auto')
+
+        # Imposta i nuovi bin raddoppiando quelli automatici
+        bins_x = (int)(len(auto_bins_x) * 1.1)
+        bins_y = (int)(len(auto_bins_y) * 1.1)
+        plt.hist2d(q_in.flatten(), q_out.flatten(), bins=[bins_x, bins_y], cmap='Blues', density=True)
+        plt.xlabel('q_in')
+        plt.ylabel('q_out')
+        # Add a colorbar for reference
+        plt.colorbar()
         addInfoLines()
 
     barrier = energy - np.mean(energy[:, [0]], axis=1, keepdims=True)

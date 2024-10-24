@@ -32,7 +32,8 @@ def autocorrelationWithExpDecayAndMu(name, title, xArray, xName, toComputeCorrel
             p0 = 5*deltaX[1]   #so if it s 
         else:
             p0 = -deltaX[1]/np.log(auto[1])
-    
+    if len(xArray)<6:
+        return xArray[-1]/2., None, None, len(xArray)
     popt, pcov = curve_fit(lambda x, mu:  np.exp(-x/mu), deltaX, auto, p0=p0)
     plt.scatter(deltaX, auto)
     mu = popt[0]

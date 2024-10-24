@@ -26,7 +26,7 @@ def find_rows_similarity(matrix):
     # Rows at the middle of the range of similarity
     middle_index = len(sorted_indices) // 2
     middle_rows = matrix[sorted_indices[middle_index-1:middle_index+2]]
-    return [[most_different_rows.flatten(), "different"], [most_similar_rows.flatten(), "similar"], [middle_rows.flatten(), "medium"]]
+    return [[most_different_rows.flatten(), f"different {sorted_indices[-3:]}"], [most_similar_rows.flatten(), f"similar {[sorted_indices[:3]]}"], [middle_rows.flatten(), f"medium {sorted_indices[middle_index-1:middle_index+2]}"]]
 
 def myHist(name, title, toHist, toHistName, nbins=False):
     plt.figure(name)

@@ -181,19 +181,6 @@ def singleStructureAnalysis( folder=""):
         with_labels=True,
         width=2.)
     fig.savefig(os.path.join(resultsFolder,'graph.png'))  
-    fig=plt.figure(figsize=(10, 9))  # Dimensione della figura
-    G = nx.grid_2d_graph(8, 8)
-
-    # Crea le posizioni dei nodi come una griglia regolare
-    pos = {(i, j): (j, 7-i) for i, j in G.nodes()}
-    mapping = {node: i for i, node in enumerate(G.nodes())}
-    #mapping2 = [i for i, node in enumerate(G.nodes())]
-    #label
-    #G = nx.relabel_nodes(G, mapping)
-    print(mapping)
-    # Plotta il grafo con posizioni specifiche
-    nx.draw(G, pos, labels=mapping, with_labels=True, width=2)
-    fig.savefig(os.path.join(resultsFolder,'64SqLatt.png'))  
  
     
     NBT=[]

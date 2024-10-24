@@ -10,45 +10,52 @@ from matplotlib.colors import ListedColormap, Normalize
 
 
 def plotWithDifferentColorbars(name, x, xName, y, yName, title,
-                                betaOfExt, Qif,
                                 trajsExtremesInitID, shortDescription, edgeColorPerInitType,
                                 markerShapeVariable, markerShapeVariableNames,
+                                Qif, betaOfExt=None,
                                 additionalMarkerTypes=None,
+                                additionalMarkerTypes_Unused=None,
                                 yerr=None, fitType= '', xscale='', yscale ='', fittingOverDifferentEdges=True, nGraphs=None,
                                 functionsToPlotContinuously = None, theoreticalX=None, theoreticalY=None):
     
     markers = ['s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h','s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h']
     
-    betas = np.unique(betaOfExt)
-    nColorbars = betas.size
-    cmaps = {}
 
     if(len(y[y!="nan"])<=1):
          return None
 
-    myMap = cm.get_cmap('cool', 256)
-    # Define a base color (redder for lower values, bluer for higher values)
-
-    fBetaOfExt=betaOfExt
-    betas = betas.astype(str)
-    betaOfExt = np.asarray(betaOfExt, dtype=str)
-    for val in betas:
-        if len(betas)==1 or val =="nan":
-            normalized= 1.
-        else:
-            normalized = (((float) (val) - np.min(fBetaOfExt.astype(float))) / (np.max(fBetaOfExt.astype(float)) - np.min(fBetaOfExt.astype(float))))
-        newcolors = myMap(np.linspace(0, 1, 256))
-        newcolors[:, 3] = 1
-        newcolors[:, 1] = (newcolors[:, 1]*normalized + (1-normalized))
-        cmaps[val] = ListedColormap(newcolors)
-
     xSort = np.argsort(x)
+    
+    if betaOfExt is None:
+        betaOfExt = np.full(len(x), "nan")
+    if 1==1:
+        betas = np.unique(betaOfExt)
+        nColorbars = betas.size
+        cmaps = {}
+        myMap = cm.get_cmap('cool', 256)
+        # Define a base color (redder for lower values, bluer for higher values)
+
+        fBetaOfExt=betaOfExt
+        betas = betas.astype(str)
+        betaOfExt = np.asarray(betaOfExt, dtype=str)
+        for val in betas:
+            if len(betas)==1 or val =="nan":
+                normalized= 1.
+            else:
+                normalized = (((float) (val) - np.min(fBetaOfExt.astype(float))) / (np.max(fBetaOfExt.astype(float)) - np.min(fBetaOfExt.astype(float))))
+            newcolors = myMap(np.linspace(0, 1, 256))
+            newcolors[:, 3] = 1
+            newcolors[:, 1] = (newcolors[:, 1]*normalized + (1-normalized))
+            cmaps[val] = ListedColormap(newcolors)
+        betaOfExt = betaOfExt[xSort]
+
+        
+
 
     x = x[xSort]
     y = y[xSort]
     trajsExtremesInitID = trajsExtremesInitID[xSort]
     markerShapeVariable = markerShapeVariable[xSort]
-    betaOfExt = betaOfExt[xSort]
     
     Qif = Qif[xSort]
     if yerr is not None:
@@ -172,7 +179,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             additional_X = np.asarray(additionalMarkerType[0])
             additional_Y = np.asarray(additionalMarkerType[1])
             additional_correspBetaOfExAndQif = np.asarray(additionalMarkerType[2])
-
+            print("add X è",additional_X)
             additionalXSort = np.argsort(additional_X)
 
             additional_X = additional_X[additionalXSort]
@@ -190,6 +197,29 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     color = cmaps[BetaOfExAndQif[0]](norm(BetaOfExAndQif[1]))
                     ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40)
                     ax1.plot(additional_X[condition], additional_Y[condition], color=color, marker=" ", linewidth=0.4)
+                    
+    if additionalMarkerTypes_Unused is not None:
+        for additionalMarkerType in additionalMarkerTypes_Unused:
+            additional_X = np.asarray(additionalMarkerType[0])
+            additional_Y = np.asarray(additionalMarkerType[1])
+            additional_correspBetaOfExAndQif = np.asarray(additionalMarkerType[2])
+            print("add X è",additional_X)
+            additionalXSort = np.argsort(additional_X)
+
+            additional_X = additional_X[additionalXSort]
+            additional_Y = additional_Y[additionalXSort]
+            additional_correspBetaOfExAndQif =additional_correspBetaOfExAndQif[additionalXSort]
+
+            marker = "."
+            for BetaOfExAndQif in additional_correspBetaOfExAndQif:
+                    if BetaOfExAndQif[0] is None:
+                        continue
+                    BetaOfExAndQif[0] = str(BetaOfExAndQif[0])
+                    condition = np.all(additional_correspBetaOfExAndQif == BetaOfExAndQif, axis=1)
+                    if len(additional_X[condition]) == 0:
+                        continue
+                    color = cmaps[BetaOfExAndQif[0]](norm(BetaOfExAndQif[1]))
+                    ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40, alpha=0.1)
 
     plottedYs = np.asarray(plottedYs)
     if yscale!='' and len(plottedYs[plottedYs>0])>0:

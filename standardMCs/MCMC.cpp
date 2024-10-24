@@ -19,7 +19,6 @@
 #define p 2 // as of now, the dynamics generation (and hence the code) only works for p=2 (RC)
 
 #define stories 1000
-#define MC 500
 #define MCeq 10
 #define MCmeas 4
 #define MCprintEv 100
@@ -36,37 +35,38 @@ int main(int argc, char **argv)
 
   // START of input management
 
-  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 10 && argc != 12 && argc != 13 && argc != 15))
+  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 11 && argc != 13 && argc != 14 && argc != 16))
   {
     cout << "Probable desired usage: ";
-    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N beta Hext\nC structureID fracPosJ graphID"<<endl;
-    cout << "flipped(if 1 flips desired reference configurations)"<<endl;
-    cout << "(requiredBetaOfSExtraction requiredQif)[if not present, FM(all +) conf.is considered]"<<endl;
+    cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N MC beta Hext\nC structureID fracPosJ graphID" << endl;
+    cout << "flipped(if 1 flips desired reference configurations)" << endl;
+    cout << "(requiredBetaOfSExtraction requiredQif)[if not present, FM(all +) conf.is considered]" << endl;
     cout << "(randomFieldType(1 : Bernoulli, 2 : Gaussian), realization, sigma) " << endl;
-    cout<< "If d is a lattice, C and structureID are required but ignored." << endl;
+    cout << "If d is a lattice, C and structureID are required but ignored." << endl;
     exit(1);
   }
 
   int d = std::stoi(argv[1]); // should include check on d value
   int N = atoi(argv[2]);
-  double beta = atof(argv[3]);
-  double Hext = atof(argv[4]);
+  int MC = atoi(argv[3]);
+  double beta = atof(argv[4]);
+  double Hext = atof(argv[5]);
 
   int C = 0;
   int structureID = -1;
   if (d < 0)
   {
-    C = atoi(argv[5]);
-    structureID = atoi(argv[6]);
+    C = atoi(argv[6]);
+    structureID = atoi(argv[7]);
   }
   else
   {
     C = 2 * d;
   }
 
-  double fracPosJ = atof(argv[7]);
-  int graphID = atoi(argv[8]);
-  int flipped = atoi(argv[9]);
+  double fracPosJ = atof(argv[8]);
+  int graphID = atoi(argv[9]);
+  int flipped = atoi(argv[10]);
 
   vector<vector<vector<rInteraction>>> Graph;
 
@@ -82,7 +82,7 @@ int main(int argc, char **argv)
   double sigma = 1.;
 
   vector<double> randomField(N);
-  if (argc == 13 || argc == 15)
+  if (argc == 14 || argc == 16)
   {
     randomFieldType = atoi(argv[argc - 3]);
     fieldStructureRealization = atoi(argv[argc - 2]);
@@ -128,12 +128,12 @@ int main(int argc, char **argv)
   info.first += (string)("Simulation run on: ") + ugnm.nodename + ", with seed " + to_string(sstart) + ", started at " + getCurrentDateTime() + "\n\n";
   info.second += (string)("1 2 ") + ugnm.nodename + " " + to_string(sstart) + " " + getCurrentDateTime() + "\n";
 
-  if (argc == 12 || argc == 15)
+  double requiredBetaOfSExtraction = 0.;
+  int requiredIndex = 0;
+  if (argc == 13 || argc == 16)
   {
-    double requiredBetaOfSExtraction = 0.;
-    int requiredIndex = atoi(argv[10]);
-
     std::string input(argv[11]);
+    requiredIndex = atoi(argv[12]);
 
     if (input == "inf")
     {
@@ -167,10 +167,10 @@ int main(int argc, char **argv)
   }
 
   char buffer[200];
-  sprintf(buffer, "%.4g_%.4g_%d_%d", beta, Hext, MC, stories);
+  sprintf(buffer, "betExtr_%.2g/%d__%.4g_%.4g_%d_%d", requiredBetaOfSExtraction, requiredIndex, beta, Hext, MC, stories);
 
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  if (argc == 13 || argc == 15)
+  if (argc == 14 || argc == 16)
   {
     folder = makeFolderNameFromBuffer_ForCluster(folder + "MCMC/stdMCMC/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
   }
@@ -223,6 +223,7 @@ int main(int argc, char **argv)
   vector<int> permanenceAtQ(N + 1, 0);
   int nMeasures = 0;
   double energy = 0;
+  vector<int> nQinAtFinalTime(N + 1, 0);
   for (int story = 0; story < stories; story++)
   {
     s = s_in;
@@ -255,19 +256,30 @@ int main(int argc, char **argv)
       MCSweep_withGraph(s, N, Graph, beta, Hext, randomField);
       // end
     }
+    int q_in = 0;
+
+    for (int i = 0; i < N; i++)
+    {
+      q_in += s_in[i] * s[i];
+    }
+    nQinAtFinalTime[(q_in + N) / 2]++;
   }
 
   nomefile = folder + "/av.dat";
   detFile.open(nomefile);
+  int perm = 0;
+  int nAtFinalTime = 0;
   for (int i = 0; i < N + 1; i++)
   {
-
-    detFile << permanenceAtQ[i] / ((double)nMeasures) << endl;
+    perm = permanenceAtQ[i];
+    nAtFinalTime = nQinAtFinalTime[i];
+    if (perm+nAtFinalTime > 0)
+      detFile << -N + 2 * i << " " << perm / ((double)nMeasures)<<" " << nAtFinalTime / ((double)stories) << endl;
   }
   detFile.close();
   nomefile = folder + "/ener.dat";
   detFile.open(nomefile);
-  detFile << (energy/N/nMeasures);
+  detFile << (energy / N / nMeasures);
   detFile.close();
 
   // END of the proper MC simulation
