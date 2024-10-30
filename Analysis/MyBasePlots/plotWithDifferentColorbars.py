@@ -8,17 +8,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, Normalize
 
+markers = ['s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h','s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h']
+
+specialAssociation_markerShapeVariable ={"T": {"inf": [".", 40]}}
 
 def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                                 trajsExtremesInitID, shortDescription, edgeColorPerInitType,
                                 markerShapeVariable, markerShapeVariableNames,
-                                Qif, betaOfExt=None,
+                                arrayForColorCoordinate, colorMapSpecifier=None,
+                                edgeColorVariableName='Traj init',
+                                colorCoordinateVariableName=r'$Q_{i,f}$', colorMapSpecifierName=r'$\beta_{extr}$',
                                 additionalMarkerTypes=None,
                                 additionalMarkerTypes_Unused=None,
                                 yerr=None, fitType= '', xscale='', yscale ='', fittingOverDifferentEdges=True, nGraphs=None,
                                 functionsToPlotContinuously = None, theoreticalX=None, theoreticalY=None):
     
-    markers = ['s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h','s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h']
     
 
     if(len(y[y!="nan"])<=1):
@@ -26,44 +30,45 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
     xSort = np.argsort(x)
     
-    if betaOfExt is None:
-        betaOfExt = np.full(len(x), "nan")
-    if 1==1:
-        betas = np.unique(betaOfExt)
-        nColorbars = betas.size
-        cmaps = {}
-        myMap = cm.get_cmap('cool', 256)
-        # Define a base color (redder for lower values, bluer for higher values)
+    if colorMapSpecifier is None:
+        colorMapSpecifier = np.full(len(x), "nan")
+    uniqueColorMapsSpecifiers = np.unique(colorMapSpecifier)
+    nColorbars = uniqueColorMapsSpecifiers.size
+    cmaps = {}
+    myMap = cm.get_cmap('cool', 256)
+    # Define a base color (redder for lower values, bluer for higher values)
+    colorMapSpecifier_float=colorMapSpecifier
+    uniqueColorMapsSpecifiers = uniqueColorMapsSpecifiers.astype(str)
+    colorMapSpecifier = np.asarray(colorMapSpecifier, dtype=str)
+    for val in uniqueColorMapsSpecifiers:
+        if len(uniqueColorMapsSpecifiers)==1 or val =="nan":
+            normalized= 1.
+        else:
+            normalized = (((float) (val) - np.min(colorMapSpecifier_float.astype(float))) / (np.max(colorMapSpecifier_float.astype(float)) - np.min(colorMapSpecifier_float.astype(float))))
+        newcolors = myMap(np.linspace(0, 1, 256))
+        newcolors[:, 3] = 1
+        newcolors[:, 1] = (newcolors[:, 1]*normalized + (1-normalized))
+        cmaps[val] = ListedColormap(newcolors)
+    colorMapSpecifier = colorMapSpecifier[xSort]
 
-        fBetaOfExt=betaOfExt
-        betas = betas.astype(str)
-        betaOfExt = np.asarray(betaOfExt, dtype=str)
-        for val in betas:
-            if len(betas)==1 or val =="nan":
-                normalized= 1.
-            else:
-                normalized = (((float) (val) - np.min(fBetaOfExt.astype(float))) / (np.max(fBetaOfExt.astype(float)) - np.min(fBetaOfExt.astype(float))))
-            newcolors = myMap(np.linspace(0, 1, 256))
-            newcolors[:, 3] = 1
-            newcolors[:, 1] = (newcolors[:, 1]*normalized + (1-normalized))
-            cmaps[val] = ListedColormap(newcolors)
-        betaOfExt = betaOfExt[xSort]
-
-        
-
-
+    
     x = x[xSort]
     y = y[xSort]
     trajsExtremesInitID = trajsExtremesInitID[xSort]
     markerShapeVariable = markerShapeVariable[xSort]
+    arrayForColorCoordinate = arrayForColorCoordinate[xSort]
     
-    Qif = Qif[xSort]
     if yerr is not None:
         yerr = yerr[xSort]
     if functionsToPlotContinuously is not None:
-        filters = deepcopy(functionsToPlotContinuously[1])
-        for i, filter in enumerate(filters):
-            filters[i] = filters[i][xSort]
+        if deepcopy(functionsToPlotContinuously[1]) is not None:
+            filters = deepcopy(functionsToPlotContinuously[1])
+            for i, filter in enumerate(filters):
+                if filters[i] is None:
+                    filters[i]=np.full(len(xSort),True)
+                else:
+                    filters[i] = filters[i][xSort]
+                    
     plotToBarRatio = 55
 
     figHeight = 10 + (2.2+(1.9*(nColorbars-1)))*10./plotToBarRatio
@@ -71,9 +76,9 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     gs = fig.add_gridspec(1+2*nColorbars, 1, height_ratios=[plotToBarRatio] +  [1.2,1] +[0.9,1] * (nColorbars-1))
 
     np.asarray(markerShapeVariable)
-    curveTypes = np.unique(markerShapeVariable,axis=0)
-    trajsExtInitIDs = np.unique(trajsExtremesInitID)
-    Qifs = np.unique(Qif)
+    uniqueMarkerShapeVariable = np.unique(markerShapeVariable,axis=0)
+    trajsExtInitIDs = np.unique([x for x in trajsExtremesInitID if x is not None])
+    uniqueColorCoordinates = np.unique(arrayForColorCoordinate)
     # Plot the main scatter plot
     ax1 = fig.add_subplot(gs[0])
     ax1.set_title(title)
@@ -81,7 +86,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     ax1.set_ylabel(yName)
     edgeColorMap = {}
 
-    ax1.scatter([],[], label=f"traj init:", color="None")
+    ax1.scatter([],[], label= edgeColorVariableName+':', color="None")
     for key, value in edgeColorPerInitType.items():
         for key2, value2 in shortDescription.items():
             if key == key2 and (key in trajsExtInitIDs):
@@ -92,10 +97,14 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
     ax1.scatter([],[], label=f"        ", color="None")
     ax1.scatter([],[], label=', '.join(markerShapeVariableNames)+":", color="None")
-    for i, t in enumerate(curveTypes):
+    for i, t in enumerate(uniqueMarkerShapeVariable):
         if i>=len(markers):
             continue
         marker= markers[i]
+        if markerShapeVariableNames==["T"]:
+            if t=='inf':
+                marker="."
+
         if t.ndim==0:
             if yerr is None:
                 ax1.scatter([],[], label=f"{t}", color="grey", marker=marker)
@@ -106,30 +115,39 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                 ax1.scatter([],[], label=f"{', '.join(map(str, t ))}", color="grey", marker=marker)
             else:
                 ax1.errorbar([],[], label=f"{', '.join(map(str, t))}", color="grey", marker=marker)
-    #print(additionalMarkerTypes)
     if additionalMarkerTypes is not None:
             [ax1.errorbar([],[], label=f"{additionalMarkerType[3]}", color="grey", marker=".") for additionalMarkerType in additionalMarkerTypes ]
     plottedYs=[]
     if fitType!='':
         ax1.scatter([],[], label="", color="None")
-    for i, t in enumerate(curveTypes):
+        
+        
+        
+    trajsExtremesInitID_forComparison = np.array([x if x is not None else -1 for x in trajsExtremesInitID])    
+    for i, t in enumerate(uniqueMarkerShapeVariable):
+        
         if i>=len(markers):
             continue
         
+        s=80
         marker = markers[i]
+        if markerShapeVariableNames==["T"]:
+            if t=='inf':
+                s=40
+                marker="."
+        
         for ext in trajsExtInitIDs:
-            for q in Qifs:
-                #[print(t,variable) for variable in markerShapeVariable]
-                outCondition = np.logical_and.reduce([trajsExtremesInitID == ext,
+            for q in uniqueColorCoordinates:
+                outCondition = np.logical_and.reduce([trajsExtremesInitID_forComparison == ext,
                                                     [np.array_equal(t,variable) for variable in markerShapeVariable],
-                                                    Qif == q])
-                for betOfEx in np.unique(betaOfExt[outCondition]):
+                                                    arrayForColorCoordinate == q])
+                for betOfEx in np.unique(colorMapSpecifier[outCondition]):
                     fToPlot=None
-                    condition = np.logical_and(outCondition, betaOfExt==betOfEx)
+                    condition = np.logical_and(outCondition, colorMapSpecifier==betOfEx)
                     if len(x[condition]) == 0:
                         continue
-                    if len(Qifs)>1:
-                        norm = Normalize(vmin=np.min(Qifs), vmax=np.max(Qifs))
+                    if len(uniqueColorCoordinates)>1:
+                        norm = Normalize(vmin=np.min(uniqueColorCoordinates), vmax=np.max(uniqueColorCoordinates))
                     else:
                         norm = lambda x: 0.5
                     color = cmaps[betOfEx](norm(q))
@@ -149,7 +167,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                         ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2)
                         plottedYs.extend(y[condition])
                     else:
-                        ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2)
+                        ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerInitType[ext], linewidths=2, s=s)
                         ax1.errorbar(x[condition], y[condition], yerr=yerr[condition], color=color, fmt= ' ', marker='')
                         plottedYs.extend(y[condition])
             
@@ -179,7 +197,6 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             additional_X = np.asarray(additionalMarkerType[0])
             additional_Y = np.asarray(additionalMarkerType[1])
             additional_correspBetaOfExAndQif = np.asarray(additionalMarkerType[2])
-            print("add X è",additional_X)
             additionalXSort = np.argsort(additional_X)
 
             additional_X = additional_X[additionalXSort]
@@ -203,7 +220,6 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             additional_X = np.asarray(additionalMarkerType[0])
             additional_Y = np.asarray(additionalMarkerType[1])
             additional_correspBetaOfExAndQif = np.asarray(additionalMarkerType[2])
-            print("add X è",additional_X)
             additionalXSort = np.argsort(additional_X)
 
             additional_X = additional_X[additionalXSort]
@@ -219,7 +235,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     if len(additional_X[condition]) == 0:
                         continue
                     color = cmaps[BetaOfExAndQif[0]](norm(BetaOfExAndQif[1]))
-                    ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40, alpha=0.1)
+                    ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40, alpha=0.01)
 
     plottedYs = np.asarray(plottedYs)
     if yscale!='' and len(plottedYs[plottedYs>0])>0:
@@ -237,32 +253,32 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     totalTicks = []
     sm = ['']*nColorbars
     ax = ['']*nColorbars
-    totalTicks = np.unique(Qif)
+    totalTicks = np.unique(arrayForColorCoordinate)
     for i in range(nColorbars):
-        thisBeta = betas[i]
-        sm[i] = ScalarMappable(cmap=cmaps[thisBeta])
-        sm[i].set_array(np.unique(Qif))
+        thisColorMapSpecifier = uniqueColorMapsSpecifiers[i]
+        sm[i] = ScalarMappable(cmap=cmaps[thisColorMapSpecifier])
+        sm[i].set_array(np.unique(arrayForColorCoordinate))
         ax[i] = fig.add_subplot(gs[2+2*i])
         cbar = plt.colorbar(sm[i], orientation='horizontal', cax=ax[i])
-        cbar.set_ticks(np.unique(Qif[betaOfExt==thisBeta]))
+        cbar.set_ticks(np.unique(arrayForColorCoordinate[colorMapSpecifier==thisColorMapSpecifier]))
         currentTicks =cbar.ax.get_xticks()
         desired_ticks = np.array([float(f'{tick:.2f}') for j, tick in enumerate(currentTicks) if j == 0 or np.abs(tick - currentTicks[j-1]) > np.max(np.diff(totalTicks))/12.])
         cbar.set_ticks(desired_ticks)
         # Set tick colors individually based on their values
         if i!=nColorbars-1:
             if xName == "N":
-                cbar.set_label(fr'$\beta_{{extr}}$={thisBeta} N={",".join(map(str, np.unique(x[betaOfExt==thisBeta])))}', labelpad=6)
+                cbar.set_label(colorMapSpecifierName+'='+fr'={thisColorMapSpecifier} N={",".join(map(str, np.unique(x[colorMapSpecifier==thisColorMapSpecifier])))}', labelpad=6)
             else:
-                cbar.set_label(r'$\beta_{extr}$=' + f"{thisBeta}", labelpad=6)
+                cbar.set_label(colorMapSpecifierName+'=' + f"{thisColorMapSpecifier}", labelpad=6)
                  
             for tick in currentTicks:
                 color = 'black'
                 cbar.ax.vlines(tick, 0, 1, color=color, linewidth=4)
         else:
             if xName == "N":
-                cbar.set_label(fr'$Q_{{i,f}}$, $\beta_{{extr}}$={thisBeta} N={",".join(map(str, np.unique(x[betaOfExt==thisBeta])))}', labelpad=6)
+                cbar.set_label(colorCoordinateVariableName+', '+ colorMapSpecifierName +f'={thisColorMapSpecifier} N={",".join(map(str, np.unique(x[colorMapSpecifier==thisColorMapSpecifier])))}', labelpad=6)
             else:
-                cbar.set_label(r'$Q_{i,f}$, $\beta_{extr}$=' + f"{thisBeta}", labelpad=6)
+                cbar.set_label(colorCoordinateVariableName+', '+ colorMapSpecifierName + f"{thisColorMapSpecifier}", labelpad=6)
             for tick in totalTicks:
                 if tick in currentTicks:
                     color = 'black'

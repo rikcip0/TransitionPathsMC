@@ -256,7 +256,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 stMC_TIbeta.append(item["results"]['TI']['beta'])
                 continue
 
-        print("analyzing", item['configuration']['ID'])  #decommentare per controllare quando c'è un intoppo
+        #print("Extracting data from", item['configuration']['ID'])  #decommentare per controllare quando c'è un intoppo
         ID.append(item['configuration']['ID']) #ID only contains new IDs. will be used to check what analysis to repeat
         refConfInitID.append(item['configuration']['referenceConfigurationsInfo']['ID'])
 
@@ -362,6 +362,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     C = np.array(C, dtype=np.int16)
     fPosJ = np.array(fPosJ, dtype=np.float64)
     Qstar= np.array(Qstar, dtype=np.int16)
+    normalizedQstar=Qstar/N
     h_ext = np.array(h_ext, dtype=np.float64)
 
     fieldTypeDictionary ={"2":"gauss", "1":"bernoulli", "nan":"noField"}
@@ -472,10 +473,10 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     stMC_fieldRealization = [value if (value != "infty" and value!="nan") else (0)for value in stMC_fieldRealization]
     stMC_fieldRealization = np.array(stMC_fieldRealization)
     
-    normalizedRefConfMutualQ = refConfMutualQ/N
+    refConfMutualQ = refConfMutualQ/N
 
-    trajInitShortDescription_Dict= {70: "Random", 71: "Ref 12", 72: "Ref 21", 73: "Annealing", 74: "Annealing", 740: "AnnealingF"}
-    edgeColorPerInitType_Dic={ 70: "lightGreen", 71: "black", 72: "purple", 73: "orange", 74: "orange", 740: "red"}
+    trajInitShortDescription_Dict= {0: "stdMC", 70: "Random", 71: "Ref 12", 72: "Ref 21", 73: "Annealing", 74: "Annealing", 740: "AnnealingF"}
+    edgeColorPerInitType_Dic={0: "None", 70: "lightGreen", 71: "black", 72: "purple", 73: "orange", 74: "orange", 740: "red"}
 
     Zdict = {}
 
@@ -610,11 +611,11 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 os.makedirs(TIPlotsFolder, exist_ok=True)
                                 plt.figure(f'T{sim_T}_{trajInitShortDescription_Dict[sim_trajInit]}')
                                 plotWithDifferentColorbars(f'T{sim_T}_{trajInitShortDescription_Dict[sim_trajInit]}',
-                                                           pathMCBetas_forThisTAndInit_used,'beta',  pathMCTIs_forThisTAndInit_used,"TI",
-                                                           'AO', trajsExtremesInitID[pathsMC_filtForThisTAndInit_used],trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
-                                                           T[pathsMC_filtForThisTAndInit_used], ["T"], refConfMutualQ[pathsMC_filtForThisTAndInit_used],
-                                                           additionalMarkerTypes=[[stdMCBetas_forThisTAndInit_used, stdMCTIBetas_forThisTAndInit_used, np.full((len(stdMCTIBetas_forThisTAndInit_used), 2), ["nan", -1]), f"inf"]],
-                                                           additionalMarkerTypes_Unused=[[stMC_beta[stdMC_filtForThisTAndInit_unused], stMC_TIbeta[stdMC_filtForThisTAndInit_unused], np.full((len(stdMC_filtForThisTAndInit_unused), 2), ["nan", -1]), f"inf"]])
+                                                           np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used]),'beta',  np.concatenate([stdMCTIBetas_forThisTAndInit_used, pathMCTIs_forThisTAndInit_used]),"TI",
+                                                           'AO', np.asarray(np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), 0), trajsExtremesInitID[pathsMC_filtForThisTAndInit_used]])), trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
+                                                           np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), "inf"), T[pathsMC_filtForThisTAndInit_used]]), ["T"], np.concatenate([np.full(len(stdMCTIBetas_forThisTAndInit_used), -1), refConfMutualQ[pathsMC_filtForThisTAndInit_used]]),
+                                                           additionalMarkerTypes_Unused=[[stMC_beta[stdMC_filtForThisTAndInit_unused], stMC_TIbeta[stdMC_filtForThisTAndInit_unused], np.full((len(stdMC_filtForThisTAndInit_unused), 2), ["nan", -1]), f"inf"]],
+                                                           functionsToPlotContinuously=[[f_interp], [None]])
                                 
                                 levelToAdd = {}
                                 levelToAdd['TIfunction'] = TIfunction
@@ -633,7 +634,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 if os.path.exists(graphAnalysisJsonPath):
                                     with open(graphAnalysisJsonPath, 'r') as file:
                                         graphData = json.load(file)
-                                    print(graphData)
                                 else:
                                     print("nun ce staaa")
                                 betaL=graphData['beta_c']['localApproach']
@@ -658,8 +658,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     tentativeBarrier_2[index] = -np.log(kFromChi_InBetween_Scaled[index])/(beta[index]*N[index])
                                 betaLForThisRealization = betaL
                                 betaGForThisRealization = betaG
-                                tentativeBarrier[indices]-=np.nanmin(tentativeBarrier[indices])
-                                tentativeBarrier_2[indices]-=np.nanmin(tentativeBarrier_2[indices])
+                                #tentativeBarrier[indices]-=np.nanmin(tentativeBarrier[indices])
+                                #tentativeBarrier_2[indices]-=np.nanmin(tentativeBarrier_2[indices])
                                 #f_interp =
                                 
                                 #levelToAdd['betaMax2'] = 
@@ -808,73 +808,73 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             TIbetaMainPlot = plotWithDifferentColorbars(f"TIbeta", x[filt], xName, TIbeta[filt], "U", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
             trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
             markerShapeVariables[filt], markerShapeVariablesNames,
-             normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+            refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
             nGraphs=len(np.unique(graphID[filt])), 
             additionalMarkerTypes=additional
             )
 
             mainPlot = plotWithDifferentColorbars(f"meanBarrier", x[filt], xName, meanBarrier[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                         normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                         refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                         yerr=stdDevBarrier[filt], nGraphs=len(np.unique(graphID[filt])))
             
             mainPlot = plotWithDifferentColorbars(f"avEnergy", x[filt], xName, avEnergy[filt], "energy", "Mean average energy over trajectory vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     yerr=avEnergyStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
             
             mainPlot = plotWithDifferentColorbars(f"muAvEnergy", x[filt], xName, muAvEnergy[filt], r"$\mu$", r"$\mu$"+" vs "+ xName+"\n"+specificationLine,
                             trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                             normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                             refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                             yerr=stdDevBarrier[filt], fitType='', xscale='', 
                             yscale='log', 
                             nGraphs=len(np.unique(graphID[filt])))
 
             mainPlot = plotWithDifferentColorbars(f"nJumps", x[filt], xName, nJumps[filt], "# jumps", "Mean number of jumps per spin over trajectory vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     yerr=nJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
             mainPlot = plotWithDifferentColorbars(f"effFlipRate", x[filt], xName, effectiveFlipRate[filt], "r", "Effective flip rate over trajectory (#jumps/T) vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     yerr=effectiveFlipRateError[filt], nGraphs=len(np.unique(graphID[filt])))
 
             mainPlot = plotWithDifferentColorbars(f"deltaNJumps", x[filt], xName, deltaNJumps[filt], r"$\delta$", "Spins number of jumps over trajectory stdDev (over sites) vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     yerr=deltaNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"deltaNOverAvJumps", x[filt], xName, deltaNJumps[filt]**2/nJumps[filt], "ratio", r"($\delta$"+"#jumps)^2/(#jumps)" +" vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     yerr=deltaNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"qDist", x[filt], xName, qDist[filt], "distance", "Average distance from stfwd path between reference configurations over trajectory vs "+xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     yerr=qDistStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
             mainPlot = plotWithDifferentColorbars(f"tau", x[filt], xName, chi_tau[filt], r"$\tau_{trans}$", r"transient time $\tau_{trans}$ vs "+ xName+"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                         normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                         refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                         yerr=stdDevBarrier[filt], nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"realTime", x[filt], xName, realTime[filt], "computer time (seconds)", "Seconds required to perform 10^5 mc sweeps vs "+ xName+"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
-                         normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                         refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                         yerr=realTimeErr[filt], nGraphs=len(np.unique(graphID[filt])))
 
             mainPlot = plotWithDifferentColorbars(f"TIhout", x[filt], xName, TIhout[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot = plotWithDifferentColorbars(f"TIQstar", x[filt], xName, TIQstar[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])))
  
  
@@ -901,56 +901,56 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 mainPlot = plotWithDifferentColorbars(f"k_log", x[filt], xName, -np.log(kFromChi[filt]), "k", "Transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                         markerShapeVariables[filt], markerShapeVariablesNames,
-                         normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                         refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                         nGraphs=len(np.unique(graphID[filt])), fitType=toFit)
                 
                 mainPlot = plotWithDifferentColorbars(f"k2_log", x[filt], xName, -np.log(kFromChi_InBetween[filt]), "k", "Generalized transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                         markerShapeVariables[filt], markerShapeVariablesNames,
-                         normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                         refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                         nGraphs=len(np.unique(graphID[filt])), fitType=toFit)
                 
                 mainPlot = plotWithDifferentColorbars(f"k2_scaled_log", x[filt], xName, -np.log(kFromChi_InBetween_Scaled[filt]), "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                         markerShapeVariables[filt], markerShapeVariablesNames,
-                         normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                         refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                         nGraphs=len(np.unique(graphID[filt])), fitType=toFit)
                 
             mainPlot = plotWithDifferentColorbars(f"k", x[filt], xName, kFromChi[filt], "k", "Transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), yscale='log')
             
             mainPlot = plotWithDifferentColorbars(f"k2", x[filt], xName, kFromChi_InBetween[filt], "k", "Generalized transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), yscale='log')
             
             mainPlot = plotWithDifferentColorbars(f"k2_scaled", x[filt], xName, kFromChi_InBetween_Scaled[filt], "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), yscale='log')
             
             mainPlot = plotWithDifferentColorbars(f"scale", x[filt], xName, scale2[filt], "f", "Projected probability of being in final cone based on linearity, vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), yscale='log')
             
             mainPlot = plotWithDifferentColorbars(f"tentativeBarrier", x[filt], xName, tentativeBarrier[filt], "Tentative "+ r"$\delta$f", "Tentative free energy barrier "+ r"(-ln(k)/N)"+", vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])),
                     theoreticalX=myX, theoreticalY=myY)
 
             mainPlot = plotWithDifferentColorbars(f"tentativeBarrier2", x[filt], xName, tentativeBarrier_2[filt], "Tentative "+ r"$\delta$f", "Tentative free energy barrier "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])),
                     theoreticalX=myX, theoreticalY=myY
                     
@@ -963,7 +963,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             functionNameToGet =None
             if studyName=="StudyInBeta":
                 functionNameToGet = 'Zfunction'
-            elif studyName=="StudyInBetaOverBetaMax":
+            elif "StudyInBetaOverBetaMax" in studyName:
                 functionNameToGet = 'rescaledZfunction_Max'
             elif studyName=="StudyInBetaOverBetaG":
                 functionNameToGet = 'rescaledZfunction_g'
@@ -1009,13 +1009,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             mainPlot = plotWithDifferentColorbars(f"ZfunctionAndCurve", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), functionsToPlotContinuously=[functions, filters])
             
             mainPlot = plotWithDifferentColorbars(f"ZfunctionAndCurve_log", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
-                     normalizedRefConfMutualQ[filt],betaOfExt=betaOfExtraction[filt],
+                     refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), yscale='log', functionsToPlotContinuously=[functions, filters])
                 
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
@@ -1053,32 +1053,26 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         
         thermodynamicIntegration(runGroupFilter, analysis_path)
         
+        if len(np.unique(beta[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, T))), ["graphID", "T"])
+        
         if len(np.unique(rescaledBetas[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax", rescaledBetas, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip( Qstar, fieldType, fieldSigma))), [ "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T, N))), ["graphID", "r", "T", "N"])
-        print(np.unique(N[runGroupFilter]))
+            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax_allNs", rescaledBetas, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip( normalizedQstar, fieldType, fieldSigma))), [ "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T, N))), ["graphID", "r", "T", "N"])
+        
+        if len(np.unique(rescaledBetas[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax", rescaledBetas, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
+        
         if len(np.unique(N[runGroupFilter]))>2: 
-            Qstar #così, slice-ando rispetto a N unisco i casi con q_star uguale
-            normalizedQstar = Qstar/N
-            #myMultiRunStudy(runGroupFilter, "StudyInN", N, "N", np.asarray(list(zip(normalizedQstar))), ["Qstar"] , np.array(list(zip(graphID, T, rescaledBetas))), ["graphID", "T",r"$\beta'$"])
             myMultiRunStudy(runGroupFilter, "StudyInN", N, "N", np.asarray(list(zip(normalizedQstar, beta))), ["Qstar"] , np.array(list(zip(fieldType))), [r"fieldType"])
     
-        if len(np.unique(beta[runGroupFilter]))>2:
-            #myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
-            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, T))), ["graphID", "T"])
-        
         if len(np.unique(rescaledBetas3[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaG", rescaledBetas3, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
+            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaG", rescaledBetas3, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
                           
         if len(np.unique(rescaledBetas2[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaL", rescaledBetas2, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
-                          
-        if len(np.unique(rescaledBetas[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax", rescaledBetas, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, Qstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
-
-
+            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaL", rescaledBetas2, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
+        
         if len(np.unique(T[runGroupFilter]))>2:
             myMultiRunStudy(runGroupFilter,"StudyInT", T,  "T", np.array(list(zip(N))), ["N"], np.array(list(zip(beta, graphID))), ["beta", "graphID"])
-            
 
         if len(np.unique(fieldSigma[runGroupFilter]))>1:
                 myMultiRunStudy(runGroupFilter,"StudyInFieldSigma", fieldSigma, r"fieldSigma", np.array(list(zip(N, T))), "N, T", np.array(list(zip(beta, graphID, fieldRealization))), "field")

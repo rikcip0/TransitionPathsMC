@@ -110,11 +110,13 @@ int main(int argc, char **argv)
   }
 
   int Qstar = atoi(argv[8]);
+/*
   if ((abs(Qstar) % 2 != N % 2 || abs(Qstar) > N) && Qstar != -1)
   {
     cout << "Q* value is not allowed!" << endl;
     exit(1);
   }
+*/  
 
   int C = 0;
   int structureID = -1;
@@ -387,7 +389,7 @@ int main(int argc, char **argv)
   vector<vector<double>> risQ(3, vector<double>(Np, 0.));
   vector<double> chiQ(Np, 0);
 
-  vector<int> mileStones = {mutualQ, 0, (int)(Qstar / 2), Qstar};
+  vector<int> mileStones = {mutualQ, 0, (int)((Qstar+1) / 2), Qstar};
   pair<vector<vector<long int>>, vector<vector<long int>>> fracOfTrajsInCone;
   fracOfTrajsInCone.first = vector<vector<long int>>(mileStones.size(), vector<long int>(Np, 0));
   fracOfTrajsInCone.second = vector<vector<long int>>(mileStones.size(), vector<long int>(Np, 0));

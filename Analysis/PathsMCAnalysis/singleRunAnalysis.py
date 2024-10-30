@@ -518,20 +518,25 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 secondConfigurationIndex = (int) (simData['configuration']['referenceConfigurationsInfo']["secondConfigurationIndex"])
 
             # Check if the line exists in the file
-            if len(lines) >= np.min([firstConfigurationIndex, secondConfigurationIndex]):
-                firstConfigurationQ = lines[firstConfigurationIndex].strip()
-                firstConfigurationQ = firstConfigurationQ.split()  
-                secondConfigurationQ = lines[secondConfigurationIndex].strip()
-                secondConfigurationQ = secondConfigurationQ.split() 
+            try:
+                if len(lines) >= np.min([firstConfigurationIndex, secondConfigurationIndex]):
+                    firstConfigurationQ = lines[firstConfigurationIndex].strip()
+                    firstConfigurationQ = firstConfigurationQ.split()  
+                    secondConfigurationQ = lines[secondConfigurationIndex].strip()
+                    secondConfigurationQ = secondConfigurationQ.split() 
+                    
+                    firstConfigurationQs = [int(entry) for entry in firstConfigurationQ]
+                    firstConfigurationQs = np.asarray(firstConfigurationQs)/N
+                    secondConfigurationQs = [int(entry) for entry in secondConfigurationQ]
+                    secondConfigurationQs = np.asarray(secondConfigurationQs)/N
+                    
+                    Qin_AdditionalHists = [(firstConfigurationQs, "PT")]
+                    Qout_AdditionalHists = [(secondConfigurationQs, "PT")]
+                    Hist2D_Data = [[(firstConfigurationQs, secondConfigurationQs), "PT"]]
+            except Exception:
+                pass
                 
-                firstConfigurationQs = [int(entry) for entry in firstConfigurationQ]
-                firstConfigurationQs = np.asarray(firstConfigurationQs)/N
-                secondConfigurationQs = [int(entry) for entry in secondConfigurationQ]
-                secondConfigurationQs = np.asarray(secondConfigurationQs)/N
                 
-                Qin_AdditionalHists = [(firstConfigurationQs, "PT")]
-                Qout_AdditionalHists = [(secondConfigurationQs, "PT")]
-                Hist2D_Data = [[(firstConfigurationQs, secondConfigurationQs), "PT"]]
                 
                 
         else:
@@ -1251,14 +1256,20 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         lines = file.readlines()
         dataLines = filter(lambda x: not x.startswith('#'), lines)
         data = np.genfromtxt(dataLines, delimiter=' ')
-        time=data[:,0]
-        avQin=data[:,1]
-        avQout=data[:,2]
-        avM=data[:,3]
-        avChi=data[:,4]
-        if simulationCode_version>=2:  #to change in check on program version, >2:
-            firstConfData = data[:, 5:5+nMileStones ]
-            secondConfData = data[:, 5+nMileStones:5+2*nMileStones ]
+        try:
+            time = data[:, 0]  # Attempt to access the first column of data
+            time=data[:,0]
+            avQin=data[:,1]
+            avQout=data[:,2]
+            avM=data[:,3]
+            avChi=data[:,4]
+            if simulationCode_version>=2:  #to change in check on program version, >2:
+                firstConfData = data[:, 5:5+nMileStones ]
+                secondConfData = data[:, 5+nMileStones:5+2*nMileStones ]
+        except IndexError:
+            plt.close('all')
+            return None
+            
 
     effectiveMuToUse = muAvEnergy
     if muAvEnergy<1500:
