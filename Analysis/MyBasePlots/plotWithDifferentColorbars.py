@@ -87,7 +87,6 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     plotToBarRatio = 55
 
     figHeight = 10 + (2.2+(1.9*(nColorbars-1)))*10./plotToBarRatio
-    print("AO", nColorbars)
     fig = plt.figure(name, figsize=(10, figHeight))  # Adjust the figsize as needed
     gs = fig.add_gridspec(1+2*nColorbars, 1, height_ratios=[plotToBarRatio] +  [1.2,1] +[0.9,1] * (nColorbars-1))
 
