@@ -609,14 +609,19 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 #beta_l = 
                                 
                                 os.makedirs(TIPlotsFolder, exist_ok=True)
-                                plt.figure(f'T{sim_T}_{trajInitShortDescription_Dict[sim_trajInit]}')
-                                plotWithDifferentColorbars(f'T{sim_T}_{trajInitShortDescription_Dict[sim_trajInit]}',
-                                                           np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used]),'beta',  np.concatenate([stdMCTIBetas_forThisTAndInit_used, pathMCTIs_forThisTAndInit_used]),"TI",
-                                                           'AO', np.asarray(np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), 0), trajsExtremesInitID[pathsMC_filtForThisTAndInit_used]])), trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
+                                plotWithDifferentColorbars(f'T{sim_T}_{trajInitShortDescription_Dict[sim_trajInit]}_U',
+                                                           np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used]),r'$\beta$',  np.concatenate([stdMCTIBetas_forThisTAndInit_used, pathMCTIs_forThisTAndInit_used]),'U',
+                                                           'Best data for TI\nand integration curve', np.asarray(np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), 0), trajsExtremesInitID[pathsMC_filtForThisTAndInit_used]])), trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                                                            np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), "inf"), T[pathsMC_filtForThisTAndInit_used]]), ["T"], np.concatenate([np.full(len(stdMCTIBetas_forThisTAndInit_used), -1), refConfMutualQ[pathsMC_filtForThisTAndInit_used]]),
                                                            additionalMarkerTypes_Unused=[[stMC_beta[stdMC_filtForThisTAndInit_unused], stMC_TIbeta[stdMC_filtForThisTAndInit_unused], np.full((len(stdMC_filtForThisTAndInit_unused), 2), ["nan", -1]), f"inf"]],
                                                            functionsToPlotContinuously=[[f_interp], [None]])
-                                
+                                plotWithDifferentColorbars(f'T{sim_T}_{trajInitShortDescription_Dict[sim_trajInit]}_Z',
+                                                           np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used]),r'$\beta$',  Zfunction(np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used])),'Z',
+                                                           'Z from best data for TI\nand corresponding points', np.asarray(np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), 0), trajsExtremesInitID[pathsMC_filtForThisTAndInit_used]])), trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
+                                                           np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), "inf"), T[pathsMC_filtForThisTAndInit_used]]), ["T"], np.concatenate([np.full(len(stdMCTIBetas_forThisTAndInit_used), -1), refConfMutualQ[pathsMC_filtForThisTAndInit_used]]),
+                                                           functionsToPlotContinuously=[[Zfunction], [None]])
+                                #plt.axvline(betaMax, 0, 1, color='red', linestyle='--', linewidth=3, label=r'$\beta_{max}$='+f'={betaMax}')
+                                plt.legend()
                                 levelToAdd = {}
                                 levelToAdd['TIfunction'] = TIfunction
                                 levelToAdd['Zfunction'] = Zfunction
@@ -654,8 +659,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     kFromChi[index] = ZFromTIBeta[index] * chi_m[index]
                                     kFromChi_InBetween[index] = ZFromTIBeta[index] * chi_m2[index]
                                     kFromChi_InBetween_Scaled[index] = kFromChi_InBetween[index]/scale2[index]
-                                    tentativeBarrier[index] = -np.log(kFromChi[index])/(beta[index]*N[index])
-                                    tentativeBarrier_2[index] = -np.log(kFromChi_InBetween_Scaled[index])/(beta[index]*N[index])
+                                    tentativeBarrier[index] = -np.log(kFromChi[index])/(N[index])
+                                    tentativeBarrier_2[index] = -np.log(kFromChi_InBetween_Scaled[index])/(N[index])
                                 betaLForThisRealization = betaL
                                 betaGForThisRealization = betaG
                                 #tentativeBarrier[indices]-=np.nanmin(tentativeBarrier[indices])

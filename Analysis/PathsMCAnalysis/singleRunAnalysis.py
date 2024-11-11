@@ -563,22 +563,6 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     initInfo_Line = refConInfo_Line + '\n' + trajsInitInfo_Line
 
-    
-    def addInfoLinesVecchio(whereToAddLines=None):       #useful for following plots
-        if whereToAddLines is None:
-            xlabel_position = plt.gca().xaxis.label.get_position()
-            plt.text(0, xlabel_position[1] - 0.18, settingInfo_Line, fontsize=7, ha='left', va='center', transform=plt.gca().transAxes)
-            plt.text(1, xlabel_position[1] - 0.18, initInfo_Line, fontsize=7, ha='right', va='center', transform=plt.gca().transAxes)
-        else:
-            if isinstance(whereToAddLines, plt.Axes):  # Check if whereToAddLines is an Axes object
-                xlabel_position = whereToAddLines.xaxis.label.get_position()
-                whereToAddLines.text(0, xlabel_position[1] - 0.20, settingInfo_Line, fontsize=6, ha='left', va='center', transform=whereToAddLines.transAxes)
-                whereToAddLines.text(1, xlabel_position[1] - 0.20, initInfo_Line, fontsize=6, ha='right', va='center', transform=whereToAddLines.transAxes)
-            else:
-                xlabel_position = whereToAddLines.gca().xaxis.label.get_position()
-                whereToAddLines.text(0, xlabel_position[1] - 0.20, settingInfo_Line, fontsize=6, ha='left', va='center', transform=whereToAddLines.gca().transAxes)
-                whereToAddLines.text(1, xlabel_position[1] - 0.20, initInfo_Line, fontsize=6, ha='right', va='center', transform=whereToAddLines.gca().transAxes)
-
     def addInfoLines(whereToAddLines=None):
         # Get the figure object
         fig = plt.gcf() if whereToAddLines is None else whereToAddLines.figure
@@ -1043,6 +1027,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     a = meanAndSigmaForParametricPlot(M, energy)
     plt.errorbar(a[0],a[1],a[2], label='mean')
     plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
+    if M_RedLine is not None:
+        plt.axvline(M_RedLine[0], color='red', linestyle='dashed', linewidth=1, label=M_RedLine[1])
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     addInfoLines()
     
@@ -1160,7 +1146,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     
     figure, mainPlot = multipleCurvesAndHist('EnergyVsM', f'energy vs M'+'\n'+ titleSpecification,
                                 M, r'M', energy, 'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
-                                isYToHist=True, histScale=histScale)
+                                isYToHist=True, histScale=histScale, redLineAtXValueAndName=M_RedLine)
     addInfoLines(figure)
     
     if not areConfigurationsFM:
@@ -1178,7 +1164,9 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         figure, mainPlot = multipleCurvesAndHist('QoutVsQinProva', r'$q_{out}$ vs $q_{in}$'+'\n'+ titleSpecification,
                                     q_in, r'$q_{in}$', q_out, r'$q_{out}$', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                     isXToHist=True, additionalXHistogramsArraysAndLabels=Qin_AdditionalHists,
-                                    isYToHist=True, additionalYHistogramsArraysAndLabels=Qout_AdditionalHists, redLineAtYValueAndName=M_RedLine, histScale=histScale)
+                                    isYToHist=True, additionalYHistogramsArraysAndLabels=Qout_AdditionalHists,
+                                    redLineAtXValueAndName=Qin_RedLine, redLineAtYValueAndName=Qout_RedLine,
+                                    histScale=histScale)
         addInfoLines(figure)
 
 

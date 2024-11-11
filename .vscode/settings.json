@@ -108,7 +108,13 @@
     "numbers": "cpp",
     "chrono": "cpp",
     "ctime": "cpp",
-    "ratio": "cpp"
+    "ratio": "cpp",
+    "charconv": "cpp",
+    "codecvt": "cpp",
+    "format": "cpp",
+    "iomanip": "cpp",
+    "span": "cpp",
+    "variant": "cpp"
   },
   "makefile.configureOnOpen": true
 }
