@@ -529,8 +529,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             betaMax2ForThisRealizationCounter=0
                             
                             TIPlotsFolder = os.path.join(TIFolder, f'N{sim_N}', f'h{sim_Hext}_f{sim_fieldType}{sim_fieldSigma}' if sim_fieldSigma!=0. else f'h{sim_Hext}_noField', f'g{sim_graphID}_fr{sim_fieldRealization}' if sim_fieldSigma!=0. else f'g{sim_graphID}',
-                                                         f'bExt{sim_betOfEx}_cs{sim_firstConfIndex}_{sim_secondConfIndex}_{sim_Qif}' if sim_firstConfIndex is not np.nan else 'FM',
-                                                         f'meas_{(str)(sim_Hin)}_{(str)(sim_Hout)}_{(str)(sim_Qstar)}' if sim_Hin is not np.inf else f'meas_inf_inf_{(str)(sim_Qstar)}')
+                                                         f'bExt{sim_betOfEx}_cs{sim_firstConfIndex}_{sim_secondConfIndex}_{sim_Qif}' if (sim_firstConfIndex!="nan" and sim_firstConfIndex is not None) else 'FM',
+                                                         f'meas_{(str)(sim_Hin)}_{(str)(sim_Hout)}_{(sim_Qstar/sim_N):.3f}' if sim_Hin is not np.inf else f'meas_inf_inf_{(sim_Qstar/sim_N):.3f}')
 
                             for sim_T, sim_trajInit in set(zip(T[TIFilt4], trajsExtremesInitID[TIFilt4])):
                                 pathMCFilt_forThisTAndInit = np.logical_and.reduce([TIFilt4, T==sim_T, trajsExtremesInitID==sim_trajInit])
@@ -741,7 +741,9 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableNames, markerShapeVariables, markerShapeVariablesNames):
         
         file_path = "data.txt"
-
+        myX= None
+        myY= None
+        """
         # Carica i dati dal file di testo
         data = np.loadtxt(file_path)
 
@@ -753,6 +755,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         filt=np.logical_and(myX<1.01, myY>0)
         myX=myX[filt]
         myY=myY[filt]
+        """
         
         thisStudyFolder= os.path.join(analysis_path, studyName)
 
@@ -1058,26 +1061,57 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         
         thermodynamicIntegration(runGroupFilter, analysis_path)
         
-        if len(np.unique(beta[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$", np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, T))), ["graphID", "T"])
-        
-        if len(np.unique(rescaledBetas[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax_allNs", rescaledBetas, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip( normalizedQstar, fieldType, fieldSigma))), [ "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T, N))), ["graphID", "r", "T", "N"])
-        
-        if len(np.unique(rescaledBetas[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax", rescaledBetas, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
-        
         if len(np.unique(N[runGroupFilter]))>2: 
-            myMultiRunStudy(runGroupFilter, "StudyInN", N, "N", np.asarray(list(zip(normalizedQstar, beta))), ["Qstar"] , np.array(list(zip(fieldType))), [r"fieldType"])
+            myMultiRunStudy(runGroupFilter, "StudyInN", N, "N",
+                            np.asarray(list(zip(normalizedQstar, beta))), ["Qstar"],
+                            np.array(list(zip(fieldType))), [r"fieldType"])
+            
+        if len(np.unique(beta[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$",
+                            np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))),
+                            ["N", "Qstar", "fieldType", r"$\sigma$"],
+                            np.array(list(zip(graphID, T))),
+                            ["graphID", "T"])
+        
+        
+        if len(np.unique(rescaledBetas[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax_allNs", rescaledBetas,
+                            r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$",
+                            np.array(list(zip( normalizedQstar, fieldType, fieldSigma))),
+                            [ "Qstar", "fieldType", r"$\sigma$"],
+                            np.array(list(zip(graphID, fieldRealization, T, N))),
+                            ["graphID", "r", "T", "N"])
+        
+        
+        if len(np.unique(rescaledBetas[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax", rescaledBetas, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$",
+                            np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))),
+                            ["N", "Qstar", "fieldType", r"$\sigma$"],
+                            np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
+        
+        
+    
     
         if len(np.unique(rescaledBetas3[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaG", rescaledBetas3, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
+            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaG", rescaledBetas3, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$",
+                            np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))),
+                            ["N", "Qstar", "fieldType", r"$\sigma$"],
+                            np.array(list(zip(graphID, fieldRealization, T))),
+                            ["graphID", "r", "T"])
                           
         if len(np.unique(rescaledBetas2[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaL", rescaledBetas2, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$", np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))), ["N", "Qstar", "fieldType", r"$\sigma$"], np.array(list(zip(graphID, fieldRealization, T))), ["graphID", "r", "T"])
+            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaL", rescaledBetas2, r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$",
+                            np.array(list(zip(N, normalizedQstar, fieldType, fieldSigma))),
+                            ["N", "Qstar", "fieldType", r"$\sigma$"],
+                            np.array(list(zip(graphID, fieldRealization, T))),
+                            ["graphID", "r", "T"])
         
         if len(np.unique(T[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInT", T,  "T", np.array(list(zip(N))), ["N"], np.array(list(zip(beta, graphID))), ["beta", "graphID"])
+            myMultiRunStudy(runGroupFilter,"StudyInT", T,  "T",
+                            np.array(list(zip(N))), ["N"],
+                            np.array(list(zip(beta, graphID))), ["beta", "graphID"])
 
         if len(np.unique(fieldSigma[runGroupFilter]))>1:
-                myMultiRunStudy(runGroupFilter,"StudyInFieldSigma", fieldSigma, r"fieldSigma", np.array(list(zip(N, T))), "N, T", np.array(list(zip(beta, graphID, fieldRealization))), "field")
+                myMultiRunStudy(runGroupFilter,"StudyInFieldSigma", fieldSigma, r"fieldSigma",
+                                np.array(list(zip(N, T))), ["N", "T"],
+                                np.array(list(zip(beta, graphID, fieldRealization))), ["field"])

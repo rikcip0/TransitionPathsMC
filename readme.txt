@@ -1,31 +1,30 @@
 TODO:
-
-SpinGlass:
-runna con q* oltre la soglia dello stato piu esterno (mi pare 0.75=45)
+PathsMCAnalysis/singleMultiRunAnalysis:
+-implement linear fit over N to extract free energy barrier
+-do jackknife on TI to correctly compute errors on k
+-extract and use best k for each graph and thermoydnamic setting
+-correct the plot of Z curves in terms of rescaled betas
+-improve thermodynamic integration data curve by curve fucntion
+-do a check on the Chi square of quantities to be plotted
 
 Graphs:
+-implement real graphs generation and acquisition by simulation code
 -implement power-law graphs generation and acquisition by simulation code
+
+PathsMCAnalysis/singleRunAnalysis:
+-improve linear fits to take only linear parts and all the linear parts
+-see autocorrelation of energy for thermodynamic integration
+-implement what is needed to do jackknife on TI
+
 
 Parallel tempering:
 -study what are characteristic quantities to check and implement relative code
 -change filesystem data structure
 
-PathsMCAnalysis/singleRunAnalysis:
--improve linear fits to take only linear parts and all the linear parts
--see autocorrelation of energy for thermodynamic integration
-
-PathsMCAnalysis/singleMultiRunAnalysis:
--correct the plot of Z curves in terms of rescaled betas
--plot thermodynamic integration data curve by curve to better check used data
--do a check on the Chi square of quantities to be plotted
-
-
-
 Possible improvements:
 
 TransitionPath:
 -Study possible relevant topological quantities relative to trajectories to sample
-
 
 
 HARD CODED PARAMETERS (not in input):

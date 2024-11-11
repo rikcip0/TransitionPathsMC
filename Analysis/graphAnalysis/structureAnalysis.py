@@ -43,7 +43,7 @@ def findFoldersWithString(parent_dir, target_strings):
 
 
 if len(sys.argv) > 1:
-    archive_path = f"../Data/Graphs"
+    archive_path = f"../../Data/Graphs"
     analysisVsSimTypesDict = {"all": "any"}
     analysisType = sys.argv[1]
     additional_strings= sys.argv[2:]
