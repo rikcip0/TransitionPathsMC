@@ -681,7 +681,9 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 results['TI']['beta'] = cumulativeUs[-1]
             else:
                 results['TI']['beta'] = data[-1]
-        
+        plotTIUAutocorrelation=False
+        if len(lines)>2:
+            plotTIUAutocorrelation=True
         if len(lines)>1:
             measuresCounter = np.arange(1, len(mcTimes)+1)
             previousContribution=np.roll(cumulativeUs*measuresCounter,1)
@@ -787,19 +789,21 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     #defining a function to plot quantities evolution over mc iterations and the respective autocorrelation
     def mcEvolutionAndAutocorrelation(mcSweeps, quantity, firstIndexForEquilibrium,
-                                      quantityShortName, quantityFullName, quantityLabelName, nMus):
+                                      quantityShortName, quantityFullName, quantityLabelName, nMus,
+                                      plotBoth=True):
         results['thermalization'][quantityShortName] = {}
 
-        plt.figure(quantityShortName)
-        plt.title(quantityFullName+' vs MC\n'+titleSpecification)
-        plt.plot(mcSweeps, quantity)
-        plt.xlabel('MC sweep')
-        plt.ylabel(quantityLabelName)
+        if plotBoth:
+            plt.figure(quantityShortName)
+            plt.title(quantityFullName+' vs MC\n'+titleSpecification)
+            plt.plot(mcSweeps, quantity)
+            plt.xlabel('MC sweep')
+            plt.ylabel(quantityLabelName)
+            addInfoLines()
 
         #plt.axvline(x=mcEq, color='red', linestyle='--')
         #plt.text(mcEq, plt.ylim()[1], 'MCeq', color='red', verticalalignment='bottom', horizontalalignment='right', fontsize=7)
 
-        addInfoLines()
 
         results['thermalization'][quantityShortName]['mean'] = np.mean(quantity[firstIndexForEquilibrium:])
         if((int)(therm_mcMeasures[-1])==mcPrint):
@@ -846,7 +850,10 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     
     mcEvolutionAndAutocorrelation(therm_mcMeasures, therm_maxNJumps, firstIndexOfMeasuresAtEq,
                                       'maxNJumps', r'Trajectory max(#jumps) per spin ', 'energy', nMusToConsider)
-    
+    if plotTIUAutocorrelation:
+        mcEvolutionAndAutocorrelation(measuresCounter, singleUs, 0,
+                                        'TI_beta_U', r'Quantity for thermodynamic integration in $\beta$', 'U', nMusToConsider,
+                                        plotBoth=False)
     figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
     for fig_name in figs:
         fig = plt.figure(fig_name)

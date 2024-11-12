@@ -1,20 +1,21 @@
 TODO:
+
+PathsMCAnalysis/singleRunAnalysis:
+-improve linear fits to take only linear parts and all the linear parts
+-implement what is needed to do jackknife on TI
+
+
 PathsMCAnalysis/singleMultiRunAnalysis:
--implement linear fit over N to extract free energy barrier
 -do jackknife on TI to correctly compute errors on k
--extract and use best k for each graph and thermoydnamic setting
+-consider errors on k to fit over N to extract free energy barrier
 -correct the plot of Z curves in terms of rescaled betas
--improve thermodynamic integration data curve by curve fucntion
 -do a check on the Chi square of quantities to be plotted
+-extract and use best k for each graph and thermoydnamic setting
+-improve thermodynamic integration data curve by curve fucntion
 
 Graphs:
 -implement real graphs generation and acquisition by simulation code
 -implement power-law graphs generation and acquisition by simulation code
-
-PathsMCAnalysis/singleRunAnalysis:
--improve linear fits to take only linear parts and all the linear parts
--see autocorrelation of energy for thermodynamic integration
--implement what is needed to do jackknife on TI
 
 
 Parallel tempering:

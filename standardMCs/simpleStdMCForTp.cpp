@@ -21,7 +21,7 @@
 #include "../McTrajs/MCdyn_classi/Initialization/initializeReferenceConfigurations.h"
 
 #define p 2
-#define MC 100000
+#define MC 300000
 #define MCeq 10000
 #define MCmeas 10
 #define MCprint 2000 // deve essere multiplo di MCmeas
