@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <iostream>
 
+#include "../../Generic/FRTGenerator.h"
 #include "../../Generic/random.h"
 #include "interaction.h"
 
@@ -29,6 +30,21 @@ bool zeroTemperatureMCSweep_withGraph(vector<int> &s, int N, vector<vector<vecto
     }
     return true;
 }
+
+double energy_Graph(vector<int> s, int N, vector<vector<vector<rInteraction>>> Graph, double h_ext, vector<double> randomField)
+{
+    double energy = 0.;
+    for (int i = 0; i < N; i++)
+    {
+        energy -= (h_ext + randomField[i]) * s[i];
+        for (int j = 0; j < (Graph)[i][0].size(); j++)
+        {
+            energy -= s[Graph[i][0][j]] * Graph[i][0][j].J * s[i] / 2.;
+        }
+    }
+    return energy;
+}
+
 
 bool MCSweep_withGraph(vector<int> &s, int N, vector<vector<vector<rInteraction>>> Graph, double beta, double h_ext, vector<double> randomField)
 {
@@ -77,19 +93,60 @@ bool MCSweep_withGraph2(vector<int> &s, vector<int> referenceConf, int N, vector
     return true;
 }
 
-double energy_Graph(vector<int> s, int N, vector<vector<vector<rInteraction>>> Graph, double h_ext, vector<double> randomField)
+bool MCSweep_withGraph_variant(vector<int> &s, int N, vector<vector<vector<rInteraction>>> Graph, double beta, double Hext, vector<double> randomField,
+                                int &mag, int lowerMeasuredMag, int &nextMeasMag, int magIncrement,  long long int t,
+                                vector<double> &logFirstTime, vector<double> &logFirstTimeSquared,
+                                vector<double> &firstBarrier, vector<long double> &barrierSum,
+                                vector<long long int> &num, vector<int> s_out)
 {
-    double energy = 0.;
+    cout<<"APRO FIUNZ"<<endl;
+    int I;
+    double locField;
     for (int i = 0; i < N; i++)
     {
-        energy -= (h_ext + randomField[i]) * s[i];
-        for (int j = 0; j < (Graph)[i][0].size(); j++)
+        I = (int)(Xrandom() * N);
+
+        locField = Hext + randomField[I];
+        for (int j = 0; j < (Graph)[I][0].size(); j++)
         {
-            energy -= s[Graph[i][0][j]] * Graph[i][0][j].J * s[i] / 2.;
+            locField += s[Graph[I][0][j]] * Graph[I][0][j].J;
+        }
+        if (locField * s[I] < 0 || exp(-2 * beta * locField * s[I]) > Xrandom())
+        {
+            cout<<"FLIPPO"<<endl;
+            s[I] = -s[I];
+            mag+=2*s[I]*s_out[I];
+            if (mag >= lowerMeasuredMag)
+            {
+            cout<<"entro"<<endl;
+                if (mag == nextMeasMag)
+                {
+                    cout<<"qui 1"<<endl;
+                    printf(" %i %f %lli\n", mag, energy_Graph(s, N, Graph, Hext, randomField), t);
+                    cout<<"qui 2"<<endl;
+                    // fflush(stdout);
+                    logFirstTime[(N - mag) / 2] += log(t);
+                    cout<<"qui 3"<<endl;
+                    logFirstTimeSquared[(N - mag) / 2] += (log(t) * log(t));
+                    cout<<"qui 4"<<endl;
+                    firstBarrier[(N - mag) / 2] += (double)(energy_Graph(s, N, Graph, Hext, randomField));
+                    cout<<"qui 5"<<endl;
+                    nextMeasMag = mag + magIncrement;
+                    cout<<"qui 6"<<endl;
+                }
+                    cout<<"qui 7"<<endl;
+                    cout<<mag<<" "<<N-mag<<endl;
+                barrierSum[(N - mag) / 2] += energy_Graph(s, N, Graph, Hext, randomField);
+                    cout<<"qui 8"<<endl;
+                num[(N - mag) / 2]++;
+                    cout<<"qui 9"<<endl;
+            }
         }
     }
-    return energy;
+    cout<<"ESCO"<<endl;
+    return true;
 }
+
 
 bool MCSweep_withJs(vector<int> s, int N, double **J, double beta)
 {

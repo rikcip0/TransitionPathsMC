@@ -1,4 +1,7 @@
 TODO:
+Simulations:
+-Do RRG FM C=3 at N=140
+-Consider if doing some simulations with larger Q*
 
 PathsMCAnalysis/singleRunAnalysis:
 -improve linear fits to take only linear parts and all the linear parts

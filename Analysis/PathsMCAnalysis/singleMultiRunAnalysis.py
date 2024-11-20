@@ -620,6 +620,11 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                                            'Z from best data for TI\nand corresponding points', np.asarray(np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), 0), trajsExtremesInitID[pathsMC_filtForThisTAndInit_used]])), trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                                                            np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), "inf"), T[pathsMC_filtForThisTAndInit_used]]), ["T"], np.concatenate([np.full(len(stdMCTIBetas_forThisTAndInit_used), -1), refConfMutualQ[pathsMC_filtForThisTAndInit_used]]),
                                                            functionsToPlotContinuously=[[Zfunction], [None]])
+                                plotWithDifferentColorbars(f'T{sim_T}_{trajInitShortDescription_Dict[sim_trajInit]}_Zlog',
+                                                           np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used]),r'$\beta$',  Zfunction(np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used])),'Z',
+                                                           'Z from best data for TI\nand corresponding points', np.asarray(np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), 0), trajsExtremesInitID[pathsMC_filtForThisTAndInit_used]])), trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
+                                                           np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), "inf"), T[pathsMC_filtForThisTAndInit_used]]), ["T"], np.concatenate([np.full(len(stdMCTIBetas_forThisTAndInit_used), -1), refConfMutualQ[pathsMC_filtForThisTAndInit_used]]),
+                                                           functionsToPlotContinuously=[[Zfunction], [None]], yscale='log')
                                 #plt.axvline(betaMax, 0, 1, color='red', linestyle='--', linewidth=3, label=r'$\beta_{max}$='+f'={betaMax}')
                                 plt.legend()
                                 levelToAdd = {}
@@ -640,7 +645,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     with open(graphAnalysisJsonPath, 'r') as file:
                                         graphData = json.load(file)
                                 else:
-                                    print("nun ce staaa")
+                                    print("nun ce staaa",graphPath)
                                 betaL=graphData['beta_c']['localApproach']
                                 levelToAdd['beta_l'] = betaL
                                 betaG=graphData['beta_c']['globalApproach']

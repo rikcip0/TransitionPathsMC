@@ -1,10 +1,9 @@
 #ifndef FRTGenerator
 #define FRTGenerator
-
+#include <math.h>
 #define FNORM (2.3283064365e-10)
 #define RANDOM ((_ira[_ip++] = _ira[_ip1++] + _ira[_ip2++]) ^ _ira[_ip3++])
 #define FRANDOM (FNORM * RANDOM)
-#define pm1 ((FRANDOM > 0.5) ? 1 : -1)
 
 unsigned int myrand, _ira[256];
 unsigned char _ip, _ip1, _ip2, _ip3;
