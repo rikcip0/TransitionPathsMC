@@ -1,5 +1,4 @@
-//Voglio fare che o si puo scegliere un grafo specifico o si specifica solo il modello e vengono fatte molte iterazioni senza salvare ogni volta tutto il grafo
-
+// Voglio fare che o si puo scegliere un grafo specifico o si specifica solo il modello e vengono fatte molte iterazioni senza salvare ogni volta tutto il grafo
 
 #include <iostream>
 #include <fstream>
@@ -8,6 +7,7 @@
 #include <string.h>
 #include <time.h> //L'ho aggiunto io (RC) per inizializzare il generatore
 
+#include "../Generic/random.h"
 #include "../Generic/FRTGenerator.h"
 #include "../MCtrajs/MCdyn_classi/Initialization/initializeGraph.h"
 #include "../MCtrajs/MCdyn_classi/Initialization/initializeReferenceConfigurations.h"
@@ -36,32 +36,13 @@
 #define magIncrement 2
 #define signToCompare -1
 #else
-#define simType "Entering"
+#define simType "Transitioning"
 #define magIncrement 2
 #define signToCompare -1
 #endif
 
 #define pm1 ((FRANDOM > 0.5) ? 1 : -1)
 
-vector<vector<vector<rInteraction>>> Graph;
-vector<double> randomField;
-double Hext;
-
-int N, C, n_int;
-int numPosJ, *deg, *J, **neigh;
-vector<int> s, s_in, s_out;
-int ener0, Qout, nextMeasMag, ener0_sum = 0;
-double *prob;
-
-int magnetizationArraysLength, lowerMeasuredMag, referenceConfMag;
-
-vector<int> startedHere;
-vector<double> logFirstTime, logFirstTimeSquared;
-vector<long long int> num, cumNum, cumNumSquared;
-vector<long double> barrierSum;
-vector<double> meanBarrier, cumFirstBarrier, firstBarrier, cumFirstBarrierSquared, cumMeanBarrier, cumMeanBarrierSquared;
-vector<double> maxMeanBarrier, maxFirstBarrier, maxCorrectedMeanBarrier, maxCorrectedFirstBarrier;
-vector<int> isArgMaxFirstBarrier, isArgMaxMeanBarrier, isArgMaxCorrectedFirstBarrier, isArgMaxCorrectedMeanBarrier;
 #ifdef WITHDISAPPEARINGFIELD
 double m_dis;
 #endif
@@ -75,7 +56,7 @@ double sqrtOrZero(double toSqrt)
     return sqrt(toSqrt);
 }
 
-int findMaxIndex(const vector<double> array, int size, int computeCorrected, double correction, int higherBoundMagnetization)
+int findMaxIndex(int N, int referenceConfMag, int lowerMeasuredMag, const vector<double> array, int size, int computeCorrected, double correction, int higherBoundMagnetization)
 {
     int maxIndex = (N - higherBoundMagnetization) / 2;
     double maxValue = (double)array[maxIndex];
@@ -126,8 +107,7 @@ int *whereEqual(int *a) // returns the first element of the a-array which is equ
     return NULL;
 }
 
-
-void initProb(double beta, double field)
+void initProb(double beta, double field, int C, int *prob)
 {
     int i;
     i = C;
@@ -144,11 +124,21 @@ void initProb(double beta, double field)
     }
 }
 
-
 int main(int argc, char **argv)
 {
-    int is=0;
+    int is = 0;
 
+    int ener0, Qout, nextMeasMag, ener0_sum = 0;
+    double *prob;
+
+    int magnetizationArraysLength, lowerMeasuredMag, referenceConfMag;
+    vector<int> startedHere;
+    vector<double> logFirstTime, logFirstTimeSquared;
+    vector<long long int> num, cumNum, cumNumSquared;
+    vector<long double> barrierSum;
+    vector<double> meanBarrier, cumFirstBarrier, firstBarrier, cumFirstBarrierSquared, cumMeanBarrier, cumMeanBarrierSquared;
+    vector<double> maxMeanBarrier, maxFirstBarrier, maxCorrectedMeanBarrier, maxCorrectedFirstBarrier;
+    vector<int> isArgMaxFirstBarrier, isArgMaxMeanBarrier, isArgMaxCorrectedFirstBarrier, isArgMaxCorrectedMeanBarrier;
     // TO IMPLEMENT- double planted RRG: type -3
 
     // START of input management
@@ -164,7 +154,7 @@ int main(int argc, char **argv)
     int d = std::stoi(argv[1]); // should include check on d value
     int N = atoi(argv[2]);
     double beta = atof(argv[3]);
-    Hext = atof(argv[4]);
+    double Hext = atof(argv[4]);
 
     int Qstar = atoi(argv[5]);
     /*
@@ -175,7 +165,7 @@ int main(int argc, char **argv)
       }
     */
 
-    C = 0;
+    int C = 0;
     int structureID = -1;
     if (d < 0)
     {
@@ -190,9 +180,11 @@ int main(int argc, char **argv)
     double fracPosJ = atof(argv[8]);
     int graphID = atoi(argv[9]);
 
-
     string admittibleGraph, folder;
     pair<string, string> info; // 1° entry: long info (for human read), 2°entry: short info (for machines read)
+    vector<vector<vector<rInteraction>>> Graph;
+    vector<double> randomField;
+    vector<int> s, s_in, s_out;
 
     if (getGraphFromGraphAndStructureID_ForCluster(d, admittibleGraph, structureID, graphID, p, C, N, fracPosJ))
         folder = admittibleGraph + "/";
@@ -341,7 +333,7 @@ int main(int argc, char **argv)
     }
 
     char buffer[200];
-    sprintf(buffer, "%.4g_%.2g_%i",  beta, Hext, Qstar);
+    sprintf(buffer, "%.4g_%.2g_%i", beta, Hext, Qstar);
 
     // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
     if (argc == 13 || argc == 15)
@@ -355,40 +347,37 @@ int main(int argc, char **argv)
 
     createFolder(folder);
     cout << "Simulation is in folder " << folder << endl;
+    /*
 
-    int i, numpPosJ;
+        myrand = time(NULL); // mia inizializzazione, che ho Windows
+        if (argc < 7)
+        {
+            fprintf(stderr, "usage: %s <N> <beta_p> <beta> <nStories> <h>\n", argv[0]);
+            exit(EXIT_FAILURE);
+        }
+
+        if (isdigit(*argv[2]))
+        {
+            beta_p = atof(argv[2]);
+        }
+        else if (strcmp(argv[2], "inf") == 0)
+        {
+            beta_p = -1; // so, in the rest of the code, if beta_p is negative it means it is to be considered infinite
+        }
+        else
+        {
+            printf("Planting temperature must be a non-negative number or infinite (inf)\n");
+            return EXIT_FAILURE;
+        }
+
+        strcpy(beta_p_string, argv[2]);
+        beta = atof(argv[3]);
+        H = atof(argv[5]);
+    */
     int index, startMag, highestMToComputeStoryMax;
     long long unsigned int t;
-    double beta_p, H=0., posJProb;
+    double beta_p, H = 0., posJProb;
     char beta_p_string[7];
-/*
-
-    myrand = time(NULL); // mia inizializzazione, che ho Windows
-    if (argc < 7)
-    {
-        fprintf(stderr, "usage: %s <N> <beta_p> <beta> <nStories> <h>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
-    if (isdigit(*argv[2]))
-    {
-        beta_p = atof(argv[2]);
-    }
-    else if (strcmp(argv[2], "inf") == 0)
-    {
-        beta_p = -1; // so, in the rest of the code, if beta_p is negative it means it is to be considered infinite
-    }
-    else
-    {
-        printf("Planting temperature must be a non-negative number or infinite (inf)\n");
-        return EXIT_FAILURE;
-    }
-
-    strcpy(beta_p_string, argv[2]);
-    beta = atof(argv[3]);
-    H = atof(argv[5]);
-*/
-
     if (strncmp(simType, "Exiting", strlen("Exiting")) == 0)
     {
         H = -H;
@@ -417,109 +406,85 @@ int main(int argc, char **argv)
             error("in h");
     }
 
-    n_int = N * C / p;
+    init_random(0, 0);
 
-    initRandom();
-
-    if (beta_p == -1)
-    {
-        numPosJ = n_int;
-    }
-    else
-    {
-        numPosJ = 0;
-        posJProb = 0.5 * (1. + tanh(beta_p));
-
-        for (i = 0; i < n_int; i++)
-        {
-            numPosJ += (FRANDOM < posJProb) ? 1 : 0;
-        }
-    }
-
-        firstBarrier.assign(magnetizationArraysLength,0.);
-    cumFirstBarrier.assign(magnetizationArraysLength,0.);
-    cumFirstBarrierSquared.assign(magnetizationArraysLength,0.);
-
-    logFirstTime.assign(magnetizationArraysLength,0.);
-    logFirstTimeSquared.assign(magnetizationArraysLength,0.);
-
-    startedHere.assign(magnetizationArraysLength,0);;
-    num.assign(magnetizationArraysLength,0 );
-    cumNum.assign(magnetizationArraysLength,0 );
-    cumNumSquared.assign(magnetizationArraysLength,0 );
+    firstBarrier.assign(magnetizationArraysLength, 0.);
+    cumFirstBarrier.assign(magnetizationArraysLength, 0.);
+    cumFirstBarrierSquared.assign(magnetizationArraysLength, 0.);
+    logFirstTime.assign(magnetizationArraysLength, 0.);
+    logFirstTimeSquared.assign(magnetizationArraysLength, 0.);
+    startedHere.assign(magnetizationArraysLength, 0);
+    num.assign(magnetizationArraysLength, 0);
+    cumNum.assign(magnetizationArraysLength, 0);
+    cumNumSquared.assign(magnetizationArraysLength, 0);
     barrierSum.assign(magnetizationArraysLength, 0);
+    meanBarrier.assign(magnetizationArraysLength, 0.);
+    cumMeanBarrier.assign(magnetizationArraysLength, 0.);
+    cumMeanBarrierSquared.assign(magnetizationArraysLength, 0.);
+    isArgMaxFirstBarrier.assign(magnetizationArraysLength, 0);
+    isArgMaxMeanBarrier.assign(magnetizationArraysLength, 0);
+    isArgMaxCorrectedFirstBarrier.assign(magnetizationArraysLength, 0);
+    isArgMaxCorrectedMeanBarrier.assign(magnetizationArraysLength, 0);
+    maxFirstBarrier.assign(magnetizationArraysLength, 0.);
+    maxMeanBarrier.assign(magnetizationArraysLength, 0.);
+    maxCorrectedFirstBarrier.assign(magnetizationArraysLength, 0.);
+    maxCorrectedMeanBarrier.assign(magnetizationArraysLength, 0.);
 
-    meanBarrier.assign(magnetizationArraysLength,0.);
-    cumMeanBarrier.assign(magnetizationArraysLength,0.);
-    cumMeanBarrierSquared.assign(magnetizationArraysLength,0.);
-
-    isArgMaxFirstBarrier.assign(magnetizationArraysLength,0);
-    isArgMaxMeanBarrier.assign(magnetizationArraysLength,0);
-    isArgMaxCorrectedFirstBarrier.assign(magnetizationArraysLength,0);
-    isArgMaxCorrectedMeanBarrier.assign(magnetizationArraysLength,0);
-
-    maxFirstBarrier.assign(magnetizationArraysLength,0.);
-    maxMeanBarrier.assign(magnetizationArraysLength,0.);
-    maxCorrectedFirstBarrier.assign(magnetizationArraysLength,0.);
-    maxCorrectedMeanBarrier.assign(magnetizationArraysLength,0.);
-
-
-    printf("#%s  C = %i p = %i  N = %i  beta_p = %s  beta = %f  H = %f nStories = %d numPosJ = %d beta_p_eff = %f seed = %d",
-           simType, C, p, N, beta_p_string, beta, fabs(H), nStories, numPosJ, atanh(2 * numPosJ / (double)n_int - 1), myrand);
+    printf("#%s  C = %i p = %i  N = %i  beta_p = %s  beta = %f  H = %f nStories = %d seed = %d",
+           simType, C, p, N, beta_p_string, beta, fabs(H), nStories, myrand);
 #ifdef WITHDISAPPEARINGFIELD
     printf(" m_dis=%f", m_dis);
 #endif
     printf("\n");
     printf("# 1:Qout  2:barrier  3:time\n");
-    ofstream thisEpicFile(folder+"/Epic_"+to_string(epicCount) +".txt");
+    ofstream thisEpicFile(folder + "/Epic_" + to_string(epicCount) + ".txt");
 
     do
     {
-    s=s_in;
+        s = s_in;
 
         if (simType == "Entering")
         {
             Qout = 0;
-            for (i = 0; i < N; i++)
+            for (int i = 0; i < N; i++)
             {
                 s[i] = pm1;
-                Qout += s[i]*s_out[i];
+                Qout += s[i] * s_out[i];
             }
         }
 
         lowerMeasuredMag = Qout; // Qout if Entering, 0 otherwise
 
-        ener0 = energy_Graph(s, N, Graph, Hext, randomField);;
+        ener0 = energy_Graph(s, N, Graph, Hext, randomField);
         ener0_sum += ener0;
         startedHere[(N - Qout) / 2]++;
         num[(N - Qout) / 2]++;
         referenceConfMag = Qout;
         nextMeasMag = Qout + magIncrement;
 
-        //initProb(beta, H);
+        // initProb(beta, H);
 
         printf("Epic %d, story %d: %i %f 0\n", epicCount, is, Qout, energy_Graph(s, N, Graph, Hext, randomField) - ener0);
 
         if (simType == "Entering")
         {
-                cout<<t<<" "<<nextMeasMag<<" "<<magIncrement<<" "<<Qstar<<endl;
+            cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
             for (t = 1; nextMeasMag <= Qstar; t++)
             {
                 MCSweep_withGraph_variant(s, N, Graph, beta, Hext, randomField, Qout, lowerMeasuredMag,
-                                            nextMeasMag, magIncrement, t, logFirstTime, logFirstTimeSquared, 
-                                            firstBarrier, barrierSum, num, s_out);
+                                          nextMeasMag, magIncrement, t, logFirstTime, logFirstTimeSquared,
+                                          firstBarrier, barrierSum, num, s_out);
             }
-                cout<<t<<" "<<nextMeasMag<<" "<<magIncrement<<" "<<Qstar<<endl;
-            
+            cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
         }
         else if (strncmp(simType, "Exiting", strlen("Exiting")) == 0)
         {
-                cout<<t<<" "<<nextMeasMag<<" "<<magIncrement<<" "<<Qstar<<endl;
+            cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
             for (t = 1; nextMeasMag <= Qstar; t++)
             {
                 MCSweep_withGraph_variant(s, N, Graph, beta, Hext, randomField, Qout, lowerMeasuredMag,
-                                        nextMeasMag, magIncrement, t, logFirstTime, logFirstTimeSquared, 
-                                            firstBarrier, barrierSum, num, s_out);
+                                          nextMeasMag, magIncrement, t, logFirstTime, logFirstTimeSquared,
+                                          firstBarrier, barrierSum, num, s_out);
 #if defined(WITHLINFIELD)
                 initProb(beta, H * Qout / (double)N);
 #elif defined(WITHLINFIELD)
@@ -535,7 +500,7 @@ int main(int argc, char **argv)
             }
         }
 
-        for (i = 0; i < magnetizationArraysLength; i++)
+        for (int i = 0; i < magnetizationArraysLength; i++)
         {
             if (num[i] > 0)
             {
@@ -553,23 +518,23 @@ int main(int argc, char **argv)
         }
 
         highestMToComputeStoryMax = (simType == "Entering") ? N : referenceConfMag;
-        index = findMaxIndex(firstBarrier, magnetizationArraysLength, 0, 0., highestMToComputeStoryMax);
+        index = findMaxIndex(N, referenceConfMag, lowerMeasuredMag, firstBarrier, magnetizationArraysLength, 0, 0., highestMToComputeStoryMax);
         isArgMaxFirstBarrier[index]++;
         maxFirstBarrier[index] += firstBarrier[index];
 
-        index = findMaxIndex(meanBarrier, magnetizationArraysLength, 0, 0., highestMToComputeStoryMax);
+        index = findMaxIndex(N, referenceConfMag, lowerMeasuredMag, meanBarrier, magnetizationArraysLength, 0, 0., highestMToComputeStoryMax);
         isArgMaxMeanBarrier[index]++;
         maxMeanBarrier[index] += meanBarrier[index];
 
-        index = findMaxIndex(firstBarrier, magnetizationArraysLength, 1, H, highestMToComputeStoryMax);
+        index = findMaxIndex(N, referenceConfMag, lowerMeasuredMag, firstBarrier, magnetizationArraysLength, 1, H, highestMToComputeStoryMax);
         isArgMaxCorrectedFirstBarrier[index]++;
         maxCorrectedFirstBarrier[index] += firstBarrier[index] - H * (N - 2 * index - referenceConfMag); // N-2i is the Qout
 
-        index = findMaxIndex(meanBarrier, magnetizationArraysLength, 1, H, highestMToComputeStoryMax);
+        index = findMaxIndex(N, referenceConfMag, lowerMeasuredMag, meanBarrier, magnetizationArraysLength, 1, H, highestMToComputeStoryMax);
         isArgMaxCorrectedMeanBarrier[index]++;
         maxCorrectedMeanBarrier[index] += meanBarrier[index] - H * (N - 2 * index - referenceConfMag);
 
-        for (i = 0; i < magnetizationArraysLength; i += 1)
+        for (int i = 0; i < magnetizationArraysLength; i += 1)
         {
             meanBarrier[i] = 0.;
             firstBarrier[i] = 0.;
@@ -578,32 +543,26 @@ int main(int argc, char **argv)
         is++;
     } while (is < nStories);
 
-
-    for (i = magnetizationArraysLength - 1; i >= 0; i -= 1)
+    for (int i = magnetizationArraysLength - 1; i >= 0; i -= 1)
     { // I could also consider a meanBarrier whose fluctuations are only considered across different stories
 
         if (cumNum[i] > 0)
         {
-            sprintf(buffer,"%i %g %g %g %g %g %g %g %g",
+            sprintf(buffer, "%i %g %g %g %g %g %g %g %g",
                     -2 * i + N, cumMeanBarrier[i] / (double)nStories, sqrtOrZero((cumMeanBarrierSquared[i] - cumMeanBarrier[i] * cumMeanBarrier[i] / (double)nStories) / (double)(nStories * (nStories - 1))),
                     cumNum[i] / (double)nStories, sqrtOrZero((cumNumSquared[i] - cumNum[i] * cumNum[i] / (double)nStories) / (double)(nStories * (nStories - 1))),
                     cumFirstBarrier[i] / (double)nStories, sqrtOrZero((cumFirstBarrierSquared[i] - cumFirstBarrier[i] * cumFirstBarrier[i] / (double)nStories) / (double)(nStories * (nStories - 1))),
                     logFirstTime[i] / (double)nStories, sqrtOrZero((logFirstTimeSquared[i] - logFirstTime[i] * logFirstTime[i] / (double)nStories) / (double)(nStories * (nStories - 1))));
-            thisEpicFile<<buffer;
+            thisEpicFile << buffer;
             sprintf(buffer, " %g %g %g %g %g %g %g %g", isArgMaxMeanBarrier[i] / (double)nStories, isArgMaxFirstBarrier[i] / (double)nStories,
                     isArgMaxCorrectedMeanBarrier[i] / (double)nStories, isArgMaxCorrectedFirstBarrier[i] / (double)nStories,
                     maxMeanBarrier[i] / nStories, maxFirstBarrier[i] / nStories, maxCorrectedMeanBarrier[i] / nStories, maxCorrectedFirstBarrier[i] / nStories);
-            thisEpicFile<<buffer;
+            thisEpicFile << buffer;
             sprintf(buffer, " %g", startedHere[i] / (double)nStories);
-            thisEpicFile<<buffer<<endl;
-        }
-        else
-        {
-            sprintf(buffer, "%i nan nan nan nan nan nan nan nan 0 0 0 0 nan nan nan nan 0", -2 * i + N);
-            thisEpicFile<<buffer<<endl;
+            thisEpicFile << buffer << endl;
         }
     }
     thisEpicFile.close();
-    cout<<"PROGRAMMA FINITO"<<endl;
+    cout << "PROGRAMMA FINITO" << endl;
     return 0;
 }
