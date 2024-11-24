@@ -26,7 +26,7 @@ compilePT:
 	@echo .
 
 compileSimpleStdMC:
-	@cd standardMCs && g++ simpleStdMcForTp.cpp -o stMC.exe -DFIXEDEXT
+	@cd MCMCs && g++ simpleStdMcForTp.cpp -o stMC.exe -DFIXEDEXT
 	@echo Program compiled in stMC
 	@echo .
 
