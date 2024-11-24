@@ -43,11 +43,13 @@ int main(int argc, char *argv[])
   double hout = atof(argv[5]);
 
   int Qstar = atoi(argv[6]);
+  /*
   if (abs(Qstar) % 2 != N % 2 || abs(Qstar) > N)
   {
     cout << "Q* value is not allowed!" << endl;
     exit(1);
   }
+  */
 
   int C = 0;
   int structureID = -1;
