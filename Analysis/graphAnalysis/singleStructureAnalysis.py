@@ -1,8 +1,8 @@
 #Analysis of parallel tempering
 import random
 import sys
+from collections import defaultdict
 import networkx as nx
-
 
 
 
@@ -148,7 +148,7 @@ def singleStructureAnalysis( folder=""):
     graphFile_path = find_files_with_string(folder, "graph.txt")[0]
     print(graphFile_path)
     N=0
-    list=[]
+    myList=[]
     orientedEdges=[]
     G = nx.Graph()
     with open(graphFile_path, 'r') as file:
@@ -159,9 +159,9 @@ def singleStructureAnalysis( folder=""):
         G.add_nodes_from(np.arange(0, N))
         lines = lines[1:]
         dataLines = filter(lambda x: not x.startswith('#'), lines)
-        data = np.genfromtxt(dataLines, delimiter=' ')
+        data = np.genfromtxt(dataLines, delimiter=' ', dtype=int)
         for i in range(0,2,1):
-            list.append(data[:,i])
+            myList.append(data[:,i])
         for i in range(np.shape(data)[0]):
             color='black'
             if data[i,2]==-1:
@@ -198,8 +198,21 @@ def singleStructureAnalysis( folder=""):
     NBT = np.asarray(NBT, dtype=np.float64)  # Use float64 for higher precision
     sparse_matrix = csr_matrix(NBT, dtype=np.float64)
     values, vectors = eigs(sparse_matrix, k=1, which='LM', tol=1e-10) 
-    
 
+
+    # Trova tutti i cicli
+    all_cycles =nx.cycle_basis(G)
+
+    # Organizza i cicli per lunghezza
+    cycles_by_length = defaultdict(list)
+    for cycle in all_cycles:
+        cycles_by_length[len(cycle)].append(cycle)
+
+    # Stampa i risultati
+    print("Cicli trovati organizzati per lunghezza:")
+    for length, cycles in sorted(cycles_by_length.items()):
+        print(f"Lunghezza {length}: {len(cycles)} ciclo/i")
+        print(f"  Cicli: {cycles}")
         
     # The largest eigenvalue
     largest_eigenvalue = values[0].real
@@ -207,10 +220,10 @@ def singleStructureAnalysis( folder=""):
     #print("vec", vectors)
     #print("lar", largest_eigenvalue)
     #print("bet", np.arctanh(1/largest_eigenvalue))
-    list=np.asarray(list).flatten()
+    myList=np.asarray(myList).flatten()
     degrees = []
     for i in range(0, N):
-        degrees.append(np.sum(list==i))
+        degrees.append(np.sum(myList==i))
     degrees = np.asarray(degrees)
     firstMoment = np.mean(degrees)
     secondMoment = np.mean(pow(degrees,2))
