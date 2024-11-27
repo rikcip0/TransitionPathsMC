@@ -18,7 +18,7 @@ from scipy.optimize import minimize_scalar
 from MyBasePlots.plotWithDifferentColorbars import plotWithDifferentColorbars
 minNumberOfSingleRunsToDoAnAnalysis=4
 
-nNsToConsiderForSubFit=3 #For extracting free energy barriers, there is also a fit
+nNsToConsiderForSubFit=4 #For extracting free energy barriers, there is also a fit
                                 #involving only this number of largest Ns
 
 def ensure_directories_exist(path):
@@ -917,19 +917,19 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 tempFilt=filt
                 filt=np.logical_and(filt, N>=np.sort(np.unique(N[filt]))[-nNsToConsiderForSubFit])
                 
-                mainPlot = plotWithDifferentColorbars(f"k_log_{nNsToConsiderForSubFit}LargerNs", x[filt], xName, -np.log(kFromChi[filt]), "k", "Transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
+                mainPlot = plotWithDifferentColorbars(f"k_log_{nNsToConsiderForSubFit}LargerNs", x[filt], xName, -np.log(kFromChi[filt]), "-ln(k)", "Transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
                      refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), fitType=toFit)
                 
-                mainPlot = plotWithDifferentColorbars(f"k2_log_{nNsToConsiderForSubFit}LargerNs", x[filt], xName, -np.log(kFromChi_InBetween[filt]), "k", "Generalized transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
+                mainPlot = plotWithDifferentColorbars(f"k2_log_{nNsToConsiderForSubFit}LargerNs", x[filt], xName, -np.log(kFromChi_InBetween[filt]), "-ln(k)", "Transition rate (2) computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                         markerShapeVariables[filt], markerShapeVariablesNames,
                         refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                         nGraphs=len(np.unique(graphID[filt])), fitType=toFit)
                     
-                mainPlot = plotWithDifferentColorbars(f"k2_scaled_log_{nNsToConsiderForSubFit}LargerNs", x[filt], xName, -np.log(kFromChi_InBetween_Scaled[filt]), "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+                mainPlot = plotWithDifferentColorbars(f"k2_scaled_log_{nNsToConsiderForSubFit}LargerNs", x[filt], xName, -np.log(kFromChi_InBetween_Scaled[filt]), "-ln(k)", "Transition rate (3) computed from single TI and "+r"$\chi$ vs "+ xName +"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                         markerShapeVariables[filt], markerShapeVariablesNames,
                         refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
@@ -937,19 +937,19 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 
                 filt=tempFilt
                 
-            mainPlot = plotWithDifferentColorbars(f"k_log", x[filt], xName, -np.log(kFromChi[filt]), "k", "Transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"k_log", x[filt], xName, -np.log(kFromChi[filt]), "-ln(k)", "Transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
                      refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), fitType=toFit)
                 
-            mainPlot = plotWithDifferentColorbars(f"k2_log", x[filt], xName, -np.log(kFromChi_InBetween[filt]), "k", "Generalized transition rate computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"k2_log", x[filt], xName, -np.log(kFromChi_InBetween[filt]), "-ln(k)",  "Transition rate (1) computed from single TI and "+r"$\chi$ vs "+ xName+"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
                      refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],
                     nGraphs=len(np.unique(graphID[filt])), fitType=toFit)
                 
-            mainPlot = plotWithDifferentColorbars(f"k2_scaled_log", x[filt], xName, -np.log(kFromChi_InBetween_Scaled[filt]), "L", "Quantity for thermodynamic integration vs "+ xName +"\n"+specificationLine,
+            mainPlot = plotWithDifferentColorbars(f"k2_scaled_log", x[filt], xName, -np.log(kFromChi_InBetween_Scaled[filt]), "-ln(k)",  "Transition rate (3) computed from single TI and "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
                      refConfMutualQ[filt],colorMapSpecifier=betaOfExtraction[filt],

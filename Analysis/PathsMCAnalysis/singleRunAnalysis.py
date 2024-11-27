@@ -662,6 +662,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     #ANALYSIS OF TI FILES: START
     results['TI'] ={'beta':[], 'hout':[], 'Qstar':[]}
 
+    plotTIUAutocorrelation=False
     TIFile = get_file_with_prefix(run_Path, 'TI_beta')
     if TIFile is not None:
         with open(TIFile, 'r') as file:
@@ -681,7 +682,6 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 results['TI']['beta'] = cumulativeUs[-1]
             else:
                 results['TI']['beta'] = data[-1]
-        plotTIUAutocorrelation=False
         if len(lines)>2:
             plotTIUAutocorrelation=True
         if len(lines)>1:
