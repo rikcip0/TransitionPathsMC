@@ -4,8 +4,12 @@ import re
 import sys
 
 from singleStructureAnalysis import singleStructureAnalysis
+from singleGraphFieldAnalysis import singleGraphFieldAnalysis
 
+nameOfFoldersContainingRequested=None
 nameOfFoldersContainingGraphs = ["fPosJ"
+                               ]
+nameOfFoldersContainingGraphFields = ["stdGaussian","stdBernoulli",
                                ]
 
 presetPath = "somePath"
@@ -21,7 +25,7 @@ def findFoldersWithString(parent_dir, target_strings):
             for dir_name in dirs:
                 full_path = os.path.join(root, dir_name)
                 # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
-                if any(folder in dir_name for folder in nameOfFoldersContainingGraphs):
+                if any(folder in dir_name for folder in nameOfFoldersContainingRequested):
                     # Cerca le cartelle che contengono "_run" nel loro nome
                     rightLevelReached=True
                     for subdir in os.listdir(full_path):
@@ -44,16 +48,16 @@ def findFoldersWithString(parent_dir, target_strings):
 
 if len(sys.argv) > 1:
     archive_path = f"../../Data/Graphs"
-    analysisVsSimTypesDict = {"all": "any"}
+    analysisVsSimTypesDict = {"graph":"graphs","field":"fields"}
     analysisType = sys.argv[1]
     additional_strings= sys.argv[2:]
 
-    if analysisType in analysisVsSimTypesDict:
-        simType = analysisVsSimTypesDict[analysisType]
-        if simType!="any":
-            archive_path+="/"+analysisType
+    if analysisType=="all":
+        simType=["fields","graphs"]
+    elif analysisType in analysisVsSimTypesDict:            
+        simType = [analysisVsSimTypesDict[analysisType]]
     elif os.path.exists(archive_path+"/"+analysisType):
-        simType=analysisType
+        simType= [analysisType]
         archive_path+="/"+analysisType
     else:
         print(f"Analysis of type {analysisType} not implemented.")
@@ -61,20 +65,30 @@ if len(sys.argv) > 1:
         print("Implemented analysis types include:")
         for implementedAnalysis in analysisVsSimTypesDict:
             print(implementedAnalysis)
+        print("and all of them together.\n")
         print("\n")
         exit()
+    for s in simType:
+        if s=="fields":
+            nameOfFoldersContainingRequested=nameOfFoldersContainingGraphFields
+            stringToFind="realization"
+            analysisToDo=singleGraphFieldAnalysis
+        elif s=="graphs":
+            nameOfFoldersContainingRequested=nameOfFoldersContainingGraphs
+            stringToFind="graph"
+            analysisToDo=singleStructureAnalysis
 
-    selected_runs = findFoldersWithString(archive_path, ['graph', *additional_strings])
-    if not selected_runs:
-        raise FileNotFoundError(f"No files of type  found in the specified path.")
-    
-    print(f"Analyzing all runs of type {simType}. {len(selected_runs)} runs found.")
+        selected_runs = findFoldersWithString(archive_path, [stringToFind, *additional_strings])
+        if not selected_runs:
+            raise FileNotFoundError(f"No files of type  found in the specified path.")
+        
+        print(f"Analyzing all runs of type {simType}. {len(selected_runs)} runs found.")
 
-    for i, run in enumerate(sorted(selected_runs, reverse=True)):
-        print(f"Analyzing graph #{i+1} out of {len(selected_runs)}\n")
-        singleStructureAnalysis(run)
-    # Get the stories names in the folder
-    print("Analysis completed.\n")
+        for i, run in enumerate(sorted(selected_runs, reverse=True)):
+            print(f"Analyzing graph #{i+1} out of {len(selected_runs)}\n")
+            analysisToDo(run)
+        # Get the stories names in the folder
+        print("Analysis completed.\n")
     
 else:
-    singleStructureAnalysis(presetPath)
+    print("AO")

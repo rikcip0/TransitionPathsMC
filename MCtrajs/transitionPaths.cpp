@@ -66,7 +66,7 @@
 //#endif
 
 #define MCmeas 4
-#define MCprint 100000
+#define MCprint 50000
 #define NpPerN 8
 
 #define printconf false
@@ -447,7 +447,7 @@ int main(int argc, char **argv)
       }
     }
     // print on file
-    if (mc % MCprint == 0)
+    if ((mc % MCprint == 0) && ((mc==0)||(mc >= MCeq)))
     {
       vector<double> j = count_jumps(&Strajs);
       vector<double> risH = compute_H_av(&Strajs, &Graph, Np, T, Hext, randomField);

@@ -125,121 +125,46 @@ def find_files_with_string(parent_dir, target_string):
     
     return matching_files
 
-def singleStructureAnalysis( folder=""):
-    resultsFolder= os.path.join(folder, 'graphAnalysis')
+def singleGraphFieldAnalysis( folder=""):
+    resultsFolder= os.path.join(folder, 'graphFieldAnalysis')
     if not os.path.exists(resultsFolder):
         os.makedirs(resultsFolder, exist_ok=True)
     else:
         delete_files_in_folder(resultsFolder)
-    jsonResultsPath = os.path.join(resultsFolder,'graphData.json')
+    jsonResultsPath = os.path.join(resultsFolder,'graphFieldData.json')
 
-    graphFile_path = find_files_with_string(folder, "graph.txt")[0]
-    print("analyzing ", graphFile_path)
+    graphFieldFile_path = find_files_with_string(folder, "field.txt")[0]
+    print("analyzing ", graphFieldFile_path)
     N=None
     p=None
     C=None
-    n_int=None
+    structureId=None
     fPosJ=None
-    n_PosInt=None
+    graphId=None
     seed=None
-    myList=[]
-    orientedEdges=[]
-    G = nx.Graph()
-    with open(graphFile_path, 'r') as file:
+    with open(graphFieldFile_path, 'r') as file:
         #print("analizzando ", nome_file)
         lines = file.readlines()
         firstLineData =np.genfromtxt(lines[0].split(), delimiter=' ')
         N=(int)(firstLineData[0])
         p=(int)(firstLineData[1])
         C=(int)(firstLineData[2])
-        n_int=(int)(firstLineData[3])
+        structureId=(int)(firstLineData[3])
         fPosJ=(float)(firstLineData[4])
-        n_PosInt=(int)(firstLineData[5])
-        seed=(int)(firstLineData[6])
-        G.add_nodes_from(np.arange(0, N))
+        graphId=(int)(firstLineData[5])
+        fieldTypeId=(int)(firstLineData[6])
+        seed=(int)(firstLineData[7])
+
         lines = lines[1:]
         dataLines = filter(lambda x: not x.startswith('#'), lines)
-        data = np.genfromtxt(dataLines, delimiter=' ', dtype=int)
-        for i in range(0,2,1):
-            myList.append(data[:,i])
-        for i in range(np.shape(data)[0]):
-            color='black'
-            if data[i,2]==-1:
-                color='red'
-            G.add_edge(*data[i,0:2], color=color)
-            orientedEdges.append((tuple)(data[i,0:2]))
-            orientedEdges.append((data[i,1], data[i,0]))
-            
-    colors = nx.get_edge_attributes(G,'color').values()
-    
-    fig=plt.figure("graph", figsize=(10, 7))  # Dimensione della figura
-     # Se non è un reticolo, usiamo un layout automatico
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos,
-        edge_color=colors, 
-        with_labels=True,
-        width=2.)
- 
-    # Trova tutti i cicli
-    all_cycles =nx.cycle_basis(G)
+        fieldValues = np.genfromtxt(dataLines, delimiter=' ')
 
-    # Organizza i cicli per lunghezza
-    cycles_by_length = {}
-    cycles_Lengths= []
-    for cycle in all_cycles:
-        l=len(cycle)
-        cycles_Lengths.append(l)
-        if l not in cycles_by_length.keys():
-            cycles_by_length[l]={}
-            cycles_by_length[l]['cycles']=[]
-            cycles_by_length[l]['nCycles']=1
-        else:
-            cycles_by_length[l]['nCycles']=cycles_by_length[l]['nCycles']+1
-        cycles_by_length[l]['cycles'].append(cycle)
-    cycles_Lengths=np.asarray(cycles_Lengths)
-    
-    fig = plt.figure("er",figsize=(10, 7))
-    x= [a for a in cycles_by_length.keys()]
-    y= [cycles_by_length[a]['nCycles'] for a in cycles_by_length.keys()]
-    plt.bar(x, y, color='skyblue', edgecolor='black')
-    print("minimum", np.min(x))
-    print("maximum", np.max(x))
-    print(cycles_Lengths)
-    myHist("ciao","ciao", cycles_Lengths, "a", nbins=1+np.nanmax(cycles_Lengths)-np.nanmin(cycles_Lengths))
-    fig = plt.gcf()
-    beta_c_l="unknown"
-    beta_c_g="unknown"
-    if fPosJ==1.0:
-        NBT=[]
-        
-        for edge1 in orientedEdges:
-            row =[]
-            for edge2 in orientedEdges:
-                if edge1[1]==edge2[0] and edge1[0]!=edge2[1]: 
-                    row.append(1)
-                else:
-                    row.append(0)
-            NBT.append(row)
-        NBT = np.asarray(NBT, dtype=np.float64)  # Use float64 for higher precision
-        sparse_matrix = csr_matrix(NBT, dtype=np.float64)
-        values, vectors = eigs(sparse_matrix, k=1, which='LM', tol=1e-10) 
-        # The largest eigenvalue
-        largest_eigenvalue = values[0].real
-        myList=np.asarray(myList).flatten()
-        degrees = []
-        for i in range(0, N):
-            degrees.append(np.sum(myList==i))
-        degrees = np.asarray(degrees)
-        firstMoment = np.mean(degrees)
-        secondMoment = np.mean(pow(degrees,2))
-        quantity = firstMoment/(secondMoment-firstMoment)
-        beta_c_l = np.arctanh(quantity)
-        beta_c_g = np.arctanh(1/largest_eigenvalue)
+    myHist("fieldValues", "Values of 1-point fields for this std realization", fieldValues, "v"
+    )
     
     simData = {}
-    simData['beta_c']= {}
-    simData['beta_c']['localApproach'] = beta_c_l
-    simData['beta_c']['globalApproach'] = beta_c_g
+    simData['mean']= np.nanmean(fieldValues)
+    simData['meanStdErr']= np.nanvar(fieldValues)
 
     writeJsonResult(simData, jsonResultsPath)
     
@@ -250,4 +175,5 @@ def singleStructureAnalysis( folder=""):
         print(filename)
         fig.savefig(filename, bbox_inches='tight')
     plt.close('all')
+
         

@@ -75,7 +75,7 @@ if len(sys.argv) != 1:
 
         print("analyzing ", simType)
 
-        archivedSingleRuns = findFoldersWithString(archive_path, '_run')
+        archivedSingleRuns = findFoldersWithString(archive_path, ['_run',*additional_strings])
         parentFolderForResults = f"../../Data/MultiRun/"+requestedAnalysis
         os.makedirs(parentFolderForResults, exist_ok=True)
         presentRunsData = []

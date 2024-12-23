@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.cm import ScalarMappable
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, Normalize
+from matplotlib.colors import ListedColormap, Normalize, hsv_to_rgb, rgb_to_hsv
 
 markers = ['s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h','s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h']
 
@@ -21,13 +21,16 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                                 additionalMarkerTypes=None,
                                 additionalMarkerTypes_Unused=None,
                                 yerr=None, fitType= '', xscale='', yscale ='', fittingOverDifferentEdges=True, nGraphs=None,
-                                functionsToPlotContinuously = None, theoreticalX=None, theoreticalY=None):
+                                functionsToPlotContinuously = None, theoreticalX=None, theoreticalY=None,
+                                linesAtXValueAndName=None, linesAtYValueAndName=None,):
+    
+    fittingOverDifferentShapes=True
     #checking if enough non-nan values
     valid_indices = np.isfinite(x) & np.isfinite(y)
     x=x[valid_indices]
     y=y[valid_indices]
     if(len(y)<3):
-         return None
+         return None, None
     markerEdgeVariable = markerEdgeVariable[valid_indices]
     markerShapeVariable = markerShapeVariable[valid_indices]
     arrayForColorCoordinate = arrayForColorCoordinate[valid_indices]
@@ -39,23 +42,43 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     #setting colorBars internal options
     if colorMapSpecifier is None:
         colorMapSpecifier = np.full(len(x), "nan")
-    uniqueColorMapsSpecifiers = np.unique(colorMapSpecifier)
+    uniqueColorMapsSpecifiers = np.sort(np.unique(colorMapSpecifier))
     nColorbars = uniqueColorMapsSpecifiers.size
     cmaps = {}
-    myMap = cm.get_cmap('cool', 256)
     # Define a base color (redder for lower values, bluer for higher values)
     colorMapSpecifier_float=colorMapSpecifier
     uniqueColorMapsSpecifiers = uniqueColorMapsSpecifiers.astype(str)
     colorMapSpecifier = np.asarray(colorMapSpecifier, dtype=str)
-    for val in uniqueColorMapsSpecifiers:
-        if len(uniqueColorMapsSpecifiers)==1 or val =="nan":
-            normalized= 1.
-        else:
-            normalized = (((float) (val) - np.min(colorMapSpecifier_float.astype(float))) / (np.max(colorMapSpecifier_float.astype(float)) - np.min(colorMapSpecifier_float.astype(float))))
-        newcolors = myMap(np.linspace(0, 1, 256))
-        newcolors[:, 3] = 1
-        newcolors[:, 1] = (newcolors[:, 1]*normalized + (1-normalized))
-        cmaps[val] = ListedColormap(newcolors)
+
+    # Creare la colormap 'cool'
+    gnuplot_map = plt.cm.gnuplot
+
+    # Numero di colorbar
+    num_colorbars = len(uniqueColorMapsSpecifiers)
+
+    # Estrarre i colori dalla colormap 'cool'
+    gnuplot_colors = gnuplot_map(np.linspace(0.15, 0.97, num_colorbars))
+    gnuplot_colors = np.flip(gnuplot_colors, axis=0)
+
+    # Calcolare la saturazione, che varia da 0.6 (medio) a 1 (satura)
+    saturations = np.linspace(0.4, 1., 256)
+
+    # Luminosità che varia da 1.0 (luminoso) a 0.3 (più scuro)
+    values = np.linspace(1., 0.9, 256)
+
+    # Creazione delle colorbar
+    for i, (val, color) in enumerate(zip(uniqueColorMapsSpecifiers, gnuplot_colors)):
+        # Converti il colore in spazio HSV per manipolare saturazione e luminosità
+        hsv_color = rgb_to_hsv(color[:3])  # Ignoriamo la componente alpha (trasparenza)
+        
+        # Creare la mappa di colori variando la saturazione e la luminosità
+        # Manteniamo la hue (tonalità) fissa, ma variamo saturazione e luminosità
+        hues = np.full_like(saturations, hsv_color[0])  # Usa la hue originale
+        hsv_colors = np.stack([hues, saturations, values], axis=1)
+        rgb_colors = hsv_to_rgb(hsv_colors)  # Converti di nuovo in RGB
+        
+        # Creare la colormap per la colorbar corrente
+        cmaps[val] = ListedColormap(rgb_colors)
 
     #defining useful arrays
     uniqueEdgeVars = np.unique([x for x in markerEdgeVariable if x is not None])
@@ -82,7 +105,9 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     filters[i]=np.full(len(xSort),True)
                 else:
                     filters[i] = filters[i][xSort]
-                    
+    
+    fitResult=None
+    
     #setting format of image            
     plotToBarRatio = 55
 
@@ -191,17 +216,31 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                         c = popt[0]
                         m= popt[1]
                         plt.plot(x[fitCondition], m*x[fitCondition]+c, linestyle='--', marker='', color=color)
-                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}', linestyle='--', marker=marker, color=color)
-
-        if fittingOverDifferentEdges is True:
+                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker=marker, color=color)
+                        fitResult= m, c, mErr
+                        
+        if fittingOverDifferentEdges is True and fittingOverDifferentShapes is False:
             if fitType=='linear':
                 fitCondition =  [np.array_equal(t,variable) for variable in markerShapeVariable]
                 if len(np.unique(x[fitCondition]))>1:
                     popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x[fitCondition], y[fitCondition])
                     c = popt[0]
                     m= popt[1]
+                    mErr =pcov[1,1]
                     plt.plot(x[fitCondition], m*x[fitCondition]+c, linestyle='--', marker='', color=color)
-                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}', linestyle='--', marker=marker, color=color)
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker=marker, color=color)
+                    fitResult= m, c, mErr
+                    
+    if fittingOverDifferentShapes is True:
+            if fitType=='linear':
+                if len(np.unique(x))>1:
+                    popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x, y)
+                    c = popt[0]
+                    m= popt[1]
+                    mErr =pcov[1,1]
+                    plt.plot(x, m*x+c, linestyle='--', marker='', color=color)
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker=marker, color=color)
+                    fitResult= m, c, mErr
  
     if additionalMarkerTypes_Unused is not None:
         for additionalMarkerType in additionalMarkerTypes_Unused:
@@ -235,6 +274,20 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     if theoreticalX is not None:
         plt.plot([],[], label=f"          ", marker=None, color="None")
         plt.plot(theoreticalX, theoreticalY, linestyle='--', marker=' ', label='cavity')
+    
+    if linesAtXValueAndName is not None:
+        plt.plot([],[], label=f"          ", marker=None, color="None")
+        for l in linesAtXValueAndName :
+            l_Value, l_Name, l_color = l
+            plt.axvline(l_Value, color=l_color, linestyle='dashed', marker=' ', linewidth=1)
+            plt.plot([],[], label=f"{l_Name}", linestyle='dashed', marker=' ', color=l_color)
+    
+    if linesAtYValueAndName is not None:
+        plt.plot([],[], label=f"          ", marker=None, color="None")
+        for l in linesAtYValueAndName :
+            l_Value, l_Name, l_color = l
+            plt.axhline(l_Value, color=l_color, linestyle='dashed', marker=' ', linewidth=1)
+            plt.plot([],[], label=f"{l_Name}", linestyle='dashed', marker=' ', color=l_color)
         
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     
@@ -286,4 +339,5 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         else:
             text_y = y_max + 0.04 * (y_max - y_min)  
         ax1.text(text_x, text_y,  f"Different graphs: {nGraphs}", fontsize=9, color='black', ha='right', va='top')
-    return ax1
+    
+    return ax1, fitResult
