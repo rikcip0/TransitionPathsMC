@@ -10,7 +10,7 @@ using namespace std;
 class rInteraction // which is residual Interaction
 {
 public:
-    int J;              // can be promoted to double
+    double J;              // can be promoted to double
     vector<int> interS; // interacting spins to the interaction (except one)
 
     // constructors
@@ -21,7 +21,7 @@ public:
         interS[0] = _interactingSpin;
     }
 
-    rInteraction(int _J, int _interactingSpin) // Generic pw interaction
+    rInteraction(double _J, int _interactingSpin) // Generic pw interaction
     {
         J = _J;
         interS.resize(1);

@@ -149,28 +149,37 @@ def singleStructureAnalysis( folder=""):
         #print("analizzando ", nome_file)
         lines = file.readlines()
         firstLineData =np.genfromtxt(lines[0].split(), delimiter=' ')
+        
+        """
         N=(int)(firstLineData[0])
+        n_int=(int)(firstLineData[1])
         p=(int)(firstLineData[1])
         C=(int)(firstLineData[2])
-        n_int=(int)(firstLineData[3])
         fPosJ=(float)(firstLineData[4])
         n_PosInt=(int)(firstLineData[5])
         seed=(int)(firstLineData[6])
+        """
+        N=33
         G.add_nodes_from(np.arange(0, N))
         lines = lines[1:]
         dataLines = filter(lambda x: not x.startswith('#'), lines)
-        data = np.genfromtxt(dataLines, delimiter=' ', dtype=int)
+        data = np.genfromtxt(dataLines, delimiter=' ')
+        print(data)
         for i in range(0,2,1):
             myList.append(data[:,i])
+        minBondValue=np.nanmin(data[:,2])
         for i in range(np.shape(data)[0]):
             color='black'
-            if data[i,2]==-1:
+            if data[i,2]<0.:
                 color='red'
-            G.add_edge(*data[i,0:2], color=color)
+            #G.add_edge(*data[i,0:2], color=color, width=-np.log(data[i,2]/minBondValue)/np.log(minBondValue)*(0.95)+0.05)
+            G.add_edge(*data[i,0:2], color=color, width=data[i,2])
             orientedEdges.append((tuple)(data[i,0:2]))
             orientedEdges.append((data[i,1], data[i,0]))
             
     colors = nx.get_edge_attributes(G,'color').values()
+    widths = list(nx.get_edge_attributes(G,'width').values())
+
     
     fig=plt.figure("graph", figsize=(10, 7))  # Dimensione della figura
      # Se non è un reticolo, usiamo un layout automatico
@@ -178,8 +187,21 @@ def singleStructureAnalysis( folder=""):
     nx.draw(G, pos,
         edge_color=colors, 
         with_labels=True,
-        width=2.)
+        width=widths)
+    
+    # Trova le componenti connesse
+    largest_cc = max(nx.connected_components(G), key=len)
+    # Crea un nuovo grafo con solo la componente più grande
+    G_largest = G.subgraph(largest_cc).copy()
+    pos = nx.spring_layout(G_largest)
+    colors = nx.get_edge_attributes(G_largest,'color').values()
+    widths = list(nx.get_edge_attributes(G_largest,'width').values())
  
+    fig=plt.figure("graph_cc", figsize=(10, 7))  # Dimensione della figura
+    nx.draw(G_largest, pos,
+        edge_color=colors, 
+        with_labels=True,
+        width=widths)
     # Trova tutti i cicli
     all_cycles =nx.cycle_basis(G)
 

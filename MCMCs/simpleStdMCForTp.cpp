@@ -28,7 +28,7 @@
 
 int main(int argc, char *argv[])
 {
-  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 11 && argc != 13 && argc != 14 && argc != 16))
+  if ( atoi(argv[1]) < -2 || (argc != 11 && argc != 13 && argc != 14 && argc != 16))
   {
     cout << "Probable desired usage: ";
     cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N beta Hext hout Q* C structureID fracPosJ graphID (requiredBetaOfSExtraction s_index) [if not present, FM(all +) conf. is considered] \n (randomFieldType(1: Bernoulli, 2:Gaussian), realization, sigma)" << endl;
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
   }
 
   double fracPosJ = atof(argv[9]);
-  int graphID = atoi(argv[10]);
+  string graphID = argv[10];
 
   vector<vector<vector<rInteraction>>> Graph;
 
@@ -106,10 +106,19 @@ int main(int argc, char *argv[])
   else
     randomField.assign(N, 0.);
 
-  if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, sigma))
-  {
-    cout << "Error in the graph initialization" << endl;
-    return 1;
+  if (d != 0){
+    if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, sigma))
+    {
+      cout << "Error in the graph initialization" << endl;
+      return 1;
+    }
+  }
+  if (d == 0){
+    if (!initializeRealGraph(folder, Graph, N, randomField, randomFieldType, fieldStructureRealization, sigma))
+    {
+      cout << "Error in the graph initialization" << endl;
+      return 1;
+    }
   }
 
   char buffer[200];
@@ -150,7 +159,7 @@ int main(int argc, char *argv[])
   }
 
   info.second += to_string(N) + " " + to_string((int)p) + " " + to_string(C);
-  info.second += " " + to_string(graphID) + " " + "inf" + " " + to_string(beta);
+  info.second += " " + graphID + " " + "inf" + " " + to_string(beta);
   if (!extremesFixed)
     info.second += " " + to_string(hout) + " " + to_string(Qstar);
   else

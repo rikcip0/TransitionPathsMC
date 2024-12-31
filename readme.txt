@@ -1,7 +1,8 @@
 TODO:
 Simulations:
--Do RRG FM C=3 at N=140
--Consider if doing some simulations with larger Q*
+-Do ZKC T=25,30,35,40 fino a 0.7 da 0.15
+-DO ER N=160 con T=65 e configurazioni per video
+-DO RRG sigma+-0.3
 
 PathsMCAnalysis/singleRunAnalysis:
 -improve linear fits to take only linear parts and all the linear parts

@@ -189,9 +189,6 @@ vector<double> compute_H_av(vector<straj> *Strajs, vector<vector<vector<rInterac
         }
     }
 
-    for (int i = 0; i < ris.size(); i++)
-    {
-    }
     return ris;
 }
 

@@ -13,7 +13,7 @@ using namespace std;
 bool initializeGraph(string &sourceFolder, vector<vector<vector<rInteraction>>> &GraphToReturn, int p, int C, int N, double fracPosJ, vector<double> &randomFieldToReturn, int randomFieldType, int fieldStructureRealization, double signedVar)
 {
     vector<vector<vector<rInteraction>>> Graph;
-    int n_int, numPosJ, i, j, k, site = 0, *deg, tempInt;
+    int n_int, i, j, k, site = 0, *deg, tempInt;
     vector<int> *J, *neigh;
     std::string fileName;
     FILE *file;
@@ -22,7 +22,6 @@ bool initializeGraph(string &sourceFolder, vector<vector<vector<rInteraction>>> 
     neigh = (vector<int> *)calloc(N, sizeof(vector<int>)); // one array for each spin
     J = (vector<int> *)calloc(N, sizeof(vector<int>));     // one array for each spin
     deg = (int *)calloc(N, sizeof(int));
-    numPosJ = (int)(fracPosJ * n_int);
 
     /*START of graph acquisition*/
     fileName = sourceFolder + "graph.txt";
@@ -297,6 +296,194 @@ bool initializeLattice(string sourceFolder, vector<vector<vector<rInteraction>>>
         cout << "d= " << dimension << " has not been implemented" << endl;
         return false;
     }
+}
+
+
+bool initializeRealGraph(string &sourceFolder, vector<vector<vector<rInteraction>>> &GraphToReturn, int &N, vector<double> &randomFieldToReturn, int randomFieldType, int fieldStructureRealization, double signedVar)
+{
+    vector<vector<vector<rInteraction>>> Graph;
+    int n_int, i, j, k, site = 0, *deg, tempInt;
+    vector<double> *J;
+    vector<int>  *neigh;
+    std::string fileName;
+    FILE *file;
+
+    int p=2;
+
+    /*START of graph acquisition*/
+    fileName = sourceFolder + "graph.txt";
+    file = fopen(fileName.c_str(), "r");
+
+    if (file == NULL)
+    {
+        perror("Error opening the file");
+        std::cout << fileName.c_str() << std::endl;
+        return false;
+    }
+
+    if (fscanf(file, "%d", &N) != 1)
+    {
+        fprintf(stderr, "Error reading from the file1\n");
+        fclose(file);
+        return false;
+    }
+    if (fscanf(file, "%d", &n_int) != 1)
+    {
+        fprintf(stderr, "Error reading from the file1\n");
+        fclose(file);
+        return false;
+    }
+    neigh = (vector<int> *)calloc(N, sizeof(vector<int>)); // one array for each spin
+    J = (vector<double> *)calloc(N, sizeof(vector<double>));     // one array for each spin
+    deg = (int *)calloc(N, sizeof(int));
+
+    double temp;
+
+    int *interSites;
+    interSites = (int *)calloc(p, sizeof(int));
+    double coupl;
+
+    for (i = 0; i < N; i++)
+        deg[i] = 0;
+
+    for (i = 0; i < n_int; i++)
+    {
+        for (int j = 0; j < p; j++)
+            if (fscanf(file, "%d", &interSites[j]) != 1)
+            {
+                fprintf(stderr, "Error reading from the file4\n");
+                fclose(file);
+                return false;
+            }
+        if (fscanf(file, "%lf", &coupl) != 1)
+        {
+            fprintf(stderr, "Error reading from the file5\n");
+            fclose(file);
+            return false;
+        }
+        for (int j = 0; j < p; j++) // For each site in the p-plet
+        {
+            site = interSites[j];
+            for (k = 0; k < p; k++)
+                neigh[site].push_back(interSites[k]); // For each site, in the array neigh[site] we ll hav
+            J[site].push_back(coupl);                 // in the C s + topology position of the array I ll have the coupling
+            //  of the topology interaction of the s spin
+            deg[site]++;
+        }
+    }
+
+    fclose(file);
+
+    for (i = 0; i < N; i++)
+    {
+        vector<vector<rInteraction>> app;
+        vector<rInteraction> nn;
+        for (j = 0; j < p * deg[i]; j++)
+        {
+            if (neigh[i][j] != i)
+                nn.push_back(rInteraction(J[i][j / p], neigh[i][j]));
+        }
+        app.push_back(nn);
+
+        for (j = 0; j < p * deg[i]; j++)
+        {
+            nn.clear();
+            if (neigh[i][j] != i)
+            {
+                for (int k = 0; k < p * deg[neigh[i][j]]; k++)
+                {
+                    if (neigh[neigh[i][j]][k] != neigh[i][j] && neigh[neigh[i][j]][k] != i)
+                        nn.push_back(rInteraction(J[neigh[i][j]][k / p], neigh[neigh[i][j]][k]));
+                }
+                app.push_back(nn);
+            }
+        }
+        Graph.push_back(app);
+    }
+    // for (i = 0; i < N; i++){                        //Useful to check on degrees
+    // if (deg[i] != C && deg[i] != C-1)
+    // printf("Weird degrees situation at site %d, with deg = %d\n",i, deg[i]);}
+
+    GraphToReturn = Graph;
+
+    // inizializzazione del campo random
+    if (randomFieldType != 0)
+    {
+        sourceFolder += "randomFieldStructures/";
+        if (randomFieldType == 1)
+        {
+            sourceFolder += "stdBernoulli/";
+        }
+        else if (randomFieldType == 2)
+        {
+            sourceFolder += "stdGaussian/";
+        }
+        else
+        {
+            cout << "randomFieldType in input not implemented" << endl;
+        }
+        sourceFolder += "realization" + to_string(fieldStructureRealization) + "/";
+        string randomFieldFileName = sourceFolder + "field.txt";
+
+        int tempInt;
+        double temp;
+        vector<double> randomField(N);
+        FILE *file;
+        file = fopen(randomFieldFileName.c_str(), "r");
+        if (file == NULL)
+        {
+            perror("Error opening the file");
+            std::cout << randomFieldFileName.c_str() << std::endl;
+            return false;
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (fscanf(file, "%d", &tempInt) != 1)
+            {
+                fprintf(stderr, "Error reading from the file6\n");
+                fclose(file);
+                return false;
+            }
+        }
+
+        if (fscanf(file, "%lf", &temp) != 1)
+        {
+            fprintf(stderr, "Error reading from the file7\n");
+            fclose(file);
+            return false;
+        }
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (fscanf(file, "%d", &tempInt) != 1)
+            {
+                fprintf(stderr, "Error reading from the file8\n");
+                fclose(file);
+                return false;
+            }
+        }
+
+        for (int i = 0; i < N; i++)
+        {
+            if (fscanf(file, "%lf", &(randomField[i])) != 1)
+            {
+                fprintf(stderr, "Error reading from the file9\n");
+                fclose(file);
+                return false;
+            }
+            randomField[i] *= signedVar;
+        }
+
+
+
+        fclose(file);
+        randomFieldToReturn = randomField;
+    }
+    else
+        randomFieldToReturn.assign(N, 0);
+
+    return true;
 }
 
 #endif

@@ -13,11 +13,16 @@ sys.path.append('../')
 from MyBasePlots.multipleCurvesAndHist import multipleCurvesAndHist
 from MyBasePlots.hist import myHist
 from MyBasePlots.autocorrelation import autocorrelationWithExpDecayAndMu
+from moviepy.editor import VideoClip
+from moviepy.video.io.bindings import mplfig_to_npimage
+import networkx as nx
+
 
 simulationCode_version = None
-currentAnalysisVersion = 'singleRunAnalysisV0002new'
+currentAnalysisVersion = 'singleRunAnalysisV0003'
 fieldTypesDict = {'1': "Bernoulli", '2': "Gaussian"}
 nMaxTrajsToPlot = 5
+nMeasuresToDoBootstrap=5
 
 def meanAndSigmaForParametricPlot(toBecomeX, toBecomeY):
     x_unique_values = np.unique(toBecomeX)
@@ -73,7 +78,39 @@ def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.5, onlyEnd=False):
         return terminalParameters, [best_segment[3], best_segment[4]], np.sqrt(pcov[0,0]), [best_segment[1], best_segment[2]], best_Chi, linear
     else:
         return None
+
+nameOfFoldersContainingGraphs = ["fPosJ","LH10","ZKC"
+                               ]
+def findFoldersWithString(parent_dir, target_strings):
+    result = []
+    # Funzione ricorsiva per cercare le cartelle
+    def search_in_subfolders(directory, livello=1):
+        if livello > 10:
+            return
+        for root, dirs, _ in os.walk(directory):
+            rightLevelReached=False
+            for dir_name in dirs:
+                full_path = os.path.join(root, dir_name)
+                # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
+                if any(folder in dir_name for folder in nameOfFoldersContainingGraphs):
+                    # Cerca le cartelle che contengono "_run" nel loro nome
+                    rightLevelReached=True
+                    for subdir in os.listdir(full_path):
+                        if all(string in os.path.join(full_path, subdir) for string in target_strings):
+                            result.append(os.path.join(full_path, subdir))
+                
+            if rightLevelReached:
+                return  # Evita di cercare ancora più in profondità
+                
+            # Se non troviamo "stdMCs" o "PathsMCs", passiamo al livello successivo
+            for dir_name in dirs:
+                search_in_subfolders(os.path.join(root, dir_name), livello+1)
+            break  # Si processa solo il primo livello di cartelle per evitare ricorsione non necessaria
     
+    # Inizia la ricerca dalla directory di base
+    search_in_subfolders(parent_dir)
+    return result
+
 def provaEmailExp(x, y, yerr, threshold_chi_square=10.):
 
     par_values = []
@@ -658,6 +695,92 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         fig.savefig(filename, bbox_inches='tight')
     plt.close('all')
     #ANALYSIS OF LOG: END
+    
+    
+    confsFolder=os.path.join(run_Path, 'conf')
+    if not os.path.exists(confsFolder):
+        return
+    graphFile_path= findFoldersWithString('../../Data', [f'{graphID}'])
+    if len(graphFile_path)!=0:
+        graphFile_path = graphFile_path[0]
+        graphFile_path=os.path.join(graphFile_path,'graph.txt')
+        print(graphFile_path)
+    else:
+        print("AO")
+    print(graphFile_path, graphID)
+    G = nx.Graph()
+    G.add_nodes_from(np.arange(0, N))
+    with open(graphFile_path, 'r') as file:
+        #print("analizzando ", nome_file)
+        lines = file.readlines()
+        firstLineData =np.genfromtxt(lines[0].split(), delimiter=' ')
+        lines = lines[1:]
+        dataLines = filter(lambda x: not x.startswith('#'), lines)
+        data = np.genfromtxt(dataLines, delimiter=' ')
+        for i in range(np.shape(data)[0]):
+            color='blue'
+            if data[i,2]<0.:
+                color='red'
+            G.add_edge(*data[i,0:2], color=color, width=data[i,2])
+            
+    pos = nx.spring_layout(G)
+    theseFiguresFolder= os.path.join(plotsFolder, "someTrajsVideo")
+    if not os.path.exists(theseFiguresFolder):
+        os.makedirs(theseFiguresFolder)
+    else:
+        delete_files_in_folder(theseFiguresFolder)
+        
+    for tj in [0,25000,50000]:
+        confs0=os.path.join(confsFolder, f'mc{tj}')
+        node_colors_over_time = {}
+        with open(confs0, 'r') as file:
+            #print("analizzando ", nome_file)
+            lines = file.readlines()
+            dataLines = filter(lambda x: not x.startswith('#'), lines)
+            data = np.genfromtxt(dataLines, delimiter=' ')
+            for i in range(np.shape(data)[0]):
+                key=data[i,0]
+                colors=['red' if n > 0 else 'blue' for n in data[i, 1:]]
+                node_colors_over_time[key]=colors
+            if T not in node_colors_over_time:
+                node_colors_over_time[T]=colors
+        times = sorted(node_colors_over_time.keys())
+
+        # Funzione per trovare i colori in base al tempo
+        def get_node_colors(t):
+            # Usa i colori del tempo precedente rispetto al valore di t
+            for i in range(len(times) - 1, -1, -1):
+                if t >= times[i]:
+                    return node_colors_over_time[times[i]]
+            return node_colors_over_time[times[0]]
+
+        # Funzione per creare i frame
+        def make_frame(t):
+            fig, ax = plt.subplots(figsize=(8, 6))
+            ax.clear()
+
+            # Colori attuali dei nodi
+            node_colors = get_node_colors(t)
+
+            edge_widths = nx.get_edge_attributes(G, "width")
+            widths = [edge_widths[edge] if edge in edge_widths else 1.0 for edge in G.edges()]
+            # Mostra il tempo corrente in una posizione sicura
+            # Disegna il grafo
+            nx.draw(G, pos, ax=ax, with_labels=True, 
+                    node_color=node_colors, edge_color="black", width=widths)
+            ax.text(0.02, 1.02, f"traj{tj} Time: {t:.2f}", transform=ax.transAxes,
+                    fontsize=12, color="black", verticalalignment="bottom", horizontalalignment="left")
+            
+            return mplfig_to_npimage(fig)
+
+        # Creazione del video
+        duration = max(times)  # Durata del video (tempo massimo + margine)
+        fps = 10  # Frame al secondo (aggiornamento fluido del tempo)
+
+        animation = VideoClip(make_frame, duration=duration)
+
+        videoPath= os.path.join(theseFiguresFolder, f"tj{tj}.mp4")
+        animation.write_videofile(videoPath, fps=fps)
 
     #ANALYSIS OF TI FILES: START
     results['TI'] ={'beta':[], 'hout':[], 'Qstar':[]}
@@ -690,6 +813,11 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             previousContribution[0]=0
             singleUs = cumulativeUs*measuresCounter-previousContribution
             measuresCounter = np.arange(1, len(mcTimes)+1)
+            nMeasuresToDoBootstrap2=np.min([nMeasuresToDoBootstrap, len(singleUs)])
+            chunk_size = len(singleUs) // nMeasuresToDoBootstrap
+            means = [np.mean(np.random.choice(singleUs, size=chunk_size, replace=True)) 
+                    for _ in range(nMeasuresToDoBootstrap2)]
+            results['TI']['betaForBS'] = means
 
             measuresCounter*=mcPrint
             measuresCounter+=mcEq
@@ -1138,6 +1266,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         someTrajs = np.append(someTrajs, np.asarray([nTrajs-2]))
         someTrajs = np.sort(np.append(someTrajs, np.random.choice(np.arange(1, nTrajs-2), nRandomTrajs-1, replace=False)))
     
+    someTrajs_MC=[tj*mcPrint for tj in someTrajs]
     titleSpecification = 'considering some sampled trajectories'
     
     figure, mainPlot = multipleCurvesAndHist('energy', r'Energy vs time'+'\n'+ titleSpecification,
@@ -1220,6 +1349,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     #ANALYSIS OF SAMPLED TRAJS: END 
     
     #ANALYSIS OF AV: START 
+
+    
     theseFiguresFolder= os.path.join(plotsFolder, 'averagedData')
     titleSpecification = 'averaged over measured trajs'
     if not os.path.exists(theseFiguresFolder):
@@ -1452,6 +1583,10 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
 
     simData['results']=results
     writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
+    
+
+    
+    
 
 def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
     print('It is a MC over configurations to do thermodynamic integration.')

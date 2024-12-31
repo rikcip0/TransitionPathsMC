@@ -763,26 +763,27 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     print("Errore, piu di un grafo trovato")
                                     print(whereToFindBetaCs)
                                     return None
-                                whereToFindBetaCs = whereToFindBetaCs[0]
-                                #print(sim_fieldType)
-                                if sim_fieldType != "noField":
-                                    print("C è campo")
-                                    whereToFindBetaCs = os.path.join(whereToFindBetaCs, 'randomFieldStructures',
-                                                                    fieldTypePathDictionary[sim_fieldType])
-                                    whereToFindBetaCs = os.path.join(whereToFindBetaCs, f'realization{sim_fieldRealization}')
+                                betaL="unknown"
+                                betaG="unknown"
+                                if len(whereToFindBetaCs)!=0:
+                                    whereToFindBetaCs = whereToFindBetaCs[0]
+                                    #print(sim_fieldType)
+                                    if sim_fieldType != "noField":
+                                        print("C è campo")
+                                        whereToFindBetaCs = os.path.join(whereToFindBetaCs, 'randomFieldStructures',
+                                                                        fieldTypePathDictionary[sim_fieldType])
+                                        whereToFindBetaCs = os.path.join(whereToFindBetaCs, f'realization{sim_fieldRealization}')
 
-                                whereToFindBetaCs= os.path.join(whereToFindBetaCs,'graphAnalysis/graphData.json')
-                                if os.path.exists(whereToFindBetaCs):
-                                    print("entro")
-                                    with open(whereToFindBetaCs, 'r') as file:
-                                        graphData = json.load(file)
-                                        betaL=graphData['beta_c']['localApproach']
-                                        betaG=graphData['beta_c']['globalApproach']
+                                    whereToFindBetaCs= os.path.join(whereToFindBetaCs,'graphAnalysis/graphData.json')
+                                    if os.path.exists(whereToFindBetaCs):
+                                        print("entro")
+                                        with open(whereToFindBetaCs, 'r') as file:
+                                            graphData = json.load(file)
+                                            betaL=graphData['beta_c']['localApproach']
+                                            betaG=graphData['beta_c']['globalApproach']
 
                                 else:
                                     print("Info su beta di ", whereToFindBetaCs," non disponibili.")
-                                    betaL="unknown"
-                                    betaG="unknown"
                                 
                                 os.makedirs(TIPlotsFolder, exist_ok=True)
                                 
@@ -983,6 +984,75 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 TDFieldType, TDFieldReali, TDFieldSigma, TDHext,
                 TDHout, TDHin, TDnQstar, TDBetaM, TDBetaG, TDBetaL, TDZmax)   
                             
+                   
+                   
+    def myTDStudy( x, xName, subfolderingVariable, subfolderingVariableNames, markerShapeVariables, markerShapeVariablesNames, arrayForColorCoordinate, colorMapSpecifier):
+        
+        thisStudyFolder= os.path.join(analysis_path, "TDStudy")
+
+        if not os.path.exists(thisStudyFolder):
+            os.makedirs(thisStudyFolder, exist_ok=True)
+        else:
+            delete_files_in_folder(thisStudyFolder)
+        
+        for v in np.unique(subfolderingVariable, axis=0):
+            subFolderingFilter = []
+            print(v)
+            if subfolderingVariable.ndim==1:
+                subFolderingFilter = (subfolderingVariable==v)
+                if np.isnan(v) or v=='nan':
+                    continue
+            else: 
+                subFolderingFilter= np.all(subfolderingVariable == v, axis=1)
+                if any(x=='nan' for x in v):
+                    print(f"Salto il ciclo esterno a causa di {v}")
+                    continue 
+            print("Siamo andati oltre", v)
+            #filt = np.logical_and.reduce([filter,
+            #                            subFolderingFilter
+            #                            ])
+            filt=subFolderingFilter
+            if len(np.unique(x[filt]))<2:
+                continue
+
+            theseFiguresFolder = os.path.join(
+                thisStudyFolder, 
+                "{}_{}".format(
+                    ''.join([name.replace('\\', '').replace('$', '').capitalize() for name in subfolderingVariableNames]),
+                    '_'.join([str(item) for item in v])
+                )
+            )
+
+            specificationLine = "at "+ ', '.join([f"{k}={v}" for k, v in zip(subfolderingVariableNames, v)]).replace('star', '*')
+            if not os.path.exists(theseFiguresFolder):
+                os.makedirs(theseFiguresFolder, exist_ok=True)
+            else:
+                delete_files_in_folder(theseFiguresFolder)
+                
+            mainPlot, _ = plotWithDifferentColorbars(f"betaG", x[filt], xName, TDBetaG[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+                        TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
+                        arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                        nGraphs=len(np.unique(TDGraphId[filt])))
+            mainPlot, _ = plotWithDifferentColorbars(f"betaL", x[filt], xName, TDBetaL[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+                        TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
+                        arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                        nGraphs=len(np.unique(TDGraphId[filt])))
+            mainPlot, _ = plotWithDifferentColorbars(f"betaMOvL", x[filt], xName, (TDBetaM/TDBetaL)[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+                        TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
+                        arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                        nGraphs=len(np.unique(TDGraphId[filt])))
+            mainPlot, _ = plotWithDifferentColorbars(f"betaMOvG", x[filt], xName, (TDBetaM/TDBetaG)[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+                        TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
+                        arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                        nGraphs=len(np.unique(TDGraphId[filt])))
+            mainPlot, _ = plotWithDifferentColorbars(f"betaM", x[filt], xName, TDBetaM[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+                        TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
+                        arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                        nGraphs=len(np.unique(TDGraphId[filt])))
+            mainPlot, _ = plotWithDifferentColorbars(f"Zmax", x[filt], xName, TDZmax[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+                        TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
+                        arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                        nGraphs=len(np.unique(TDGraphId[filt])))
                                                         
     def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableNames, markerShapeVariables, markerShapeVariablesNames, arrayForColorCoordinate=refConfMutualQ, colorMapSpecifier=betaOfExtraction):
         
@@ -1028,6 +1098,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 delete_files_in_folder(theseFiguresFolder)
 
             additional= []
+            
             tempFilt=filt
             if r"$\beta$" in xName:  #da riscalare nel caso /beta_max
                 stMC_corrBetaAndQif = np.empty((len(stMC_beta), 2), dtype=object)
@@ -1406,7 +1477,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     for runGroupFilter, runGroupName in selectedRunGroups_FiltersAndNames:
         
         analysis_path = os.path.join(parentAnalysis_path, runGroupName)
-        runGroupFilter=np.logical_and.reduce([runGroupFilter, normalizedQstar==0.6])
+        runGroupFilter=np.logical_and.reduce([runGroupFilter])
         analyticalData_path = "data.txt"
         analyBet= None
         analyBarr= None
@@ -1471,18 +1542,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         TDFieldType, TDFieldReali, TDFieldSigma, TDHext,
         TDHout, TDHin, TDnQstar, TDBetaM, TDBetaG, TDBetaL, TDZmax) = thermodynamicIntegration(runGroupFilter, analysis_path)
         theseFiguresFolder= analysis_path
-        plt.figure("betaM")
-        plt.plot(TDN, TDBetaM)
-        plt.figure("betaG")
-        plt.plot(TDN, TDBetaG)
-        plt.figure("betaL")
-        plt.plot(TDN, TDBetaL)
-        plt.figure("betaMsuG")
-        plt.plot(TDN, TDBetaM/TDBetaG)
-        plt.figure("betaMsuL")
-        plt.plot(TDN, TDBetaM/TDBetaL)
-        plt.figure("betaGsuL")
-        plt.plot(TDN, TDBetaG/TDBetaL)
+        myTDStudy(TDN, "N", np.asarray(list(zip(TDnQstar, TDFieldType, TDFieldSigma))),
+                            ["Qstar", "fieldType", r"$\sigma$"],
+                            np.array(list(zip( TDGraphId, TDT))),
+                            [r"graphID","T"],
+                            colorMapSpecifier=TDN,
+                            arrayForColorCoordinate=TDT
+                            )
         
         figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
         for fig_name in figs:

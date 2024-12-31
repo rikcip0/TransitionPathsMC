@@ -45,7 +45,7 @@ def findFoldersWithString(parent_dir, target_strings):
     return result
 
 if len(sys.argv) != 1:
-    analysisVsSimTypesDict = {"all":"any","ER":"ER", "RRG":"RRG"}
+    analysisVsSimTypesDict = {"all":"any","ER":"ER", "RRG":"RRG", "realGraphs":"realGraphs"}
     
     requestedAnalysis = sys.argv[1]
     additional_strings= sys.argv[2:]

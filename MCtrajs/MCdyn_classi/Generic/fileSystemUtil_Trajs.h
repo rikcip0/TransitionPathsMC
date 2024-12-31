@@ -358,10 +358,12 @@ bool getGraphFromGraphID(string &folderPathToFind, int graphID, int p = 0, int C
 */
 // implementazione in corso::FINE
 
-bool getGraphFromGraphAndStructureID_ForCluster(int type, string &folderPathToFind, int structureID, int graphID, int p, int C, int N, double f)
+bool getGraphFromGraphAndStructureID_ForCluster(int type, string &folderPathToFind, int structureID, string graphID, int p, int C, int N, double f)
 {
   vector<string> compatibleFilePaths;
   string toSearch;
+
+
   if (type < 0)
   {
     if (type == -3)
@@ -370,17 +372,22 @@ bool getGraphFromGraphAndStructureID_ForCluster(int type, string &folderPathToFi
       toSearch = "../Data/Graphs/ER";
     else if (type == -1)
       toSearch = "../Data/Graphs/RRG";
-    folderPathToFind = toSearch + "/p" + to_string(p) + "C" + to_string(C) + "/N" + to_string(N) + "/structure" + to_string(structureID) + "/fPosJ" + to_string(f).substr(0, 4) + "/graph" + to_string(graphID);
+   folderPathToFind = toSearch + "/p" + to_string(p) + "C" + to_string(C) + "/N" + to_string(N) + "/structure" + to_string(structureID) + "/fPosJ" + to_string(f).substr(0, 4) + "/graph" + graphID;
+  }
+  else if (type == 0)
+  {
+    toSearch = "../Data/Graphs/realGraphs";
+    folderPathToFind = toSearch + "/" + graphID;
   }
   else if (type == 1)
   {
     toSearch = "../Data/Graphs/1dChain";
-    folderPathToFind = toSearch + "/N" + to_string(N) + "/fPosJ" + to_string(f).substr(0, 4) + "/graph" + to_string(graphID);
+    folderPathToFind = toSearch + "/N" + to_string(N) + "/fPosJ" + to_string(f).substr(0, 4) + "/graph" + graphID;
   }
   else
   {
     toSearch = "../Data/Graphs/SqLatt/" + to_string(type) + "d";
-    folderPathToFind = toSearch + "/N" + to_string(N) + "/fPosJ" + to_string(f).substr(0, 4) + "/graph" + to_string(graphID);
+    folderPathToFind = toSearch + "/N" + to_string(N) + "/fPosJ" + to_string(f).substr(0, 4) + "/graph" + graphID;
   }
 
   return true;

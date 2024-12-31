@@ -15,7 +15,7 @@ using namespace std;
 #define INITIALIZETRAJS
 
 #define startingBeta 0.2
-#define deltaBeta 0.01
+#define deltaBetaStd 0.01
 #define sweepsPerBeta 100
 
 bool initializeTrajectoriesFromRefConfs(int N, double T, vector<straj> &trajsToInitialize, pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, bool swapConfs = false)
@@ -93,10 +93,24 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
     s2 = refConfs.second;
 
     int Qfin = compute_Q_fin(&Strajs, s1, s2)[1]; // It should be N..., but why not to check!?
+    double betaToStart = startingBeta;
+    double deltaBeta=deltaBetaStd;
+    if (betaToStart > beta / 1.5)
+    {
+        betaToStart=beta/1.5;
+        betaToStart=std::round(betaToStart / deltaBeta) * deltaBeta;
+    }
+    double annealingBeta = betaToStart;
+    int MCAtBetaStart = MCeq / 1000;
+    if (MCAtBetaStart == 0)
+    {
 
-    double annealingBeta = startingBeta;
-    int MCAtBetaStart = 100;
-    int MCToArrive = 5000;
+        MCAtBetaStart = 1;
+    }
+    if ((beta-betaToStart)/deltaBeta<10.){
+        deltaBeta/=10.;
+    }
+    int MCToArrive = MCeq / 20;
     double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - startingBeta));
     double MCAtBetaAnn = MCAtBetaStart;
 
@@ -119,7 +133,7 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
     }
 
     trajsToInitialize = Strajs;
-    details.second += to_string(initTrajCCode) + " " + to_string(startingBeta) + " " + to_string(MCAtBetaStart) + " " + to_string(MCToArrive) + " " + to_string(deltaBeta) + "\n";
+    details.second += to_string(initTrajCCode) + " " + to_string(betaToStart) + " " + to_string(MCAtBetaStart) + " " + to_string(MCToArrive) + " " + to_string(deltaBeta) + "\n";
     return true;
 }
 
@@ -157,9 +171,21 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
 
     int Qfin = compute_Q_fin(&Strajs, s1, s2)[1]; // It should be N..., but why not to check!?
 
-    double annealingBeta = startingBeta;
-    int MCAtBetaStart = 100;
-    int MCToArrive = 5000;
+    double betaToStart = startingBeta;
+    double deltaBeta=deltaBetaStd;
+    if (betaToStart > beta / 1.5)
+    {
+        betaToStart=beta/1.5;
+        betaToStart=std::round(betaToStart / deltaBeta) * deltaBeta;
+    }
+    double annealingBeta = betaToStart;
+    int MCAtBetaStart = MCeq / 1000;
+    if (MCAtBetaStart == 0)
+        MCAtBetaStart = 1;
+    if ((beta-betaToStart)/deltaBeta<10.){
+        deltaBeta/=10.;
+    }
+    int MCToArrive = MCeq / 20;
     double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - startingBeta));
     double MCAtBetaAnn = MCAtBetaStart;
 
@@ -182,7 +208,7 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
     }
 
     trajsToInitialize = Strajs;
-    details.second += to_string(initTrajCCode) + " " + to_string(startingBeta) + " " + to_string(MCAtBetaStart) + " " + to_string(MCToArrive) + " " + to_string(deltaBeta) + "\n";
+    details.second += to_string(initTrajCCode) + " " + to_string(betaToStart) + " " + to_string(MCAtBetaStart) + " " + to_string(MCToArrive) + " " + to_string(deltaBeta) + "\n";
     return true;
 }
 

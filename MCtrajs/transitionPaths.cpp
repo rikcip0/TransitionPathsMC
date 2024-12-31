@@ -22,8 +22,8 @@
 #elif defined(INITANNEALING)
 #define initTrajJCode 90
 #ifndef SWAPPED
-//define initTrajCCode 74 //to make annealing without End fixed
-#define initTrajCCode 740 //to make annealing with End fixed (as if Q*=N during annealing)
+// define initTrajCCode 74 //to make annealing without End fixed
+#define initTrajCCode 740 // to make annealing with End fixed (as if Q*=N during annealing)
 #define swapConfig false
 #else
 #define initTrajCCode 75
@@ -39,7 +39,10 @@
 #define swapConfig true
 #endif
 #endif
-
+#define MCeq 25000
+#define MCprint 25000
+#define MCconf 25000
+#define mcForIntegratedMeasuring 2500
 #include "../Generic/random.h"
 
 #include "MCdyn_classi/Generic/fileSystemUtil_Trajs.h"
@@ -59,20 +62,17 @@
 
 #define MC 1000000000
 
-//#ifdef INITANNEALING
-//#define MCeq 40000
-//#else
-#define MCeq 100000
-//#endif
+// #ifdef INITANNEALING
+// #define MCeq 40000
+// #else
+
+// #endif
 
 #define MCmeas 4
-#define MCprint 50000
 #define NpPerN 8
 
-#define printconf false
-#define MCconf 100000
+#define printconf true
 
-#define mcForIntegratedMeasuring 10000
 #define averagingMCForIntegratedMeasuring 1
 #define nPointsForDistanceFromStfwdPathComputation 50
 
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 
   // START of input management
 
-  if ((argc < 2) || (atoi(argv[1]) == 0) || atoi(argv[1]) < -2 || (argc != 13 && argc != 15 && argc != 16 && argc != 18))
+  if (atoi(argv[1]) < -2 || (argc != 13 && argc != 15 && argc != 16 && argc != 18))
   {
     cout << "Probable desired usage: ";
     cout << "d(-2:ER -1:RRG k>0:k-dim sqLatt) N T beta Hext hin hout Q*(if -1 is self-computed) \nC structureID fracPosJ graphID (requiredBetaOfSExtraction requiredQif)[if not present, FM(all +) conf.is considered]\n (randomFieldType(1: Bernoulli, 2:Gaussian), realization, sigma)" << endl;
@@ -110,13 +110,13 @@ int main(int argc, char **argv)
   }
 
   int Qstar = atoi(argv[8]);
-/*
-  if ((abs(Qstar) % 2 != N % 2 || abs(Qstar) > N) && Qstar != -1)
-  {
-    cout << "Q* value is not allowed!" << endl;
-    exit(1);
-  }
-*/  
+  /*
+    if ((abs(Qstar) % 2 != N % 2 || abs(Qstar) > N) && Qstar != -1)
+    {
+      cout << "Q* value is not allowed!" << endl;
+      exit(1);
+    }
+  */
 
   int C = 0;
   int structureID = -1;
@@ -125,13 +125,13 @@ int main(int argc, char **argv)
     C = atoi(argv[9]);
     structureID = atoi(argv[10]);
   }
-  else
+  else if (d > 0)
   {
     C = 2 * d;
   }
 
   double fracPosJ = atof(argv[11]);
-  int graphID = atoi(argv[12]);
+  string graphID = argv[12];
 
   vector<vector<vector<rInteraction>>> Graph;
 
@@ -146,20 +146,27 @@ int main(int argc, char **argv)
   int randomFieldType = 0, fieldStructureRealization = 0;
   double sigma = 1.;
 
-  vector<double> randomField(N);
+  vector<double> randomField;
   if (argc == 16 || argc == 18)
   {
     randomFieldType = atoi(argv[argc - 3]);
     fieldStructureRealization = atoi(argv[argc - 2]);
     sigma = atof(argv[argc - 1]);
   }
-  else
-    randomField.assign(N, 0.);
-
-  if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, sigma))
-  {
-    cout << "Error in the graph initialization" << endl;
-    return 1;
+  cout<<folder;
+  if (d != 0){
+    if (!initializeGraph(folder, Graph, p, C, N, fracPosJ, randomField, randomFieldType, fieldStructureRealization, sigma))
+    {
+      cout << "Error in the graph initialization" << endl;
+      return 1;
+    }
+  }
+  if (d == 0){
+    if (!initializeRealGraph(folder, Graph, N, randomField, randomFieldType, fieldStructureRealization, sigma))
+    {
+      cout << "Error in the graph initialization" << endl;
+      return 1;
+    }
   }
 
   string graphType;
@@ -244,7 +251,7 @@ int main(int argc, char **argv)
     if (!
 #ifndef QUENCHCONFS
         initializeReferenceConfigurationsFromParTemp_FirstOccurrence(folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
-        //initializeReferenceConfigurationsFromParTemp_Typical(folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
+    // initializeReferenceConfigurationsFromParTemp_Typical(folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
 #else
         initializeReferenceConfigurationsSeqQuenchingFromParTemp(Graph, folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
 #endif
@@ -351,7 +358,7 @@ int main(int argc, char **argv)
     info.second += "21 ";
   }
   info.second += to_string(N) + " " + to_string((int)p) + " " + to_string(C);
-  info.second += " " + to_string(graphID) + " " + to_string(T) + " " + to_string(beta);
+  info.second += " " + graphID + " " + to_string(T) + " " + to_string(beta);
   if (!extremesFixed)
     info.second += " " + to_string(hin) + " " + to_string(Qstar) + " " + to_string(hout);
   else
@@ -389,7 +396,12 @@ int main(int argc, char **argv)
   vector<vector<double>> risQ(3, vector<double>(Np, 0.));
   vector<double> chiQ(Np, 0);
 
-  vector<int> mileStones = {mutualQ, 0, (int)((Qstar+1) / 2), Qstar};
+  for(int i=0;i<N;i++){
+    cout<<i<<" "<<endl;
+    for(int j=0;j<Graph[i][0].size();j++)
+      cout<<Graph[i][0][j].interS[0]<<" "<<Graph[i][0][j].J<<endl;
+  }
+  vector<int> mileStones = {mutualQ, 0, (int)((Qstar + 1) / 2), Qstar};
   pair<vector<vector<long int>>, vector<vector<long int>>> fracOfTrajsInCone;
   fracOfTrajsInCone.first = vector<vector<long int>>(mileStones.size(), vector<long int>(Np, 0));
   fracOfTrajsInCone.second = vector<vector<long int>>(mileStones.size(), vector<long int>(Np, 0));
@@ -447,7 +459,7 @@ int main(int argc, char **argv)
       }
     }
     // print on file
-    if ((mc % MCprint == 0) && ((mc==0)||(mc >= MCeq)))
+    if ((mc % MCprint == 0) && ((mc == 0) || (mc >= MCeq)))
     {
       vector<double> j = count_jumps(&Strajs);
       vector<double> risH = compute_H_av(&Strajs, &Graph, Np, T, Hext, randomField);
@@ -517,7 +529,10 @@ int main(int argc, char **argv)
     }
     if (printconf && (mc % MCconf == 0))
     {
-      nomefile = folder + "conf_." + to_string(mc);
+      if(mc==0){
+        createFolder(folder+ "/conf");
+      }
+      nomefile = folder + "/conf/mc" + to_string(mc);
       print_conf(&Strajs, T, nomefile);
     }
 
@@ -536,8 +551,9 @@ int main(int argc, char **argv)
         ther_qDistFromStFw = 0.;
       }
 
-      double meanEner = 0., maxEner = -C * N;
+      double meanEner = 0., maxEner = 0.;
       vector<double> risH = compute_H_av(&Strajs, &Graph, Np, T, Hext, randomField);
+      maxEner = risH[0];
       for (int i = 0; i < Np; i++)
       {
         meanEner += risH[i];
