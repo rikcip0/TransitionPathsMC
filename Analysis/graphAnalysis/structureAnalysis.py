@@ -7,7 +7,7 @@ from singleStructureAnalysis import singleStructureAnalysis
 from singleGraphFieldAnalysis import singleGraphFieldAnalysis
 
 nameOfFoldersContainingRequested=None
-nameOfFoldersContainingGraphs = ["fPosJ", "LH10"
+nameOfFoldersContainingGraphs = ["fPosJ"
                                ]
 nameOfFoldersContainingGraphFields = ["stdGaussian","stdBernoulli",
                                ]
@@ -75,7 +75,7 @@ if len(sys.argv) > 1:
             analysisToDo=singleGraphFieldAnalysis
         elif s=="graphs":
             nameOfFoldersContainingRequested=nameOfFoldersContainingGraphs
-            stringToFind="wg"
+            stringToFind="graph"
             analysisToDo=singleStructureAnalysis
 
         selected_runs = findFoldersWithString(archive_path, [stringToFind, *additional_strings])

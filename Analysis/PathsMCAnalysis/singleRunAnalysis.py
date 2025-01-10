@@ -79,7 +79,7 @@ def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.5, onlyEnd=False):
     else:
         return None
 
-nameOfFoldersContainingGraphs = ["fPosJ","LH10","ZKC"
+nameOfFoldersContainingGraphs = ["fPosJ"
                                ]
 def findFoldersWithString(parent_dir, target_strings):
     result = []
@@ -491,7 +491,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     graphInfoKeys = [ 'graphID', 'fPosJ', 'p', 'C', 'd']
     fieldInfoKeys = ['fieldMean', 'fieldSigma']
     parametersInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('-','',1).replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter not in graphInfoKeys+otherInfoKeys+fieldInfoKeys])
-    graphInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in graphInfoKeys])
+    graphInfo_Line = ' '.join([str(parameter) + '=' + str(int(value) if value.isdigit() else float(value) if value.replace('.', '', 1).isdigit() else value) for parameter, value in simData['configuration']['parameters'].items() if parameter in graphInfoKeys and(parameter!='C' or ((int)(value))!=0)])
     
     
     M_RedLine=None
@@ -621,6 +621,26 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
         fig.text(leftmost, vertical_position, settingInfo_Line, fontsize=7, ha='left', va='center', transform=fig.transFigure)
         fig.text(rightmost, vertical_position, initInfo_Line, fontsize=7, ha='right', va='center', transform=fig.transFigure)
     
+    def addInfoLinesForVideo(whereToAddLines):
+        # Get the figure object
+        fig = whereToAddLines
+
+        # Get all the axes in the figure
+        axes = fig.get_axes()
+        # Find the leftmost and rightmost positions of all axes
+        leftmost = min(ax.get_position().x0 for ax in axes)  # Left boundary of the main plot
+        rightmost = max(ax.get_position().x1 for ax in axes)  # Right boundary of the last subplot (histogram)
+
+        # Find the bottom of the axes (to avoid overlap with x-axis labels)
+        lowest_position = min(ax.get_position().y0 for ax in axes)
+        
+        # Adjust the vertical position to be slightly below the x-axis labels
+        vertical_position = lowest_position - 0.145  # Adjust this value to control the distance
+
+        # Add text at the bottom of the combined plot, spanning from leftmost to rightmost
+        fig.text(leftmost, vertical_position, settingInfo_Line, fontsize=7, ha='left', va='center', transform=fig.transFigure)
+        fig.text(rightmost, vertical_position, initInfo_Line, fontsize=7, ha='right', va='center', transform=fig.transFigure)
+    
 
     simData['analysisVersion'] = currentAnalysisVersion
     results = {}
@@ -698,89 +718,110 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     
     
     confsFolder=os.path.join(run_Path, 'conf')
-    if not os.path.exists(confsFolder):
-        return
-    graphFile_path= findFoldersWithString('../../Data', [f'{graphID}'])
-    if len(graphFile_path)!=0:
-        graphFile_path = graphFile_path[0]
-        graphFile_path=os.path.join(graphFile_path,'graph.txt')
-        print(graphFile_path)
-    else:
-        print("AO")
-    print(graphFile_path, graphID)
-    G = nx.Graph()
-    G.add_nodes_from(np.arange(0, N))
-    with open(graphFile_path, 'r') as file:
-        #print("analizzando ", nome_file)
-        lines = file.readlines()
-        firstLineData =np.genfromtxt(lines[0].split(), delimiter=' ')
-        lines = lines[1:]
-        dataLines = filter(lambda x: not x.startswith('#'), lines)
-        data = np.genfromtxt(dataLines, delimiter=' ')
-        for i in range(np.shape(data)[0]):
-            color='blue'
-            if data[i,2]<0.:
-                color='red'
-            G.add_edge(*data[i,0:2], color=color, width=data[i,2])
+    if os.path.exists(confsFolder) and bool(os.listdir(confsFolder)) and False:
             
-    pos = nx.spring_layout(G)
-    theseFiguresFolder= os.path.join(plotsFolder, "someTrajsVideo")
-    if not os.path.exists(theseFiguresFolder):
-        os.makedirs(theseFiguresFolder)
-    else:
-        delete_files_in_folder(theseFiguresFolder)
-        
-    for tj in [0,25000,50000]:
-        confs0=os.path.join(confsFolder, f'mc{tj}')
-        node_colors_over_time = {}
-        with open(confs0, 'r') as file:
+        graphFile_path= findFoldersWithString('../../Data/Graphs', [f'{graphID}'])
+        print(graphFile_path)
+        if len(graphFile_path)!=0:
+            graphFile_path = graphFile_path[0]
+            graphFile_path=os.path.join(graphFile_path,'graph.txt')
+            print(graphFile_path)
+        else:
+            print("AO")
+        print(graphFile_path, graphID)
+        G = nx.Graph()
+        G.add_nodes_from(np.arange(0, N))
+        with open(graphFile_path, 'r') as file:
             #print("analizzando ", nome_file)
             lines = file.readlines()
+            firstLineData =np.genfromtxt(lines[0].split(), delimiter=' ')
+            lines = lines[1:]
             dataLines = filter(lambda x: not x.startswith('#'), lines)
             data = np.genfromtxt(dataLines, delimiter=' ')
             for i in range(np.shape(data)[0]):
-                key=data[i,0]
-                colors=['red' if n > 0 else 'blue' for n in data[i, 1:]]
-                node_colors_over_time[key]=colors
-            if T not in node_colors_over_time:
-                node_colors_over_time[T]=colors
-        times = sorted(node_colors_over_time.keys())
-
-        # Funzione per trovare i colori in base al tempo
-        def get_node_colors(t):
-            # Usa i colori del tempo precedente rispetto al valore di t
-            for i in range(len(times) - 1, -1, -1):
-                if t >= times[i]:
-                    return node_colors_over_time[times[i]]
-            return node_colors_over_time[times[0]]
-
-        # Funzione per creare i frame
-        def make_frame(t):
-            fig, ax = plt.subplots(figsize=(8, 6))
-            ax.clear()
-
-            # Colori attuali dei nodi
-            node_colors = get_node_colors(t)
-
-            edge_widths = nx.get_edge_attributes(G, "width")
-            widths = [edge_widths[edge] if edge in edge_widths else 1.0 for edge in G.edges()]
-            # Mostra il tempo corrente in una posizione sicura
-            # Disegna il grafo
-            nx.draw(G, pos, ax=ax, with_labels=True, 
-                    node_color=node_colors, edge_color="black", width=widths)
-            ax.text(0.02, 1.02, f"traj{tj} Time: {t:.2f}", transform=ax.transAxes,
-                    fontsize=12, color="black", verticalalignment="bottom", horizontalalignment="left")
+                color='blue'
+                if data[i,2]<0.:
+                    color='red'
+                G.add_edge(*data[i,0:2], color=color, width=data[i,2])
+                
+        pos = nx.spring_layout(G)
+        theseFiguresFolder= os.path.join(plotsFolder, "someTrajsVideo")
+        if not os.path.exists(theseFiguresFolder):
+            os.makedirs(theseFiguresFolder)
+        else:
+            delete_files_in_folder(theseFiguresFolder)
             
-            return mplfig_to_npimage(fig)
+        for tj in [0,200000, 400000]:
+            confs0=os.path.join(confsFolder, f'mc{tj}')
+            node_colors_over_time = {}
+            if not os.path.exists(confs0):
+                continue
+            with open(confs0, 'r') as file:
+                #print("analizzando ", nome_file)
+                lines = file.readlines()
+                dataLines = filter(lambda x: not x.startswith('#'), lines)
+                data = np.genfromtxt(dataLines, delimiter=' ')
+                for i in range(np.shape(data)[0]):
+                    key=data[i,0]
+                    colors=['red' if n > 0 else 'blue' for n in data[i, 1:]]
+                    node_colors_over_time[key]=colors
+                if T not in node_colors_over_time:
+                    node_colors_over_time[T]=colors
+            times = sorted(node_colors_over_time.keys())
 
-        # Creazione del video
-        duration = max(times)  # Durata del video (tempo massimo + margine)
-        fps = 10  # Frame al secondo (aggiornamento fluido del tempo)
+            # Funzione per trovare i colori in base al tempo
+            def get_node_colors(t):
+                # Usa i colori del tempo precedente rispetto al valore di t
+                for i in range(len(times) - 1, -1, -1):
+                    if t >= times[i]:
+                        return node_colors_over_time[times[i]]
+                return node_colors_over_time[times[0]]
 
-        animation = VideoClip(make_frame, duration=duration)
+            def make_frame(t):
+                fig, (ax_main, ax_info) = plt.subplots(2, 1, gridspec_kw={'height_ratios': [9, 1]}, figsize=(8, 6))
 
-        videoPath= os.path.join(theseFiguresFolder, f"tj{tj}.mp4")
-        animation.write_videofile(videoPath, fps=fps)
+                # Rimuovi spazi extra tra i subplot
+                fig.subplots_adjust(hspace=0)
+
+                # Disegna il grafo sul primo subplot
+                ax_main.clear()
+                node_colors = get_node_colors(t)
+                edge_widths = nx.get_edge_attributes(G, "width")
+                widths = [edge_widths[edge] if edge in edge_widths else 1.0 for edge in G.edges()]
+                nx.draw(
+                    G, pos, ax=ax_main, with_labels=True,
+                    node_color=node_colors, edge_color="black", width=widths,
+                    node_size=60
+                )
+                ax_main.text(
+                    0.02, 1.02, f"traj{tj} Time: {t:.2f}",
+                    transform=ax_main.transAxes, fontsize=12, color="black",
+                    verticalalignment="bottom", horizontalalignment="left"
+                )
+
+                # Rimuovi gli assi dal subplot delle InfoLines
+                ax_info.axis('off')
+
+                # Aggiungi le InfoLines sul secondo subplot
+                ax_info.text(
+                    0.02, 0.5, settingInfo_Line, fontsize=7, ha='left', va='center', color='black'
+                )
+                ax_info.text(
+                    0.98, 0.5, initInfo_Line, fontsize=7, ha='right', va='center', color='black'
+                )
+
+                # Converti la figura in immagine
+                return mplfig_to_npimage(fig)
+
+            # Creazione del video
+            duration = max(times)  # Durata del video (tempo massimo + margine)
+            fps = 10  # Frame al secondo (aggiornamento fluido del tempo)
+
+            animation = VideoClip(make_frame, duration=duration)
+
+            videoPath= os.path.join(theseFiguresFolder, f"tj{tj}.mp4")
+            animation.write_videofile(videoPath, fps=fps)
+            plt.close('all')
 
     #ANALYSIS OF TI FILES: START
     results['TI'] ={'beta':[], 'hout':[], 'Qstar':[]}

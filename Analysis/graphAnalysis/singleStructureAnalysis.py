@@ -150,21 +150,21 @@ def singleStructureAnalysis( folder=""):
         lines = file.readlines()
         firstLineData =np.genfromtxt(lines[0].split(), delimiter=' ')
         
-        """
+        fPosJ=(float)(firstLineData[4])
         N=(int)(firstLineData[0])
+        """
         n_int=(int)(firstLineData[1])
         p=(int)(firstLineData[1])
         C=(int)(firstLineData[2])
-        fPosJ=(float)(firstLineData[4])
         n_PosInt=(int)(firstLineData[5])
         seed=(int)(firstLineData[6])
-        """
         N=33
+        """
         G.add_nodes_from(np.arange(0, N))
         lines = lines[1:]
         dataLines = filter(lambda x: not x.startswith('#'), lines)
         data = np.genfromtxt(dataLines, delimiter=' ')
-        print(data)
+
         for i in range(0,2,1):
             myList.append(data[:,i])
         minBondValue=np.nanmin(data[:,2])
@@ -176,7 +176,8 @@ def singleStructureAnalysis( folder=""):
             G.add_edge(*data[i,0:2], color=color, width=data[i,2])
             orientedEdges.append((tuple)(data[i,0:2]))
             orientedEdges.append((data[i,1], data[i,0]))
-            
+
+    print(N)
     colors = nx.get_edge_attributes(G,'color').values()
     widths = list(nx.get_edge_attributes(G,'width').values())
 
@@ -224,9 +225,7 @@ def singleStructureAnalysis( folder=""):
     x= [a for a in cycles_by_length.keys()]
     y= [cycles_by_length[a]['nCycles'] for a in cycles_by_length.keys()]
     plt.bar(x, y, color='skyblue', edgecolor='black')
-    print("minimum", np.min(x))
-    print("maximum", np.max(x))
-    print(cycles_Lengths)
+
     myHist("ciao","ciao", cycles_Lengths, "a", nbins=1+np.nanmax(cycles_Lengths)-np.nanmin(cycles_Lengths))
     fig = plt.gcf()
     beta_c_l="unknown"

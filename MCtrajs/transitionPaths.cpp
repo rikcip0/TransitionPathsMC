@@ -39,10 +39,11 @@
 #define swapConfig true
 #endif
 #endif
-#define MCeq 25000
-#define MCprint 25000
-#define MCconf 25000
-#define mcForIntegratedMeasuring 2500
+#define MCeq 50000
+#define MCprint 50000
+#define MCconf 100000
+#define mcForIntegratedMeasuring 5000
+#define printconf true
 #include "../Generic/random.h"
 
 #include "MCdyn_classi/Generic/fileSystemUtil_Trajs.h"
@@ -70,8 +71,6 @@
 
 #define MCmeas 4
 #define NpPerN 8
-
-#define printconf true
 
 #define averagingMCForIntegratedMeasuring 1
 #define nPointsForDistanceFromStfwdPathComputation 50

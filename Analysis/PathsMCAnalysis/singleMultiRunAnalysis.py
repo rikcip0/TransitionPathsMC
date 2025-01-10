@@ -108,7 +108,7 @@ def P_t(n, q, p_up):
     """
     return comb(n, (n+q)/2)*((p_up)**((n+q)/2))*((1-p_up)**((n-q)/2))
 
-nameOfFoldersContainingGraphs = ["fPosJ"
+nameOfFoldersContainingGraphs = ["fPosJ","realGraphs"
                                ]
 
 def findFoldersWithString(parent_dir, target_strings):
@@ -118,19 +118,19 @@ def findFoldersWithString(parent_dir, target_strings):
         if livello > 10:
             return
         for root, dirs, _ in os.walk(directory):
-            rightLevelReached=False
+            rightLevelReachedFor=[]
             for dir_name in dirs:
                 full_path = os.path.join(root, dir_name)
                 # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
                 if any(folder in dir_name for folder in nameOfFoldersContainingGraphs):
                     # Cerca le cartelle che contengono "_run" nel loro nome
-                    rightLevelReached=True
+                    rightLevelReachedFor.append(dir_name)
                     for subdir in os.listdir(full_path):
                         if all(string in os.path.join(full_path, subdir) for string in target_strings):
                             result.append(os.path.join(full_path, subdir))
                 
-            if rightLevelReached:
-                return  # Evita di cercare ancora più in profondità
+            for r in rightLevelReachedFor:
+                dirs.remove(r)
                 
             # Se non troviamo "stdMCs" o "PathsMCs", passiamo al livello successivo
             for dir_name in dirs:
@@ -512,7 +512,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     for g, t, r in set(zip(graphID, fieldType, fieldRealization)):
         if r==0:
             continue
-        whereToFindFieldInfo= findFoldersWithString('../../Data', [f'/graph{g}'])
+        whereToFindFieldInfo= findFoldersWithString('../../Data/Graphs', [f'graph{g}'])
                                 
         if len(whereToFindFieldInfo)>1:
             print("Errore, piu di un grafo trovato")
@@ -660,11 +660,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 
                                 if (0. not in stdMCsBetas_forThisTDSetting and 0. not in beta[pathMCFilt_forThisTAndInit]):
                                     continue
-                                
                                 maxPathsMCsBeta = np.nanmax(beta[pathMCFilt_forThisTAndInit])
                                 stdMC_filtForThisTAndInit = np.logical_and(filterForStdMCs_forThisTDSetting, stMC_beta<maxPathsMCsBeta)
                                 
+                                
                                 pathMCBetas_forThisTAndInit, pathMCTIs_forThisTAndInit, pathMCMCs_forThisTAndInit, pathMCFilter_forThisTAndInit = getUniqueXAndYZAccordingToZ(beta, TIbeta, lastMeasureMC, preliminaryFilter=pathMCFilt_forThisTAndInit)
+                                print("EAER",pathMCBetas_forThisTAndInit)
                                 smallestPathsMcBetaToConsider_i = np.argmin(pathMCBetas_forThisTAndInit)
                                 smallestPathsMcBetaToConsider= pathMCBetas_forThisTAndInit[smallestPathsMcBetaToConsider_i]
                                 smallestPathsMcTIToConsider = pathMCTIs_forThisTAndInit[smallestPathsMcBetaToConsider_i]
@@ -694,12 +695,10 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 #print("C", smallestPathsMcBetaToConsider)
                                 stdMC_filtForThisTAndInit_used = np.logical_and(stdMC_filtForThisTAndInit, stMC_beta <= largestStdMcBetaToConsider)
                                 pathsMC_filtForThisTAndInit_used = np.logical_and(pathMCFilter_forThisTAndInit, beta >= smallestPathsMcBetaToConsider)
-                                temp = np.concatenate([stMC_beta[stdMC_filtForThisTAndInit_used], beta[pathsMC_filtForThisTAndInit_used]])
-
+                                temp = np.sort(np.concatenate([stMC_beta[stdMC_filtForThisTAndInit_used], beta[pathsMC_filtForThisTAndInit_used]]))
                                 maxBetaNotTooSpaced = np.max([temp[i] for i in range(1, len(temp)) if temp[i] - temp[i-1] <= 0.1])
                                 stdMC_filtForThisTAndInit_used = np.logical_and(stdMC_filtForThisTAndInit_used, stMC_beta <= maxBetaNotTooSpaced)
                                 pathsMC_filtForThisTAndInit_used = np.logical_and(pathsMC_filtForThisTAndInit_used, beta <= maxBetaNotTooSpaced)
-                                
                                 stdMC_filtForThisTAndInit_unused = np.logical_and(stdMC_filtForThisTAndInit, ~stdMC_filtForThisTAndInit_used)
                                 pathsMC_filtForThisTAndInit_unused = np.logical_and(pathMCFilter_forThisTAndInit, ~pathsMC_filtForThisTAndInit_used)
                                 
@@ -757,7 +756,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     betaMax = minimize_scalar(lambda z:-Zfunction(z), bounds=(np.nanmin(TIx), np.nanmax(TIx))).x
                                 #else:
                                 #    print(largestStdMcTIToConsider, smallestPathsMcTIToConsider ,TIDifferenceMax)
-                                whereToFindBetaCs= findFoldersWithString('../../Data', [f'/graph{sim_graphID}'])
+                                whereToFindBetaCs= findFoldersWithString('../../Data/Graphs', [f'{sim_graphID}'])
                                 
                                 if len(whereToFindBetaCs)>1:
                                     print("Errore, piu di un grafo trovato")
@@ -1005,9 +1004,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             else: 
                 subFolderingFilter= np.all(subfolderingVariable == v, axis=1)
                 if any(x=='nan' for x in v):
-                    print(f"Salto il ciclo esterno a causa di {v}")
                     continue 
-            print("Siamo andati oltre", v)
             #filt = np.logical_and.reduce([filter,
             #                            subFolderingFilter
             #                            ])
@@ -1053,6 +1050,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                         nGraphs=len(np.unique(TDGraphId[filt])))
+            figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
+            for fig_name in figs:
+                fig = plt.figure(fig_name)
+                filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
+                print(filename)
+                fig.savefig(filename, bbox_inches='tight')
                                                         
     def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableNames, markerShapeVariables, markerShapeVariablesNames, arrayForColorCoordinate=refConfMutualQ, colorMapSpecifier=betaOfExtraction):
         
@@ -1065,7 +1068,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         
         for v in np.unique(subfolderingVariable, axis=0):
             subFolderingFilter = []
-            print(v)
             if subfolderingVariable.ndim==1:
                 subFolderingFilter = (subfolderingVariable==v)
                 if np.isnan(v) or v=='nan':
@@ -1075,7 +1077,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 if any(x=='nan' for x in v):
                     print(f"Salto il ciclo esterno a causa di {v}")
                     continue 
-            print("Siamo andati oltre", v)
             filt = np.logical_and.reduce([filter,
                                         subFolderingFilter
                                         ])
@@ -1433,12 +1434,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     filters.append(folderingVariableFilt)
                                     functions.append(f)
             print(functions,filters)
-                
-            mainPlot, _ = plotWithDifferentColorbars(f"ZfunctionAndCurve", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
-                    trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
-                    markerShapeVariables[filt], markerShapeVariablesNames,
-                     arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
-                    nGraphs=len(np.unique(graphID[filt])), functionsToPlotContinuously=[functions, filters])
             
             mainPlot, _ = plotWithDifferentColorbars(f"ZfunctionAndCurve_log", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
@@ -1446,6 +1441,14 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                      arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                     nGraphs=len(np.unique(graphID[filt])), yscale='log', functionsToPlotContinuously=[functions, filters])
                 
+            if studyName=="StudyInT":
+                toFit='linear'
+            mainPlot, _ = plotWithDifferentColorbars(f"ZfunctionAndCurve", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
+                    trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
+                     arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],  fitType=toFit,
+                    nGraphs=len(np.unique(graphID[filt])), functionsToPlotContinuously=[functions, filters])
+            
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
             for fig_name in figs:
                 fig = plt.figure(fig_name)
@@ -1467,7 +1470,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     selectedRunGroups_FiltersAndNames = [
         [
             np.logical_and(C==c, fPosJ==f),
-            f"p2C{c}/fPosJ{f:.2f}"
+            f"p2C{c}/fPosJ{f:.2f}" if c!=0 else f"fPosJ{f:.2f}"
         ]
         for c,f in set(zip(C,fPosJ))
         ]
@@ -1546,6 +1549,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             ["Qstar", "fieldType", r"$\sigma$"],
                             np.array(list(zip( TDGraphId, TDT))),
                             [r"graphID","T"],
+                            colorMapSpecifier=TDN,
+                            arrayForColorCoordinate=TDT
+                            )
+        myTDStudy(TDT, "T", np.asarray(list(zip(TDnQstar, TDFieldType, TDFieldSigma))),
+                            ["Qstar", "fieldType", r"$\sigma$"],
+                            np.array(list(zip( TDGraphId))),
+                            [r"graphID"],
                             colorMapSpecifier=TDN,
                             arrayForColorCoordinate=TDT
                             )
@@ -1703,28 +1713,26 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             fig.savefig(filename, bbox_inches='tight')
         plt.close('all')    
                                 
-            
-        if len(np.unique(rescaledBetas_M[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax_allNs", rescaledBetas_M,
-                            r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$",
-                            np.array(list(zip( normalizedQstar, fieldType, fieldSigma))),
-                            [ "Qstar", "fieldType", r"$\sigma$"],
-                            np.array(list(zip(graphID, fieldRealization))),
-                            ["graphID", "r"],
-                            colorMapSpecifier=N,
-                            arrayForColorCoordinate=T)
-            
-        if len(np.unique(beta[runGroupFilter]))>2:
-            myMultiRunStudy(runGroupFilter,"StudyInBeta_allNs", beta,
-                            r"$\beta$",
-                            np.array(list(zip( normalizedQstar, fieldType, fieldSigma))),
-                            [ "Qstar", "fieldType", r"$\sigma$"],
-                            np.array(list(zip(graphID, fieldRealization))),
-                            ["graphID", "r"],
-                            colorMapSpecifier=N,
-                            arrayForColorCoordinate=T)
-        
-
+        if len(np.unique(N[runGroupFilter]))>1:
+            if len(np.unique(rescaledBetas_M[runGroupFilter]))>2:
+                myMultiRunStudy(runGroupFilter,"StudyInBetaOverBetaMax_allNs", rescaledBetas_M,
+                                r"$\beta$  $\frac{\langle \beta_{max} \rangle_g}{\beta_{max}}$",
+                                np.array(list(zip( normalizedQstar, fieldType, fieldSigma))),
+                                [ "Qstar", "fieldType", r"$\sigma$"],
+                                np.array(list(zip(graphID, fieldRealization))),
+                                ["graphID", "r"],
+                                colorMapSpecifier=N,
+                                arrayForColorCoordinate=T)
+                
+            if len(np.unique(beta[runGroupFilter]))>2:
+                myMultiRunStudy(runGroupFilter,"StudyInBeta_allNs", beta,
+                                r"$\beta$",
+                                np.array(list(zip( normalizedQstar, fieldType, fieldSigma))),
+                                [ "Qstar", "fieldType", r"$\sigma$"],
+                                np.array(list(zip(graphID, fieldRealization))),
+                                ["graphID", "r"],
+                                colorMapSpecifier=N,
+                                arrayForColorCoordinate=T)
         
         if len(np.unique(beta[runGroupFilter]))>2:
             myMultiRunStudy(runGroupFilter,"StudyInBeta", beta, r"$\beta$",
@@ -1756,8 +1764,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         
         if len(np.unique(T[runGroupFilter]))>2:
             myMultiRunStudy(runGroupFilter,"StudyInT", T,  "T",
-                            np.array(list(zip(N))), ["N"],
-                            np.array(list(zip(beta, graphID))), ["beta", "graphID"])
+                            np.array(list(zip(N, beta))), ["N","beta"],
+                            np.array(list(zip( graphID))), [ "graphID"])
 
         if len(np.unique(fieldSigma[runGroupFilter]))>1:
                 myMultiRunStudy(runGroupFilter,"StudyInFieldSigma", fieldSigma, r"fieldSigma",

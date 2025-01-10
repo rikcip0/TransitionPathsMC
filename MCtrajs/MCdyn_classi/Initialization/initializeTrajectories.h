@@ -95,10 +95,12 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
     int Qfin = compute_Q_fin(&Strajs, s1, s2)[1]; // It should be N..., but why not to check!?
     double betaToStart = startingBeta;
     double deltaBeta=deltaBetaStd;
-    if (betaToStart > beta / 1.5)
+    if (beta-betaToStart<10*deltaBeta)
     {
-        betaToStart=beta/1.5;
-        betaToStart=std::round(betaToStart / deltaBeta) * deltaBeta;
+        betaToStart=betaToStart-10*deltaBeta;
+        if (betaToStart<0.){
+            betaToStart=0.;
+        }
     }
     double annealingBeta = betaToStart;
     int MCAtBetaStart = MCeq / 1000;
@@ -107,11 +109,9 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
 
         MCAtBetaStart = 1;
     }
-    if ((beta-betaToStart)/deltaBeta<10.){
-        deltaBeta/=10.;
-    }
+
     int MCToArrive = MCeq / 20;
-    double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - startingBeta));
+    double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - betaToStart));
     double MCAtBetaAnn = MCAtBetaStart;
 
     for (; annealingBeta <= beta + 0.0001; annealingBeta += deltaBeta)
@@ -173,20 +173,19 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
 
     double betaToStart = startingBeta;
     double deltaBeta=deltaBetaStd;
-    if (betaToStart > beta / 1.5)
+    if (beta-betaToStart<10*deltaBeta)
     {
-        betaToStart=beta/1.5;
-        betaToStart=std::round(betaToStart / deltaBeta) * deltaBeta;
+        betaToStart=betaToStart-10*deltaBeta;
+        if (betaToStart<0.){
+            betaToStart=0.;
+        }
     }
     double annealingBeta = betaToStart;
     int MCAtBetaStart = MCeq / 1000;
     if (MCAtBetaStart == 0)
         MCAtBetaStart = 1;
-    if ((beta-betaToStart)/deltaBeta<10.){
-        deltaBeta/=10.;
-    }
     int MCToArrive = MCeq / 20;
-    double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - startingBeta));
+    double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - betaToStart));
     double MCAtBetaAnn = MCAtBetaStart;
 
     for (; annealingBeta <= beta + 0.0001; annealingBeta += deltaBeta)
