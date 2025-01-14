@@ -635,7 +635,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         betaLOverRealizationsCounter=0
                         betaGOverRealizations=0.
                         betaGOverRealizationsCounter=0
-                        for sim_N, sim_graphID, sim_fieldRealization in set(zip(N[TIFilt3], graphID[TIFilt3], fieldRealization[TIFilt3])):
+                        for sim_N, sim_C, sim_graphID, sim_fieldRealization in set(zip(N[TIFilt3], C[TIFilt3], graphID[TIFilt3], fieldRealization[TIFilt3])):
                             sim_Qstar=(int)(sim_N*sim_nQstar)
                             TIFilt4 = np.logical_and(TIFilt3, np.logical_and.reduce([N==sim_N, graphID==sim_graphID, fieldRealization==sim_fieldRealization]))
                             st_TIFilt4 = np.logical_and(st_TIFilt3, np.logical_and.reduce([stMC_N==sim_N , stMC_graphID==sim_graphID, stMC_fieldRealization==sim_fieldRealization]))
@@ -756,7 +756,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     betaMax = minimize_scalar(lambda z:-Zfunction(z), bounds=(np.nanmin(TIx), np.nanmax(TIx))).x
                                 #else:
                                 #    print(largestStdMcTIToConsider, smallestPathsMcTIToConsider ,TIDifferenceMax)
-                                whereToFindBetaCs= findFoldersWithString('../../Data/Graphs', [f'{sim_graphID}'])
+                                whereToFindBetaCs= findFoldersWithString('../../Data/Graphs', [f'graph{sim_graphID}' if sim_C!=0 else f'{sim_graphID}'])
                                 
                                 if len(whereToFindBetaCs)>1:
                                     print("Errore, piu di un grafo trovato")
@@ -987,7 +987,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                    
     def myTDStudy( x, xName, subfolderingVariable, subfolderingVariableNames, markerShapeVariables, markerShapeVariablesNames, arrayForColorCoordinate, colorMapSpecifier):
         
-        thisStudyFolder= os.path.join(analysis_path, "TDStudy")
+        thisStudyFolder= os.path.join(analysis_path, "TDStudyAt"+xName)
 
         if not os.path.exists(thisStudyFolder):
             os.makedirs(thisStudyFolder, exist_ok=True)
@@ -1026,27 +1026,27 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             else:
                 delete_files_in_folder(theseFiguresFolder)
                 
-            mainPlot, _ = plotWithDifferentColorbars(f"betaG", x[filt], xName, TDBetaG[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+            mainPlot, _ = plotWithDifferentColorbars(f"betaG", x[filt], xName, TDBetaG[filt], r"$\beta_{G}$", r"$\beta_{G}$ vs "+ xName+"\n"+specificationLine,
                         TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                         nGraphs=len(np.unique(TDGraphId[filt])))
-            mainPlot, _ = plotWithDifferentColorbars(f"betaL", x[filt], xName, TDBetaL[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+            mainPlot, _ = plotWithDifferentColorbars(f"betaL", x[filt], xName, TDBetaL[filt], r"$\beta_{L}$", r"$\beta_{L}$ vs "+ xName+"\n"+specificationLine,
                         TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                         nGraphs=len(np.unique(TDGraphId[filt])))
-            mainPlot, _ = plotWithDifferentColorbars(f"betaMOvL", x[filt], xName, (TDBetaM/TDBetaL)[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+            mainPlot, _ = plotWithDifferentColorbars(f"betaMOvL", x[filt], xName, (TDBetaM/TDBetaL)[filt], r"$\beta_{M}/\beta_{L}$", r"$\beta_{M}/\beta_{L}$ vs "+ xName+"\n"+specificationLine,
                         TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                         nGraphs=len(np.unique(TDGraphId[filt])))
-            mainPlot, _ = plotWithDifferentColorbars(f"betaMOvG", x[filt], xName, (TDBetaM/TDBetaG)[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+            mainPlot, _ = plotWithDifferentColorbars(f"betaMOvG", x[filt], xName, (TDBetaM/TDBetaG)[filt], r"$\beta_{M}/\beta_{G}$", r"$\beta_{M}/\beta_{G}$ vs "+ xName+"\n"+specificationLine,
                         TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                         nGraphs=len(np.unique(TDGraphId[filt])))
-            mainPlot, _ = plotWithDifferentColorbars(f"betaM", x[filt], xName, TDBetaM[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+            mainPlot, _ = plotWithDifferentColorbars(f"betaM", x[filt], xName, TDBetaM[filt], r"$\beta_{M}$", r"$\beta_{M}$ vs " +xName+"\n"+specificationLine,
                         TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                         nGraphs=len(np.unique(TDGraphId[filt])))
-            mainPlot, _ = plotWithDifferentColorbars(f"Zmax", x[filt], xName, TDZmax[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
+            mainPlot, _ = plotWithDifferentColorbars(f"Zmax", x[filt], xName, TDZmax[filt], r"$Z_{max}$", r"$Z_{max}$ vs "+ xName+"\n"+specificationLine,
                         TDTrajInit[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                         arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                         nGraphs=len(np.unique(TDGraphId[filt])))
@@ -1056,7 +1056,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
                 print(filename)
                 fig.savefig(filename, bbox_inches='tight')
-                                                        
+            plt.close('all')
+                                                       
     def myMultiRunStudy(filter, studyName, x, xName, subfolderingVariable, subfolderingVariableNames, markerShapeVariables, markerShapeVariablesNames, arrayForColorCoordinate=refConfMutualQ, colorMapSpecifier=betaOfExtraction):
         
         thisStudyFolder= os.path.join(analysis_path, studyName)
@@ -1129,6 +1130,11 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             additionalMarkerTypes=additional
             )
 
+            mainPlot, _ = plotWithDifferentColorbars(f"lastMeasureMC", x[filt], xName, lastMeasureMC[filt], "lastMeasureMC", "lastMeasureMC vs "+ xName+"\n"+specificationLine,
+                        trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
+                        arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                        nGraphs=len(np.unique(graphID[filt])))
+            
             mainPlot, _ = plotWithDifferentColorbars(f"meanBarrier", x[filt], xName, meanBarrier[filt], "barrier", "mean barrier vs "+ xName+"\n"+specificationLine,
                         trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                          arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
@@ -1160,11 +1166,20 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                      arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                     yerr=deltaNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
-                
+            toFit = None
+            if xName=="T":
+                toFit='linear'
             mainPlot, _ = plotWithDifferentColorbars(f"deltaNOverAvJumps", x[filt], xName, deltaN2JumpsOverNJumps[filt], "ratio", r"($\delta$"+"#jumps)^2/(#jumps)" +" vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
                      arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
-                    yerr=deltaN2JumpsOverNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])))
+                    yerr=deltaN2JumpsOverNJumpsStdErr[filt], nGraphs=len(np.unique(graphID[filt])),
+                    fitType=toFit)
+            toFit = None
+                
+            mainPlot, _ = plotWithDifferentColorbars(f"deltaNOverAvJumpsOvT", x[filt], xName, deltaN2JumpsOverNJumps[filt]/T[filt], "ratio", r"($\delta$"+"#jumps)^2/(#jumps)/T" +" vs "+ xName +"\n"+specificationLine,
+                    trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
+                     arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                    yerr=deltaN2JumpsOverNJumpsStdErr[filt]/T[filt], nGraphs=len(np.unique(graphID[filt])))
                 
             mainPlot, _ = plotWithDifferentColorbars(f"qDist", x[filt], xName, qDist[filt], "distance", "Average distance from stfwd path between reference configurations over trajectory vs "+xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic, markerShapeVariables[filt], markerShapeVariablesNames,
