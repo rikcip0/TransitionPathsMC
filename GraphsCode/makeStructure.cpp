@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include "../MCtrajs/MCdyn_classi/Generic/fileSystemUtil.h"
+#include "../Generic/fileSystemUtil.h"
 #include "../Generic/random.h"
 
 #define p 2 // as of now, the dynamics generation (and hence the code) only works for p=2 (RC)

@@ -16,7 +16,8 @@
 #include "../MCtrajs/MCdyn_classi/thermodynamicUtilities.h"
 
 #define p 2
-#define nStories 20
+#define nStories 5000
+#define timeOut 30
 #define epicCount 1
 #define nDisorderCopies 1 // number of instances for each disorder configuration TO BE IMPLEMENTED
 #define configurationsChoiceOption -1
@@ -107,9 +108,10 @@ int *whereEqual(int *a) // returns the first element of the a-array which is equ
     return NULL;
 }
 
-void initProb(double beta, double field, int C, int *prob)
+void initProb(double beta, double field, int C, double *prob)
 {
     int i;
+    prob= (double*)calloc(C+1, sizeof(double));
     i = C;
     while (i >= 0)
     {
@@ -139,6 +141,7 @@ int main(int argc, char **argv)
     vector<double> meanBarrier, cumFirstBarrier, firstBarrier, cumFirstBarrierSquared, cumMeanBarrier, cumMeanBarrierSquared;
     vector<double> maxMeanBarrier, maxFirstBarrier, maxCorrectedMeanBarrier, maxCorrectedFirstBarrier;
     vector<int> isArgMaxFirstBarrier, isArgMaxMeanBarrier, isArgMaxCorrectedFirstBarrier, isArgMaxCorrectedMeanBarrier;
+    vector<int> isThere;
     // TO IMPLEMENT- double planted RRG: type -3
 
     // START of input management
@@ -155,7 +158,7 @@ int main(int argc, char **argv)
     int N = atoi(argv[2]);
     double beta = atof(argv[3]);
     double Hext = atof(argv[4]);
-
+    double frac=0.;
     int Qstar = atoi(argv[5]);
     /*
       if ((abs(Qstar) % 2 != N % 2 || abs(Qstar) > N) && Qstar != -1)
@@ -178,7 +181,7 @@ int main(int argc, char **argv)
     }
 
     double fracPosJ = atof(argv[8]);
-    int graphID = atoi(argv[9]);
+    string graphID = argv[9];
 
     string admittibleGraph, folder;
     pair<string, string> info; // 1° entry: long info (for human read), 2°entry: short info (for machines read)
@@ -377,7 +380,7 @@ int main(int argc, char **argv)
     int index, startMag, highestMToComputeStoryMax;
     long long unsigned int t;
     double beta_p, H = 0., posJProb;
-    char beta_p_string[7];
+    char beta_p_string[7]="0.2";
     if (strncmp(simType, "Exiting", strlen("Exiting")) == 0)
     {
         H = -H;
@@ -407,7 +410,6 @@ int main(int argc, char **argv)
     }
 
     init_random(0, 0);
-
     firstBarrier.assign(magnetizationArraysLength, 0.);
     cumFirstBarrier.assign(magnetizationArraysLength, 0.);
     cumFirstBarrierSquared.assign(magnetizationArraysLength, 0.);
@@ -430,6 +432,7 @@ int main(int argc, char **argv)
     maxCorrectedFirstBarrier.assign(magnetizationArraysLength, 0.);
     maxCorrectedMeanBarrier.assign(magnetizationArraysLength, 0.);
 
+    isThere.assign(timeOut+1, 0);
     printf("#%s  C = %i p = %i  N = %i  beta_p = %s  beta = %f  H = %f nStories = %d seed = %d",
            simType, C, p, N, beta_p_string, beta, fabs(H), nStories, myrand);
 #ifdef WITHDISAPPEARINGFIELD
@@ -437,6 +440,7 @@ int main(int argc, char **argv)
 #endif
     printf("\n");
     printf("# 1:Qout  2:barrier  3:time\n");
+    //cout<<"CI SONO"<<endl;
     ofstream thisEpicFile(folder + "/Epic_" + to_string(epicCount) + ".txt");
 
     do
@@ -455,6 +459,7 @@ int main(int argc, char **argv)
 
         lowerMeasuredMag = Qout; // Qout if Entering, 0 otherwise
 
+    //cout<<"CI SONOe"<<endl;
         ener0 = energy_Graph(s, N, Graph, Hext, randomField);
         ener0_sum += ener0;
         startedHere[(N - Qout) / 2]++;
@@ -462,29 +467,41 @@ int main(int argc, char **argv)
         referenceConfMag = Qout;
         nextMeasMag = Qout + magIncrement;
 
-        // initProb(beta, H);
+    //cout<<"CI SONOa"<<endl;
+        initProb(beta, H, C, prob);
+    //cout<<"CI SONOd"<<endl;
 
-        printf("Epic %d, story %d: %i %f 0\n", epicCount, is, Qout, energy_Graph(s, N, Graph, Hext, randomField) - ener0);
+        //printf("Epic %d, story %d: %i %f 0\n", epicCount, is, Qout, energy_Graph(s, N, Graph, Hext, randomField) - ener0);
+    //cout<<"CI SONO2"<<endl;
 
         if (simType == "Entering")
         {
-            cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
-            for (t = 1; nextMeasMag <= Qstar; t++)
+            //cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
+            //for (t = 0; (nextMeasMag <= Qstar)&&(t<=timeOut); t++)
+            for (t = 0; (t<=timeOut); t++)
             {
                 MCSweep_withGraph_variant(s, N, Graph, beta, Hext, randomField, Qout, lowerMeasuredMag,
                                           nextMeasMag, magIncrement, t, logFirstTime, logFirstTimeSquared,
                                           firstBarrier, barrierSum, num, s_out);
+            if(nextMeasMag>Qstar){
+                    isThere[t]++;
             }
-            cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
+            }
+            //cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
         }
         else if (strncmp(simType, "Exiting", strlen("Exiting")) == 0)
         {
-            cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
-            for (t = 1; nextMeasMag <= Qstar; t++)
+            //cout << t << " " << nextMeasMag << " " << magIncrement << " " << Qstar << endl;
+            //for (t = 0; (nextMeasMag <= Qstar)&&(t<=timeOut); t++)
+            for (t = 0; (t<=timeOut); t++)
             {
                 MCSweep_withGraph_variant(s, N, Graph, beta, Hext, randomField, Qout, lowerMeasuredMag,
                                           nextMeasMag, magIncrement, t, logFirstTime, logFirstTimeSquared,
                                           firstBarrier, barrierSum, num, s_out);
+                
+                if(nextMeasMag>Qstar){
+                    isThere[t]++;
+                }
 #if defined(WITHLINFIELD)
                 initProb(beta, H * Qout / (double)N);
 #elif defined(WITHLINFIELD)
@@ -499,6 +516,9 @@ int main(int argc, char **argv)
 #endif
             }
         }
+            if(nextMeasMag > Qstar){
+                frac+=1;
+            }
 
         for (int i = 0; i < magnetizationArraysLength; i++)
         {
@@ -543,6 +563,8 @@ int main(int argc, char **argv)
         is++;
     } while (is < nStories);
 
+
+    /*Elimino per prova
     for (int i = magnetizationArraysLength - 1; i >= 0; i -= 1)
     { // I could also consider a meanBarrier whose fluctuations are only considered across different stories
 
@@ -562,6 +584,17 @@ int main(int argc, char **argv)
             thisEpicFile << buffer << endl;
         }
     }
+    */
+
+   frac=frac/nStories;
+    for (int i = 0 ; i <= timeOut; i ++)
+    { // I could also consider a meanBarrier whose fluctuations are only considered across different stories
+
+            sprintf(buffer, "%i %g",
+                    i, (double)(isThere[i]) / (double)nStories);
+            thisEpicFile << buffer<<endl;
+    }
+    cout<<"LA FRAZIONE E"   <<frac<<endl;
     thisEpicFile.close();
     cout << "PROGRAMMA FINITO" << endl;
     return 0;

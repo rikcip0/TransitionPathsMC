@@ -99,7 +99,7 @@ bool MCSweep_withGraph_variant(vector<int> &s, int N, vector<vector<vector<rInte
                                 vector<double> &firstBarrier, vector<long double> &barrierSum,
                                 vector<long long int> &num, vector<int> s_out)
 {
-    cout<<"APRO FIUNZ"<<endl;
+    //cout<<"APRO FIUNZ"<<endl;
     int I;
     double locField;
     for (int i = 0; i < N; i++)
@@ -113,37 +113,37 @@ bool MCSweep_withGraph_variant(vector<int> &s, int N, vector<vector<vector<rInte
         }
         if (locField * s[I] < 0 || exp(-2 * beta * locField * s[I]) > Xrandom())
         {
-            cout<<"FLIPPO"<<endl;
+            //cout<<"FLIPPO"<<endl;
             s[I] = -s[I];
             mag+=2*s[I]*s_out[I];
             if (mag >= lowerMeasuredMag)
             {
-            cout<<"entro"<<endl;
+            //cout<<"entro"<<endl;
                 if (mag == nextMeasMag)
                 {
-                    cout<<"qui 1"<<endl;
-                    printf(" %i %f %lli\n", mag, energy_Graph(s, N, Graph, Hext, randomField), t);
-                    cout<<"qui 2"<<endl;
+                    //cout<<"qui 1"<<endl;
+                    //printf(" %i %f %lli\n", mag, energy_Graph(s, N, Graph, Hext, randomField), t);
+                    //cout<<"qui 2"<<endl;
                     // fflush(stdout);
                     logFirstTime[(N - mag) / 2] += log(t);
-                    cout<<"qui 3"<<endl;
+                    //cout<<"qui 3"<<endl;
                     logFirstTimeSquared[(N - mag) / 2] += (log(t) * log(t));
-                    cout<<"qui 4"<<endl;
+                    //cout<<"qui 4"<<endl;
                     firstBarrier[(N - mag) / 2] += (double)(energy_Graph(s, N, Graph, Hext, randomField));
-                    cout<<"qui 5"<<endl;
+                    //cout<<"qui 5"<<endl;
                     nextMeasMag = mag + magIncrement;
-                    cout<<"qui 6"<<endl;
+                    //cout<<"qui 6"<<endl;
                 }
-                    cout<<"qui 7"<<endl;
-                    cout<<mag<<" "<<N-mag<<endl;
+                    //cout<<"qui 7"<<endl;
+                    //cout<<mag<<" "<<N-mag<<endl;
                 barrierSum[(N - mag) / 2] += energy_Graph(s, N, Graph, Hext, randomField);
-                    cout<<"qui 8"<<endl;
+                    //cout<<"qui 8"<<endl;
                 num[(N - mag) / 2]++;
-                    cout<<"qui 9"<<endl;
+                    //cout<<"qui 9"<<endl;
             }
         }
     }
-    cout<<"ESCO"<<endl;
+    //cout<<"ESCO"<<endl;
     return true;
 }
 
@@ -230,7 +230,7 @@ bool zeroTemperatureQuench_withGraph(vector<int> &s, vector<vector<vector<rInter
 bool computeSelfOverlap_withJs(int &QToReturn, vector<int> s, double **J, double beta, int N = 0)
 {
     int eqSweeps = 10;
-    int nStories = 200;
+    int nStories = 100;
 
     int Q = 0;
     vector<int> sAtStart = s;

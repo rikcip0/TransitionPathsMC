@@ -25,6 +25,11 @@ compilePT:
 	@echo Program compiled in PT
 	@echo .
 
+compileStdInAndOut:
+	@cd MCMCs && g++ inAndOutRRG.cpp -o stdInAndOut.exe -DENTERING
+	@echo Program compiled in stdInAndOut.exe 
+	@echo .
+
 compileSimpleStdMC:
 	@cd MCMCs && g++ simpleStdMcForTp.cpp -o stMC.exe -DFIXEDEXT
 	@echo Program compiled in stMC
