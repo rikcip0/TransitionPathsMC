@@ -59,8 +59,64 @@ int main(int argc, char **argv)
 
   vector<int> list;
   vector<int> deg(N, 0);
-
   if (type == -3)
+  {
+    int ind[C], v[C], i, site, q, graphLen, t, listLen;
+    int newSite, flag, sum, prod, max, indMax;
+
+    int nPatt = 3;
+    double factor = 0.05;
+    vector<int> s[nPatt];
+
+    for (int i = 0; i < nPatt; i++)
+    {
+      s[i].assign(N, 0);
+    }
+
+    printf(".");
+    // generate 2 orthogonal configurations
+    s[0].assign(N,1 );
+    for (int i = 1; i < nPatt; i++)
+    {
+      for (int j = 0; j < N; j++)
+      {
+        s[i][j] = Xrandom() > 0.5 ? 1 : -1;
+      }
+    }
+
+    double prob = (double)C / (double)(N - 1);
+    double thisProb;
+
+    for (int i = 0; i < N; i++)
+    {
+      for (int j = 0; j < i; j++)
+      {
+        thisProb = prob;
+        for (int k = 0; k < nPatt; k++)
+        {
+          for(int l = 0; l < k; l++)
+            {
+                if (s[k][i]*s[k][j] != s[l][i]*s[l][j])
+                {
+                  thisProb *= factor;
+                }
+            }
+        }
+
+        cout << "prob è" << thisProb << endl;
+        if (prob == thisProb)
+        {
+          cout << "E UGUALEEEEEEEEE" << endl;
+        }
+        if (Xrandom() < thisProb)
+        {
+          list.push_back(i);
+          list.push_back(j);
+        }
+      }
+    }
+  }
+  else if (type == -4)
   {
     int ind[C], v[C], i, site, q, graphLen, t, listLen;
     int newSite, flag, sum, prod, max, indMax;
@@ -322,10 +378,10 @@ int main(int argc, char **argv)
         {
           vector<int> neighborCords = coords;
           neighborCords[j] += sign;
-          if (neighborCords[j]==L)
-            neighborCords[j]=0;
-          if (neighborCords[j]==-1)
-            neighborCords[j]=L-1;
+          if (neighborCords[j] == L)
+            neighborCords[j] = 0;
+          if (neighborCords[j] == -1)
+            neighborCords[j] = L - 1;
 
           int neighbor = 0;
           for (int k = 0; k < d; k++)

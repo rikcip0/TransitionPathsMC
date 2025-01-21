@@ -68,19 +68,22 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     # Luminosità che varia da 1.0 (luminoso) a 0.3 (più scuro)
     values = np.linspace(1., 0.9, 256)
 
-    # Creazione delle colorbar
-    for i, (val, color) in enumerate(zip(uniqueColorMapsSpecifiers, gnuplot_colors)):
-        # Converti il colore in spazio HSV per manipolare saturazione e luminosità
-        hsv_color = rgb_to_hsv(color[:3])  # Ignoriamo la componente alpha (trasparenza)
-        
-        # Creare la mappa di colori variando la saturazione e la luminosità
-        # Manteniamo la hue (tonalità) fissa, ma variamo saturazione e luminosità
-        hues = np.full_like(saturations, hsv_color[0])  # Usa la hue originale
-        hsv_colors = np.stack([hues, saturations, values], axis=1)
-        rgb_colors = hsv_to_rgb(hsv_colors)  # Converti di nuovo in RGB
-        
-        # Creare la colormap per la colorbar corrente
-        cmaps[val] = ListedColormap(rgb_colors)
+    if len(uniqueColorMapsSpecifiers) == 1:
+        cmaps[uniqueColorMapsSpecifiers[0]] = plt.cm.gnuplot
+    else:
+        # Creazione delle colorbar
+        for i, (val, color) in enumerate(zip(uniqueColorMapsSpecifiers, gnuplot_colors)):
+            # Converti il colore in spazio HSV per manipolare saturazione e luminosità
+            hsv_color = rgb_to_hsv(color[:3])  # Ignoriamo la componente alpha (trasparenza)
+            
+            # Creare la mappa di colori variando la saturazione e la luminosità
+            # Manteniamo la hue (tonalità) fissa, ma variamo saturazione e luminosità
+            hues = np.full_like(saturations, hsv_color[0])  # Usa la hue originale
+            hsv_colors = np.stack([hues, saturations, values], axis=1)
+            rgb_colors = hsv_to_rgb(hsv_colors)  # Converti di nuovo in RGB
+            
+            # Creare la colormap per la colorbar corrente
+            cmaps[val] = ListedColormap(rgb_colors)
 
     #defining useful arrays
     uniqueEdgeVars = np.unique([x for x in markerEdgeVariable if x is not None])

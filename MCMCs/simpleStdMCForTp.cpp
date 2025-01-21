@@ -21,10 +21,10 @@
 #include "../McTrajs/MCdyn_classi/Initialization/initializeReferenceConfigurations.h"
 
 #define p 2
-#define MC 300000
-#define MCeq 10000
+#define MC 600000
+#define MCeq 20000
 #define MCmeas 10
-#define MCprint 2000 // deve essere multiplo di MCmeas
+#define MCprint 5000 // deve essere multiplo di MCmeas
 
 int main(int argc, char *argv[])
 {
