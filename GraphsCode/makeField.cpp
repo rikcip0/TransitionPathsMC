@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     int myrand = init_random(0, 0);
     printf("# pairwise_PT.c  N = %i  C = %i  seed = %u\n graphID = % i  fracPosJ = % f\n", N, C, myrand, graphID, fracPosJ);
 
-    string graphType, fileName = "../Data/BetasForPT/";
+    string graphType;
 
     if (d < 0)
     {
@@ -84,7 +84,6 @@ int main(int argc, char *argv[])
     }
 
     graphType += "/fPosJ" + to_string(fracPosJ).substr(0, 4) + "/N" + to_string(N);
-    fileName += graphType + ".txt";
 
 
     folder +="randomFieldStructures/";
