@@ -17,7 +17,7 @@ from scipy.optimize import minimize_scalar
 
 from MyBasePlots.plotWithDifferentColorbars import plotWithDifferentColorbars
 minNumberOfSingleRunsToDoAnAnalysis=4
-discBetaStep=0.02
+discBetaStep=0.025
 nNsToConsiderForSubFit=4 #For extracting free energy barriers, there is also a fit
                                 #involving only this number of largest Ns
 
@@ -88,31 +88,40 @@ def addLevelOnNestedDictionary( structure, param_tuples, levelToAdd):
     return current_level
 
 def analyticDataF(x, xName, filt,fieldSigma,beta):
+
     if (analyBet is None) or np.any(fieldSigma[filt]!=0.) or (("beta" not in xName) and len(np.unique(beta[filt]))>1):
+
         return None, None, None
     arrayToConsider=beta
     if ("beta" in xName):
+
         arrayToConsider=x
     betaRange= np.nanmin(arrayToConsider[filt]), np.nanmax(arrayToConsider[filt]) 
     betaRangeCondition = np.logical_and(analyBet>=betaRange[0],analyBet<=betaRange[1]) 
     betaRangeCondition = np.logical_and(betaRangeCondition, analyBarr>0) 
     if np.all(betaRangeCondition==False):
+
         return None, None, None
     theoreticalX=analyBet[betaRangeCondition]
     theoreticalY0=analyBarr[betaRangeCondition]
     theoreticalY1=analyBetBarr[betaRangeCondition]
+
     if ("beta" not in xName):
+
         theoreticalX = np.linspace(np.nanmin(x[filt]), np.nanmax(x[filt]),100)
         theoreticalY0 = np.full(100, theoreticalY0[0])
         theoreticalY1 = np.full(100, theoreticalY1[0])
     return theoreticalX, theoreticalY0, theoreticalY1
 
-def analyticDataF2(x, xName,fieldSigma,filt):
+def analyticDataF2(x, xType, fieldSigma,filt):
+    global analyBet, analyBarr, analyBetBarr
+
     fieldSigma = np.array(fieldSigma,dtype=np.float64)
-    if np.any(fieldSigma[filt]>0.):
+    if len(x)==0 or np.any(fieldSigma[filt]!=0.):
         return None, None, None
     x=np.array(x,dtype=np.float64)
-    if (analyBet is None) or ("beta" not in xName):
+    if (analyBet is None) or (("beta" != xType)):
+
         return None, None, None
     arrayToConsider=x
     betaRange= np.nanmin(arrayToConsider), np.nanmax(arrayToConsider) 
@@ -123,7 +132,7 @@ def analyticDataF2(x, xName,fieldSigma,filt):
     theoreticalX=analyBet[betaRangeCondition]
     theoreticalY0=analyBarr[betaRangeCondition]
     theoreticalY1=analyBetBarr[betaRangeCondition]
-    if ("beta" not in xName):
+    if ("beta"!= xType):
         theoreticalX = np.linspace(np.nanmin(arrayToConsider), np.nanmax(arrayToConsider),100)
         theoreticalY0 = np.full(100, theoreticalY0[0])
         theoreticalY1 = np.full(100, theoreticalY1[0])
@@ -581,7 +590,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             print("Info su true mean di ", whereToFindFieldInfo," non disponibili.")
         
         if fieldActualMean<0.:
-            print("flippo", np.cumsum(thisFieldPathsMCs), " e ", np.cumsum(thisFieldStdMCs))
+            #print("flippo", np.cumsum(thisFieldPathsMCs), " e ", np.cumsum(thisFieldStdMCs))
             fieldSigma[thisFieldPathsMCs]=-fieldSigma[thisFieldPathsMCs]
             stMC_fieldSigma[thisFieldStdMCs]=-stMC_fieldSigma[thisFieldStdMCs]
     
@@ -620,8 +629,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             
             
         #specifying graph in 2 cycle
-        for sim_Hext in set(h_ext[filt]):
-            TIFilt = np.logical_and.reduce([ h_ext==sim_Hext, filt])
+        for sim_C, sim_Hext in set(zip(C[filt],h_ext[filt])):
+            TIFilt = np.logical_and.reduce([ C==sim_C, h_ext==sim_Hext, filt])
             st_TIFilt = np.logical_and.reduce([stMC_Hext==sim_Hext])
             for sim_fieldType, sim_fieldSigma in set(zip(fieldType[TIFilt], fieldSigma[TIFilt])):
                 TIFilt1 = np.logical_and(TIFilt, np.logical_and.reduce([fieldType==sim_fieldType, fieldSigma==sim_fieldSigma]))
@@ -641,7 +650,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         betaLOverRealizationsId=[]
                         betaGOverRealizations=[]
                         betaGOverRealizationsId=[]
-                        for sim_N, sim_C, sim_graphID, sim_fieldRealization in set(zip(N[TIFilt3], C[TIFilt3], graphID[TIFilt3], fieldRealization[TIFilt3])):
+                        for sim_N, sim_graphID, sim_fieldRealization in set(zip(N[TIFilt3],graphID[TIFilt3], fieldRealization[TIFilt3])):
                             sim_Qstar=(int)(sim_N*sim_nQstar)
                             TIFilt4 = np.logical_and(TIFilt3, np.logical_and.reduce([N==sim_N, graphID==sim_graphID, fieldRealization==sim_fieldRealization]))
                             st_TIFilt4 = np.logical_and(st_TIFilt3, np.logical_and.reduce([stMC_N==sim_N , stMC_graphID==sim_graphID, stMC_fieldRealization==sim_fieldRealization]))
@@ -757,6 +766,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     def exp_integral_to_x(x_point, aoF=f_interp, factor=ZAtBet0,  maxValue = maxBetaNotTooSpaced):
                                         return factor* np.exp(integral_to_x(x_point, aoF, maxValue))
                                     print("Term int fatta")
+
                                     TIfunction= integral_to_x
                                     Zfunction= exp_integral_to_x
                                     betaMax = minimize_scalar(lambda z:-Zfunction(z), bounds=(np.nanmin(TIx), np.nanmax(TIx))).x
@@ -891,31 +901,31 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 TDBetaL.append(betaL)
                                 TDZmax.append(Zfunction(betaMax))
                                 
+                                if isinstance(betaLForThisRealization, (int, float)):      
+                                    betaLOverRealizations.append(betaLForThisRealization)
+                                    betaLOverRealizationsId.append([sim_graphID,sim_fieldRealization])
+                                if isinstance(betaGForThisRealization, (int, float)):      
+                                    betaGOverRealizations.append(betaGForThisRealization)
+                                    betaGOverRealizationsId.append([sim_graphID,sim_fieldRealization])
 
                             if betaMaxForThisRealizationCounter>0:
                                 betaMaxOverRealizations += betaMaxForThisRealization/betaMaxForThisRealizationCounter
                                 betaMaxOverRealizationsCounter+=1
                             
-                            if isinstance(betaLForThisRealization, (int, float)):      
-                                betaLOverRealizations.append(betaLForThisRealization)
-                                betaLOverRealizationsId.append(sim_graphID)
-                            if isinstance(betaGForThisRealization, (int, float)):      
-                                betaGOverRealizations.append(betaGForThisRealization)
-                                betaGOverRealizationsId.append(sim_graphID)
       
                         if betaMaxOverRealizationsCounter>0:
                             betaMaxOverRealizations /= betaMaxOverRealizationsCounter
                         if len(betaLOverRealizationsId)>0:
                             betaLOverRealizations = np.array(betaLOverRealizations)
                             betaLOverRealizationsId = np.array(betaLOverRealizationsId)
-                            uniqueValues, unique_indices = np.unique(betaLOverRealizationsId, return_index=True)
-                            betaLOverRealizations = np.sum(betaLOverRealizations[unique_indices])/len(uniqueValues)
+                            uniqueValues, unique_indices = np.unique(betaLOverRealizationsId, axis=0, return_index=True)
+                            betaLOverRealizationsV = np.sum(betaLOverRealizations[unique_indices])/len(uniqueValues)
                         if len(betaGOverRealizationsId)>0:
                             betaGOverRealizations = np.array(betaGOverRealizations)
                             betaGOverRealizationsId = np.array(betaGOverRealizationsId)
-                            uniqueValues, unique_indices = np.unique(betaGOverRealizationsId, return_index=True)
-                            betaGOverRealizations = np.sum(betaGOverRealizations[unique_indices])/len(uniqueValues)
-                        
+                            uniqueValues, unique_indices = np.unique(betaGOverRealizationsId, axis=0, return_index=True)
+                            betaGOverRealizationsV = np.mean(betaGOverRealizations[unique_indices])
+
                         for sim_N, sim_graphID, sim_fieldRealization in set(zip(N[TIFilt3], graphID[TIFilt3], fieldRealization[TIFilt3])):
                             TIFilt4 = np.logical_and(TIFilt3, np.logical_and.reduce([N==sim_N, graphID==sim_graphID, fieldRealization==sim_fieldRealization]))
                             for sim_T, sim_trajInit in set(zip(T[TIFilt4],trajsExtremesInitID[TIFilt4])):
@@ -931,6 +941,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     thisCurveBetaMax = level['betaMax']
                                     thisCurveBetaL = level['beta_l']
                                     thisCurveBetaG = level['beta_g']
+                                    
                                     if isinstance(thisCurveBetaMax, (int, float)):
                                         #print(betaGOverRealizations, betaMaxOverRealizations, thisCurveBetaMax, thisCurveBetaG)
                                         rescaledBetas_M[TIFilt_forThisTAndInit] = (beta[TIFilt_forThisTAndInit])/(thisCurveBetaMax)*(betaMaxOverRealizations)
@@ -942,13 +953,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                         level['rescaledZfunction_Max']=rescaledZfunction_M
                                         
                                     if isinstance(thisCurveBetaL, (int, float)):
-                                        rescaledBetas_L[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaL*betaLOverRealizations
+                                        rescaledBetas_L[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaL*betaLOverRealizationsV
                                         def rescaledZfunction_L(bet, numBet=1., denBet=thisCurveBetaL, function=originalZfunction):
                                             return function(bet*denBet/numBet)
                                         level['rescaledZfunction_l']=rescaledZfunction_L
                                     
                                     if isinstance(thisCurveBetaG, (int, float)):
-                                        rescaledBetas_G[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaG*betaGOverRealizations
+                                        rescaledBetas_G[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaG*betaGOverRealizationsV
                                         def rescaledZfunction_G(bet, numBet=1., denBet=thisCurveBetaG, function=originalZfunction):
                                             return function(bet*denBet/numBet)
                                         level['rescaledZfunction_g']=rescaledZfunction_G
@@ -979,7 +990,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         if np.isnan(max_value):
                             continue
                         for discRescBeta in np.round(np.arange(0., max_value+discBetaStep, discBetaStep, dtype=float),decimals=4):
-                            discretizableFilt=np.logical_and(TIFilt3, np.fabs(discRescBeta-rescaledBetas_G)<discBetaStep/2.+0.00001)
+                            discretizableFilt=np.logical_and(TIFilt3, np.fabs(discRescBeta-rescaledBetas_G)<discBetaStep/2.+0.000000000000001)
                             if len(np.unique(N[discretizableFilt]))>=3:
                                 for g,ft,fr,fs in set(zip(graphID[discretizableFilt], fieldType[discretizableFilt],fieldRealization[discretizableFilt],fieldSigma[discretizableFilt])):
                                     discretizableFilt2=np.logical_and.reduce([
@@ -1132,18 +1143,21 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         subFolderingValues=[]
         nLastSubfVal=[]
         #print(np.unique(subfolderingVariable[:,-subListsLengths[-1]:],axis=0))
-        for unique_values in np.unique(subfolderingVariable[:,:-subListsLengths[-1]],axis=0):
+        for unique_values in np.unique(subfolderingVariable[filter,:-subListsLengths[-1]],axis=0):
+            if any([(x=='nan') for x in unique_values]):
+                continue
             v = subfolderingVariable[np.all(subfolderingVariable[:, :-subListsLengths[-1]] == unique_values, axis=1), -subListsLengths[-1]:]
-            v=np.unique(v,axis=0)
-            for a in v:
-                subFolderingValues.append([*unique_values, *a])
-            nLastSubfVal.append(len(v))
+            v = v[~np.any(v == 'nan', axis=1)]
+            v = np.unique(v,axis=0)
+            if(len(v))>0:
+                for a in v:
+                    subFolderingValues.append([*unique_values, *a])
+                nLastSubfVal.append(len(subFolderingValues))
+            
         nLastSubfVal=np.array(nLastSubfVal,dtype=int)
-        nLastSubfVal=np.cumsum(nLastSubfVal,dtype=int)
         theseFiguresFolder=thisStudyFolder
         for i,v in enumerate(subFolderingValues):
-            print("I VALE",i)
-            print(v)
+            print("I VALE",i,v)
             print("nLastSubfVal",nLastSubfVal)
             if (i==0) or (i in nLastSubfVal):
                 eqAnBet =[]
@@ -1168,6 +1182,86 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 barrierBet3lN =[]
                 barrierBetBarr3lN = []
                 barrierBetBarrErr3lN = []
+                
+            def considerToPlotN(theseFiguresFolder):        
+                folderToPlot=theseFiguresFolder[:theseFiguresFolder.rfind("/")]
+                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr1),0)
+                
+                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet1, "beta",fieldSigma,filt)
+                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit1", barrierBet1, r"$\beta$", barrierBetBarr1, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (1) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
+                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
+                    np.full(len(barrierBet1), "fit in N"), ["from"],
+                    np.full(len(barrierBet1), 1), yerr= barrierBetBarrErr1,
+                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
+                
+                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr2),0)                
+                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet2, "beta",fieldSigma,filt)
+                
+                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit2", barrierBet2, r"$\beta$", barrierBetBarr2, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (2) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
+                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
+                    np.full(len(barrierBet2), "fit in N"), ["from"],
+                    np.full(len(barrierBet2), 1), yerr= barrierBetBarrErr2,
+                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
+                
+                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr3),0)                
+                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet3, "beta",fieldSigma,filt)
+                
+                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit3", barrierBet3, r"$\beta$", barrierBetBarr3, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (3) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
+                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
+                    np.full(len(barrierBet3), "fit in N"), ["from"],
+                    np.full(len(barrierBet3), 1), yerr= barrierBetBarrErr3,
+                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
+                
+                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr1lN),0)                
+                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet1lN, "beta",fieldSigma,filt)
+                
+                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit1lNs", barrierBet1lN, r"$\beta$", barrierBetBarr1lN, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (1 largeNs) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
+                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
+                    np.full(len(barrierBetBarrErr1lN), "fit in N"), ["from"],
+                    np.full(len(barrierBetBarrErr1lN), 1), yerr= barrierBetBarrErr1lN,
+                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
+                
+                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr2lN),0)
+                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet2lN, "beta",fieldSigma,filt)
+                
+                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit2lNs", barrierBet2lN, r"$\beta$", barrierBetBarr2lN, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (2 largeNs) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
+                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
+                    np.full(len(barrierBet2lN), "fit in N"), ["from"],
+                    np.full(len(barrierBet2lN), 1), yerr= barrierBetBarrErr2lN,
+                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
+                
+                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr3lN),0)
+                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet3lN, "beta",fieldSigma,filt)
+                
+                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit3lNs", barrierBet3lN, r"$\beta$", barrierBetBarr3lN, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (3 largeNs) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
+                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
+                    np.full(len(barrierBet3lN), "fit in N"), ["from"],
+                    np.full(len(barrierBet3lN), 1), yerr= barrierBetBarrErr3lN,
+                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
+                
+                figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
+                for fig_name in figs:
+                    fig = plt.figure(fig_name)
+                    filename = os.path.join(folderToPlot, f'{fig_name}.png')
+                    print(filename)
+                    fig.savefig(filename, bbox_inches='tight')
+                plt.close('all')
+
+            def considerToPlotT(theseFiguresFolder):    
+                folderToPlot=theseFiguresFolder[:theseFiguresFolder.rfind("/")]    
+                barrierBetaAEdgeColors= np.full(len(eqAnBet),0)
+                mainPlot, _ = plotWithDifferentColorbars(f"eqAn", eqAnBet, r"$\beta$", eqAnBetAn,"Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (1) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
+                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
+                    np.full(len(eqAnBet), "fit in T"), ["from"],
+                    np.full(len(eqAnBet), 1), yerr= eqAnBetAnErr)
+                
+                figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
+                for fig_name in figs:
+                    fig = plt.figure(fig_name)
+                    filename = os.path.join(folderToPlot, f'{fig_name}.png')
+                    print(filename)
+                    fig.savefig(filename, bbox_inches='tight')
+                plt.close('all')
 
             
 
@@ -1190,6 +1284,10 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             v = [[next(v_iter) for _ in sublist] for sublist in subfolderingVariableNames] if isinstance(subfolderingVariableNames[0], list) else [next(v_iter) for _ in subfolderingVariableNames]
 
             if len(np.unique(x[filt]))<3:
+                if (xName=="N") and (i in (nLastSubfVal-1)):
+                    considerToPlotN(theseFiguresFolder)
+                elif (xName=="T") and (i in (nLastSubfVal-1)):     
+                    considerToPlotT(theseFiguresFolder)
                 continue
             
             theseFiguresFolder = os.path.join(
@@ -1367,7 +1465,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 toFit=['linear']
                 
             toCompare = np.logical_and(filt, np.array([True if x is not None  else False for x in kFromChi_InBetween_Scaled ]))
-            if "N" in xName and len(np.unique(N[toCompare]))>=nNsToConsiderForSubFit:
+            if "N"==xName and len(np.unique(N[toCompare]))>=nNsToConsiderForSubFit:
                 tempFilt=filt
                 filt=np.logical_and.reduce([filt, N>=np.sort(np.unique(N[toCompare]))[-nNsToConsiderForSubFit]])
                 
@@ -1463,6 +1561,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     nGraphs=len(np.unique(graphID[filt])), colorMapSpecifierName=colorMapSpecifierName)
             
             theoreticalX, theoreticalY0, theoreticalY1 = analyticDataF(x, xName, filt, fieldSigma,beta)
+
 
             mainPlot, _ = plotWithDifferentColorbars(f"tentativeBarrier", x[filt], xName, tentativeBarrier[filt]/beta[filt], "Tentative "+ r"$\delta$f", "Tentative free energy barrier (1) "+ r"(-ln(k)/($\beta$N))"+", vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
@@ -1564,7 +1663,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     nGraphs=len(np.unique(graphID[filt])), yscale='log', functionsToPlotContinuously=[functions, filters])
                 
             if studyName=="StudyInT":
-                toFit=['linear','quadratic']
+                toFit=['expo','linear','quadratic']
             mainPlot, _ = plotWithDifferentColorbars(f"ZfunctionAndCurve", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
                     trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
                     markerShapeVariables[filt], markerShapeVariablesNames,
@@ -1585,89 +1684,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 #print(filename)
                 fig.savefig(filename, bbox_inches='tight')
 
-            plt.close('all')
+            plt.close('all')       
             
-            if (xName=="N") and (i in (nLastSubfVal-2)):       
-                print("SO ENTRATOOO")         
-                theseFiguresFolder=theseFiguresFolder[:theseFiguresFolder.rfind("/")]
-                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr1),0)
-                
-                print("b",barrierBet1)
-                print("a",barrierBetBarr1)
-                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet1, r"$\beta$",fieldSigma,filt)
-                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit1", barrierBet1, r"$\beta$", barrierBetBarr1, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (1) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
-                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
-                    np.full(len(barrierBet1), "fit in N"), ["from"],
-                    np.full(len(barrierBet1), 1), yerr= barrierBetBarrErr1,
-                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
-                
-                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr2),0)                
-                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet2, r"$\beta$",fieldSigma,filt)
-                
-                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit2", barrierBet2, r"$\beta$", barrierBetBarr2, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (2) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
-                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
-                    np.full(len(barrierBet2), "fit in N"), ["from"],
-                    np.full(len(barrierBet2), 1), yerr= barrierBetBarrErr2,
-                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
-                
-                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr3),0)                
-                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet3, r"$\beta$",fieldSigma,filt)
-                
-                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit3", barrierBet3, r"$\beta$", barrierBetBarr3, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (3) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
-                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
-                    np.full(len(barrierBet3), "fit in N"), ["from"],
-                    np.full(len(barrierBet3), 1), yerr= barrierBetBarrErr3,
-                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
-                
-                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr1lN),0)                
-                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet1lN, r"$\beta$",fieldSigma,filt)
-                
-                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit1lNs", barrierBet1lN, r"$\beta$", barrierBetBarr1lN, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (1 largeNs) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
-                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
-                    np.full(len(barrierBetBarrErr1lN), "fit in N"), ["from"],
-                    np.full(len(barrierBetBarrErr1lN), 1), yerr= barrierBetBarrErr1lN,
-                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
-                
-                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr2lN),0)
-                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet2lN, r"$\beta$",fieldSigma,filt)
-                
-                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit2lNs", barrierBet2lN, r"$\beta$", barrierBetBarr2lN, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (2 largeNs) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
-                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
-                    np.full(len(barrierBet2lN), "fit in N"), ["from"],
-                    np.full(len(barrierBet2lN), 1), yerr= barrierBetBarrErr2lN,
-                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
-                
-                barrierBetaAEdgeColors= np.full(len(barrierBetBarrErr3lN),0)
-                theoreticalX, theoreticalY0, theoreticalY1=analyticDataF2(barrierBet3lN, r"$\beta$",fieldSigma,filt)
-                
-                mainPlot, _ = plotWithDifferentColorbars(f"betTentativeBarrier_FromFit3lNs", barrierBet3lN, r"$\beta$", barrierBetBarr3lN, "Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (3 largeNs) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
-                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
-                    np.full(len(barrierBet3lN), "fit in N"), ["from"],
-                    np.full(len(barrierBet3lN), 1), yerr= barrierBetBarrErr3lN,
-                    theoreticalX=theoreticalX, theoreticalY=theoreticalY1)
-            else:
-                print("AWEAW",xName,i,nLastSubfVal-1)
-                print(xName=="T",i in (nLastSubfVal-1))
+            if (xName=="N") and (i in (nLastSubfVal-1)):
+                considerToPlotN(theseFiguresFolder)
+            elif (xName=="T") and (i in (nLastSubfVal-1)):     
+                    considerToPlotT(theseFiguresFolder)
 
-            if (xName=="T") and (i in (nLastSubfVal-1)):            
-                theseFiguresFolder=theseFiguresFolder[:theseFiguresFolder.rfind("/")]    
-                barrierBetaAEdgeColors= np.full(len(eqAnBet),0)
-                print("C",eqAnBet)
-                print("D",eqAnBetAn)
-                print("E",eqAnBetAnErr)
-                mainPlot, _ = plotWithDifferentColorbars(f"eqAn", eqAnBet, r"$\beta$", eqAnBetAn,"Tentative "+ r"$\beta\delta$f", "Tentative free energy barrier (1) "+ r"(-ln(k)/ N)"+", vs "+ xName +"\n",
-                    barrierBetaAEdgeColors, typeOfFitInN_Dict, edgeColorPerTypeOfFitInIn_Dic,
-                    np.full(len(eqAnBet), "fit in T"), ["from"],
-                    np.full(len(eqAnBet), 1), yerr= eqAnBetAnErr)
-
-    
-            figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-            for fig_name in figs:
-                fig = plt.figure(fig_name)
-                filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-                print(filename)
-                fig.savefig(filename, bbox_inches='tight')
-            plt.close('all')
                     
 
 
@@ -1687,6 +1710,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         #runGroupFilter=np.logical_and.reduce([runGroupFilter,fieldSigma==0.,normalizedQstar==0.6,N>80])
         #runGroupFilter=np.logical_and.reduce([runGroupFilter,fieldSigma==0.,T<40])
         
+        global analyBet, analyBarr, analyBetBarr
+        
         analyticalData_path = "data.txt"
         analyBet= None
         analyBarr= None
@@ -1704,13 +1729,11 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             analyBetBarr=analyBetBarr[analyBetBarr>0]
             analyBarr=[analyBetBarr[i]/analyBet[i] for i in range(len(analyBetBarr))]
             analyBarr=np.asarray(analyBarr)
-            #print(analyBarr)
         else:
             analyBet=None
             analyBetBarr=None
             analyBarr=None
             
-        print("E ORA",analyBarr)
         
         #"""
         (TDN, TDTrajInit, TDT, TDBetOfEx, TDFirstConfIndex, TDSecondConfIndex, TDGraphId,
@@ -1734,40 +1757,49 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         
     
         if len(np.unique(N[runGroupFilter]))>2: 
-            myMultiRunStudy(runGroupFilter, "StudyInNProvaM", N, "N",
-                            np.asarray(list(zip(h_ext, fieldType, fieldSigma,
-                                                normalizedQstar, h_in, h_out,
-                                                discretizedRescaledBetas_M))),
-                            [["Hext","fieldType","sigma"], ["Qstar","Hin","Hout"],["rMbeta"]],
-                            np.array(list(zip( beta, graphID, rescaledBetas_M))),
-                            [r"beta","graphID",r"r1beta"],
-                            colorMapSpecifier=np.full(len(normalizedQstar),"nan"),
-                            arrayForColorCoordinate=refConfMutualQ)
-            
-        if len(np.unique(N[runGroupFilter]))>2: 
-            myMultiRunStudy(runGroupFilter, "StudyInNProvaG", N, "N",
-                            np.asarray(list(zip(h_ext, fieldType, fieldSigma,
-                                                normalizedQstar, h_in, h_out,
-                                                discretizedRescaledBetas_G))),
-                            [["Hext","fieldType","sigma"], ["Qstar","Hin","Hout"],["rGbeta"]],
-                            np.array(list(zip( beta, graphID, rescaledBetas_G))),
-                            [r"beta","graphID"],
-                            colorMapSpecifier=np.full(len(normalizedQstar),"nan"),
-                            arrayForColorCoordinate=rescaledBetas_G)
-            
-        #return
-        
-        if len(np.unique(N[runGroupFilter]))>2: 
             myMultiRunStudy(runGroupFilter, "StudyInN", N, "N",
                             np.asarray(list(zip(h_ext, fieldType, fieldSigma,
                                                 normalizedQstar, h_in, h_out,
                                                 beta))),
                             [["Hext","fieldType","sigma"],
                              ["Qstar","Hin","Hout"],
-                             ["beta"]],
+                             [r"beta"]],
                             np.array(list(zip( graphID, fieldRealization))),
                             ["graph", "r"],
-                            colorMapSpecifier=np.full(len(normalizedQstar),"nan"),arrayForColorCoordinate=T)
+                            colorMapSpecifier=np.full(len(normalizedQstar),"nan"),arrayForColorCoordinate=refConfMutualQ)
+        
+            myMultiRunStudy(runGroupFilter, "StudyInNabs", N, "N",
+                            np.asarray(list(zip(h_ext, fieldType, np.fabs(fieldSigma),
+                                                normalizedQstar, h_in, h_out,
+                                                beta))),
+                            [["Hext","absFieldType","sigma"],
+                             ["Qstar","Hin","Hout"],
+                             [r"beta"]],
+                            np.array(list(zip( graphID, fieldRealization))),
+                            ["graph", "r"],
+                            colorMapSpecifier=np.full(len(normalizedQstar),"nan"),arrayForColorCoordinate=refConfMutualQ)
+        
+            myMultiRunStudy(runGroupFilter, "StudyInNProvaM", N, "N",
+                            np.asarray(list(zip(h_ext, fieldType, fieldSigma,
+                                                normalizedQstar, h_in, h_out,
+                                                discretizedRescaledBetas_M))),
+                            [["Hext","fieldType","sigma"], ["Qstar","Hin","Hout"],["rMbeta"]],
+                            np.array(list(zip( beta, graphID))),
+                            [r"beta","graphID",r"r1beta"],
+                            colorMapSpecifier=np.full(len(normalizedQstar),"nan"),
+                            arrayForColorCoordinate=rescaledBetas_M)
+
+            myMultiRunStudy(runGroupFilter, "StudyInNProvaG", N, "N",
+                            np.asarray(list(zip(h_ext, fieldType, fieldSigma,
+                                                normalizedQstar, h_in, h_out,
+                                                discretizedRescaledBetas_G))),
+                            [["Hext","fieldType","sigma"], ["Qstar","Hin","Hout"],["rGbeta"]],
+                            np.array(list(zip( beta, graphID))),
+                            [r"beta","graphID"],
+                            colorMapSpecifier=np.full(len(normalizedQstar),"nan"),
+                            arrayForColorCoordinate=rescaledBetas_G)
+            
+
 
         if len(np.unique(N[runGroupFilter]))>1:
             if len(np.unique(rescaledBetas_M[runGroupFilter]))>2:
@@ -1791,7 +1823,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         
         if len(np.unique(T[runGroupFilter]))>2:
             myMultiRunStudy(runGroupFilter,"StudyInT", T,  "T",
-                            np.array(list(zip(N,h_ext, normalizedQstar, h_in, h_out,beta))), [["N","Hext"],["Qstar","Hin","Hout"],["beta"]],
+                            np.array(list(zip(N,h_ext, normalizedQstar, h_in, h_out,beta))), [["N","Hext"],["Qstar","Hin","Hout"],[r"beta"]],
                             np.array(list(zip( graphID))), [ "graphID"])
         
             

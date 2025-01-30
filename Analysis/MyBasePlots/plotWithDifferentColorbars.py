@@ -223,15 +223,18 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                         m= popt[1]
                         mErr =pcov[1,1]
                         plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color=color)
-                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker=marker, color=color)
+                        plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color=color)
+                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
+                        plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
                         fitResult= m, c, mErr
                     if 'quadratic' in fitTypes:
-                        popt, pcov = curve_fit(lambda x, c, m:  c+(x*x*m), x[fitCondition], y[fitCondition])
+                        popt, pcov = curve_fit(lambda x, c, a:  c+(x*x*a), x[fitCondition], y[fitCondition])
                         c = popt[0]
-                        m= popt[1]
+                        a= popt[1]
                         mErr =pcov[1,1]
-                        plt.plot(xToPlot, m*xToPlot**2.+c, linestyle='--', marker='', color=color)
-                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker=marker, color=color)
+                        plt.plot([], [], label=r'c+aT^{2}', linestyle='--', marker=marker, color=color)
+                        plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color=color)
+                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
                         fitResult= m, c, mErr
                         
         if fittingOverDifferentEdges is True and fittingOverDifferentShapes is False:
@@ -244,37 +247,55 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     m= popt[1]
                     mErr =pcov[1,1]
                     plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color=color)
-                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker=marker, color=color)
+                    plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color=color)
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
+                    plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
                     fitResult= m, c, mErr
-                if 'quadratic'in fitTypes:
-                    if len(np.unique(x[fitCondition]))>1:
-                        popt, pcov = curve_fit(lambda x, c, m:  c+(x*x*m), x[fitCondition], y[fitCondition])
-                        c = popt[0]
-                        m= popt[1]
-                        mErr =pcov[1,1]
-                        plt.plot(xToPlot, m*xToPlot**2.+c, linestyle='--', marker='', color=color)
-                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker='', color=color)
-                        fitResult= m, c, mErr
+                if 'quadratic' in fitTypes:
+                    popt, pcov = curve_fit(lambda x, c, a:  c+(x*x*a), x[fitCondition], y[fitCondition])
+                    c = popt[0]
+                    a= popt[1]
+                    mErr =pcov[1,1]
+                    plt.plot([], [], label=r'c+aT^{2}', linestyle='--', marker=marker, color=color)
+                    plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color=color)
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
+                    fitResult= m, c, mErr
+
                     
     if fittingOverDifferentShapes is True:
         xToPlot=np.linspace(np.nanmin(x), np.nanmax(x), 100)
         if len(np.unique(x))>1:
+            if 'expo' in fitTypes:
+                    popt, pcov = curve_fit(lambda x, c, m,s:  c*(1.-np.exp(-(x-s)*m)), x, y,p0=[y[-1],(y[1]-y[0])/(x[1]-x[0])/y[-1],0.], maxfev=10000)
+                    c = popt[0]
+                    m= popt[1] 
+                    s= popt[2] 
+                    mErr =pcov[1,1]
+                    #s =popt[2]
+                    plt.plot(xToPlot, c*(1.-np.exp(-(xToPlot-s)*m)), linestyle='--', marker='', color=color)
+                    plt.plot([], [], label=f'exp0', linestyle='--', marker=marker, color=color)
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
+                    plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
+                    fitResult= m, c, mErr
             if 'linear' in fitTypes:
-                popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x, y)
-                c = popt[0]
-                m= popt[1]
-                mErr =pcov[1,1]
-                plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color=color)
-                plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker=marker, color=color)
-                fitResult= m, c, mErr
+                    popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x, y)
+                    c = popt[0]
+                    m= popt[1]
+                    mErr =pcov[1,1]
+                    plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color=color)
+                    plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color=color)
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
+                    plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
+                    fitResult= m, c, mErr
             if 'quadratic' in fitTypes:
-                popt, pcov = curve_fit(lambda x, c, m:  c+(x*x*m), x, y)
-                c = popt[0]
-                m= popt[1]
-                mErr =pcov[1,1]
-                plt.plot(xToPlot, m*xToPlot**2.+c, linestyle='--', marker='', color=color)
-                plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr}', linestyle='--', marker=marker, color=color)
-                fitResult= m, c, mErr
+                    popt, pcov = curve_fit(lambda x, c,a:  c+(a*x**2.), x, y)
+                    c = popt[0]
+                    a= popt[1]
+                    mErr =pcov[1,1]
+                    plt.plot([], [], label=r'$c+aT^{2}$', linestyle='--', marker=marker, color=color)
+                    plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color=color)
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
+                    fitResult= m, c, mErr
             if 'mix' in fitTypes:
                 print(x)
                 print("Y",y)

@@ -40,10 +40,10 @@
 #endif
 #endif
 #define MCeq 50000
-#define MCprint 50000
+#define MCprint 12500
 #define MCconf 100000
 #define mcForIntegratedMeasuring 5000
-#define printconf true
+#define printconf false
 #include "../Generic/random.h"
 
 #include "MCdyn_classi/Generic/fileSystemUtil_Trajs.h"
@@ -69,7 +69,7 @@
 
 // #endif
 
-#define MCmeas 4
+#define MCmeas 12500
 #define NpPerN 8
 
 #define averagingMCForIntegratedMeasuring 1
@@ -412,16 +412,17 @@ int main(int argc, char **argv)
   int counter = 0;
 
   double ther_meanMeanEner, ther_meanMaxEner, ther_qDistFromStFw, ther_meanJumpsAv, ther_meanJumpsStdDev, ther_meanJumpsMin, ther_meanJumpsMax;
-  string nomeAvFile, nomeTIQstarFile, nomeTIHoutFile, nomeTIBetaFile;
+  string nomeAvFile, nomeTIQstarFile, nomeTIHoutFile, nomeTIBetaFile,nomeTIBetaFile2;
 
   nomeAvFile = folder + "/av.dat";
 
   nomeTIQstarFile = folder + "/TI_Qstar.dat";
   nomeTIHoutFile = folder + "/TI_hout.dat";
   nomeTIBetaFile = folder + "/TI_beta.dat";
+  nomeTIBetaFile2 = folder + "/TI_beta2.dat";
 
   logfile << "#Running on host " << ugnm.nodename << endl;
-
+  double thisMeas=0.; //toberemoved
   for (long mc = 0; mc < MC; mc++)
   {
     // just measuring the magnetization
@@ -453,7 +454,9 @@ int main(int argc, char **argv)
           probafin_av += (Qfin[1] >= Qstar ? exp(2 * hout) : 1);
         else
           probafin_av += (Qfin[1] >= Qstar ? 1 : 0);
-        L_av += compute_L_av(&Strajs, &Graph, T, beta, Hext, randomField);
+        thisMeas=compute_L_av(&Strajs, &Graph, T, beta, Hext, randomField); //toBeRemoved
+        L_av += thisMeas; //to be removed
+        //original L_av+=compute_L_av(&Strajs, &Graph, T, beta, Hext, randomField);
         counter++;
       }
     }
@@ -523,6 +526,13 @@ int main(int argc, char **argv)
         for (int i = 0; i < 3; i++)
           mfinfile3 << qfin_av[i] / counter << " ";
         mfinfile3 << L_av / counter << endl;
+        mfinfile3.close();
+
+        ofstream mfinfile4(nomeTIBetaFile2, std::ios::app);
+        mfinfile3 << mc << " " << beta << " ";
+        for (int i = 0; i < 3; i++)
+          mfinfile3 << qfin_av[i] / counter << " ";
+        mfinfile3 << L_av / counter << " "<< thisMeas<< endl;
         mfinfile3.close();
       }
     }
