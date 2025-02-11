@@ -39,11 +39,11 @@
 #define swapConfig true
 #endif
 #endif
-#define MCeq 50000
-#define MCprint 12500
+#define MCeq 100000
+#define MCprint 50000
 #define MCconf 100000
 #define mcForIntegratedMeasuring 5000
-#define printconf false
+#define printconf true
 #include "../Generic/random.h"
 
 #include "MCdyn_classi/Generic/fileSystemUtil_Trajs.h"
@@ -69,7 +69,7 @@
 
 // #endif
 
-#define MCmeas 12500
+#define MCmeas 5
 #define NpPerN 8
 
 #define averagingMCForIntegratedMeasuring 1
@@ -408,7 +408,7 @@ int main(int argc, char **argv)
   vector<double> qfin_av(3, 0);
   double chifin_av = 0.;
   double probafin_av = 0.;
-  double L_av = 0.;
+  long double L_av = 0.;
   int counter = 0;
 
   double ther_meanMeanEner, ther_meanMaxEner, ther_qDistFromStFw, ther_meanJumpsAv, ther_meanJumpsStdDev, ther_meanJumpsMin, ther_meanJumpsMax;

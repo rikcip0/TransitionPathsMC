@@ -30,9 +30,9 @@ def find_rows_similarity(matrix):
 
 def myHist(name, title, toHist, toHistName, nbins=False):
     plt.figure(name)
+    toHist=np.array(toHist)
     min_val = np.min(toHist)
     max_val = np.max(toHist)
-
     toHist=toHist.flatten()
     totalOccurrences= len(toHist)
     if nbins is False:

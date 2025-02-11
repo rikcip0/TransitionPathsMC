@@ -7,6 +7,7 @@ from singleStructureAnalysis import singleStructureAnalysis
 from singleGraphFieldAnalysis import singleGraphFieldAnalysis
 
 nameOfFoldersContainingRequested=None
+stringToFindGraph='graph'
 nameOfFoldersContainingGraphs = ["fPosJ"
                                ]
 nameOfFoldersContainingGraphFields = ["stdGaussian","stdBernoulli",
@@ -47,10 +48,11 @@ def findFoldersWithString(parent_dir, target_strings):
 
 
 if len(sys.argv) > 1:
-    archive_path = f"../../Data/Graphs"
+    archive_path = f"../../Data/Graphs/RRG/p2C3"
     analysisVsSimTypesDict = {"graph":"graphs","field":"fields"}
-    analysisType = sys.argv[1]
-    additional_strings= sys.argv[2:]
+    ao = sys.argv[1]
+    analysisType = sys.argv[2]
+    additional_strings= sys.argv[3:]
 
     if analysisType=="all":
         simType=["fields","graphs"]
@@ -71,14 +73,15 @@ if len(sys.argv) > 1:
     for s in simType:
         if s=="fields":
             nameOfFoldersContainingRequested=nameOfFoldersContainingGraphFields
-            stringToFind="realization"
+            stringToFind="realization1"
             analysisToDo=singleGraphFieldAnalysis
         elif s=="graphs":
             nameOfFoldersContainingRequested=nameOfFoldersContainingGraphs
-            stringToFind="graph"
+            stringToFind= stringToFindGraph
             analysisToDo=singleStructureAnalysis
-
+        print("AA")
         selected_runs = findFoldersWithString(archive_path, [stringToFind, *additional_strings])
+        print("AA2")
         if not selected_runs:
             raise FileNotFoundError(f"No files of type  found in the specified path.")
         

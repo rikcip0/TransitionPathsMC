@@ -844,16 +844,19 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
                 mcTimes = data[:,0]
                 cumulativeUs = data[:,-1]
                 results['TI']['beta'] = cumulativeUs[-1]
+                cumulativeUs=np.array(cumulativeUs,dtype=np.float128)
             else:
                 results['TI']['beta'] = data[-1]
         if len(lines)>2:
             plotTIUAutocorrelation=True
         if len(lines)>1:
-            measuresCounter = np.arange(1, len(mcTimes)+1)
+            measuresCounter = np.arange(1, len(mcTimes)+1,dtype=np.float128)
             previousContribution=np.roll(cumulativeUs*measuresCounter,1)
             previousContribution[0]=0
             singleUs = cumulativeUs*measuresCounter-previousContribution
-            measuresCounter = np.arange(1, len(mcTimes)+1)
+            singleUs =np.array(singleUs,dtype=np.float64)
+            cumulativeUs =np.array(cumulativeUs,dtype=np.float64)
+            measuresCounter =np.array(measuresCounter,dtype=np.int64)
             nMeasuresToDoBootstrap2=np.min([nMeasuresToDoBootstrap, len(singleUs)])
             chunk_size = len(singleUs) // nMeasuresToDoBootstrap
             means = [np.mean(np.random.choice(singleUs, size=chunk_size, replace=True)) 
@@ -870,6 +873,9 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
             plt.ylabel('U')
             plt.plot(measuresCounter, cumulativeUs) 
             plt.scatter(measuresCounter, cumulativeUs, label= "cumulative average")
+            #m2=[measuresCounter[i] for i in range(len(measuresCounter//4))]
+            #s2=[np.mean(singleUs[i*4:(i+1)*4]) for i in range(len(measuresCounter//4))]
+            #plt.scatter(m2, s2, label= "single measure") 
             plt.scatter(measuresCounter, singleUs, label= "single measure") 
             plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
             addInfoLines()
@@ -1674,7 +1680,7 @@ def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
     TIFile = get_file_with_prefix(run_Path, 'TIbeta')
     if TIFile is not None:
         with open(TIFile, 'r') as file:
-            numbers = [float(num) for num in file.readline().replace(',', '.').split() if any(c.isdigit() or c == '.' for c in num)]
+            numbers = [(np.float64)(num) for num in file.readline().replace(',', '.').split() if any(c.isdigit() or c == '.' for c in num)]
         results['TI']['beta'] = numbers[-1]
     else:
         results['TI']['beta'] = 'nan'

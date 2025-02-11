@@ -5,7 +5,6 @@ from collections import defaultdict
 import networkx as nx
 
 
-
 from matplotlib.colors import LinearSegmentedColormap
 sys.path.append('../')
 from matplotlib import pyplot as plt
@@ -132,7 +131,6 @@ def singleGraphFieldAnalysis( folder=""):
     else:
         delete_files_in_folder(resultsFolder)
     jsonResultsPath = os.path.join(resultsFolder,'graphFieldData.json')
-
     graphFieldFile_path = find_files_with_string(folder, "field.txt")[0]
     print("analyzing ", graphFieldFile_path)
     N=None
@@ -159,8 +157,7 @@ def singleGraphFieldAnalysis( folder=""):
         dataLines = filter(lambda x: not x.startswith('#'), lines)
         fieldValues = np.genfromtxt(dataLines, delimiter=' ')
 
-    myHist("fieldValues", "Values of 1-point fields for this std realization", fieldValues, "v"
-    )
+    myHist("fieldValues", "Values of 1-point fields for this std realization", fieldValues, "v")
     
     simData = {}
     simData['mean']= np.nanmean(fieldValues)

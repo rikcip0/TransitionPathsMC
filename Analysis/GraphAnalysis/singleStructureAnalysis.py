@@ -133,7 +133,11 @@ def singleStructureAnalysis( folder=""):
         delete_files_in_folder(resultsFolder)
     jsonResultsPath = os.path.join(resultsFolder,'graphData.json')
 
-    graphFile_path = find_files_with_string(folder, "graph.txt")[0]
+    graphFile_path = find_files_with_string(folder, "graph.txt")
+    if len(graphFile_path)>0:
+        graphFile_path=graphFile_path[0]
+    else:
+        return
     print("analyzing ", graphFile_path)
     N=None
     p=None
@@ -145,12 +149,13 @@ def singleStructureAnalysis( folder=""):
     myList=[]
     orientedEdges=[]
     G = nx.Graph()
+    fPosJ=1.
     with open(graphFile_path, 'r') as file:
         #print("analizzando ", nome_file)
         lines = file.readlines()
         firstLineData =np.genfromtxt(lines[0].split(), delimiter=' ')
         
-        fPosJ=(float)(firstLineData[4])
+        #fPosJ=(float)(firstLineData[4])
         N=(int)(firstLineData[0])
         """
         n_int=(int)(firstLineData[1])
@@ -230,6 +235,10 @@ def singleStructureAnalysis( folder=""):
     fig = plt.gcf()
     beta_c_l="unknown"
     beta_c_g="unknown"
+    beta_c_g2="unknown"
+    beta_c_g3="unknown"
+    beta_c_g4="unknown"
+    beta_c_g5="unknown"
     if fPosJ==1.0:
         NBT=[]
         
@@ -243,7 +252,19 @@ def singleStructureAnalysis( folder=""):
             NBT.append(row)
         NBT = np.asarray(NBT, dtype=np.float64)  # Use float64 for higher precision
         sparse_matrix = csr_matrix(NBT, dtype=np.float64)
-        values, vectors = eigs(sparse_matrix, k=1, which='LM', tol=1e-10) 
+        myK=12
+        values, vectors = eigs(sparse_matrix, k=myK, which='LR', tol=1e-4, maxiter=100000)
+
+        print("AUTIV", values)
+        # Calcolare e stampare il prodotto scalare tra gli autovettori
+        for i in range(values.shape[0]):
+            print(f"Autovalore {i}: {values[i]:.6f}")
+            for j in range(i, values.shape[0]):  # Per evitare di ripetere calcoli
+                scalar_product = np.dot(vectors[:, i].conj(), vectors[:, j])  # prodotto scalare tra autovettori
+                print(f"Prodotto scalare tra autovettori {i} e {j}: {scalar_product:.6f}")
+            # Stampare anche gli autovalori corrispondenti
+        print("I valori sonooo")
+        print(values)
         # The largest eigenvalue
         largest_eigenvalue = values[0].real
         myList=np.asarray(myList).flatten()
@@ -256,11 +277,40 @@ def singleStructureAnalysis( folder=""):
         quantity = firstMoment/(secondMoment-firstMoment)
         beta_c_l = np.arctanh(quantity)
         beta_c_g = np.arctanh(1/largest_eigenvalue)
+        print("VALGANO", values)
+        largest_eigenvalues = [v.real for v in values]
+        #largest_eigenvalues_i = [v.imaginary for v in values]
+        for mm,ao in enumerate(largest_eigenvalues):
+                print("val", values[mm])
+                #print("vett",vectors[:,mm])
+        beta_c_g3=beta_c_g
+        beta_c_g4=beta_c_g
+        beta_c_g5=beta_c_g
+        if ((largest_eigenvalues[1]).real) >0.:
+            beta_c_g3=np.arctanh(1./(largest_eigenvalues[1]).real)
+            mediaUltimi2=np.sqrt(largest_eigenvalues[0].real*(largest_eigenvalues[1]).real)
+            effValue = largest_eigenvalue-((largest_eigenvalues[1]).real)/largest_eigenvalue
+            if ((largest_eigenvalues[2]).real) >0.:
+                mediaUltimi2=np.sqrt(largest_eigenvalues[0].real*((largest_eigenvalues[2]).real+(largest_eigenvalues[1]).real)/2.)
+                effValue = largest_eigenvalue-((largest_eigenvalues[1]).real+(largest_eigenvalues[2]).real)/(2.*largest_eigenvalue)
+            beta_c_g4 = np.arctanh(1./mediaUltimi2)
+            beta_c_g5 = np.arctanh(1./effValue)
+            
+            
+        beta_c_g2 = 2./((1./beta_c_g3)+(1./beta_c_g))
+                
+
+        myHist("vec","vec", largest_eigenvalues, "a")
+        #myHist("vec2","vec", largest_eigenvalues_i, "a")
     
     simData = {}
     simData['beta_c']= {}
     simData['beta_c']['localApproach'] = beta_c_l
     simData['beta_c']['globalApproach'] = beta_c_g
+    simData['beta_c']['globalApproach_2'] = beta_c_g2
+    simData['beta_c']['globalApproach_3'] = beta_c_g3
+    simData['beta_c']['globalApproach_4'] = beta_c_g4
+    simData['beta_c']['globalApproach_5'] = beta_c_g5
 
     writeJsonResult(simData, jsonResultsPath)
     
