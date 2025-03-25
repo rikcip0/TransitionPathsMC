@@ -1,6 +1,5 @@
 TODO:
 Simulations:
--Do ZKC T=25,30,35,40 fino a 0.7 da 0.15 MCeq e simili a 50000
 -DO ER N=160 con T=65 e configurazioni per video
 -DO RRG sigma+-0.3
 

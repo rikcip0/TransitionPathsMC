@@ -7,6 +7,7 @@ from singleStructureAnalysis import singleStructureAnalysis
 from singleGraphFieldAnalysis import singleGraphFieldAnalysis
 
 nameOfFoldersContainingRequested=None
+archive_path = f"../../Data/Graphs/"
 stringToFindGraph='graph'
 nameOfFoldersContainingGraphs = ["fPosJ"
                                ]
@@ -48,7 +49,6 @@ def findFoldersWithString(parent_dir, target_strings):
 
 
 if len(sys.argv) > 1:
-    archive_path = f"../../Data/Graphs/RRG/p2C3"
     analysisVsSimTypesDict = {"graph":"graphs","field":"fields"}
     ao = sys.argv[1]
     analysisType = sys.argv[2]

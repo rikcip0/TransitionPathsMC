@@ -141,7 +141,7 @@ public:
     for (int e = 1; e < fieldjumps.size(); e++)
     { // epochs loop
       double H;
-      for (int i = counter.size() - 1; i >= 0; i--)
+      for (int i = counter.size() - 1; i > 0; i--)
       { // in such a way that at the end H = h[0]
         H = Hext + randomField[(*neighbors)[0][i - 1].interS[0]];
         for (int j = 0; j < counter[i].size(); j++)
@@ -308,13 +308,13 @@ public:
 
         H = Hext + randomField[(*neighbors)[0][i - 1].interS[0]];
         for (int j = 0; j < counter[i].size(); j++)
-          H += counter[i][j] * (*neighbors)[i][j].J; // I think we should include the coupling here (RC)
+          H += counter[i][j] * (*neighbors)[i][j].J;
         h[i].push_back(H);
       }
 
       H = Hext + randomField[siteIndex];
       for (int j = 0; j < counter[0].size(); j++)
-        H += counter[0][j] * (*neighbors)[0][j].J; // I think we should include the coupling here (RC)
+        H += counter[0][j] * (*neighbors)[0][j].J; 
       h[0].push_back(H);
       // cout<<"epoch e "<<e<<"\n H="<<H<<" fj.i,j,t="<<fieldjumps[e].i<<" "<<fieldjumps[e].j<<" "<<fieldjumps[e].t<<endl;
       double wp = w(2 * H);
@@ -326,8 +326,8 @@ public:
       double am = -wm;
       for (int i = 0; i < counter[0].size(); i++)
       {
-        ap -= w(2 * counter[0][i] * (h[1 + i].back() + (*neighbors)[0][i].J)); // I think we should include the coupling here (RC)
-        am -= w(2 * counter[0][i] * (h[1 + i].back() - (*neighbors)[0][i].J)); // I think we should include the coupling here (RC)
+        ap -= w(2 * counter[0][i] * (h[1 + i].back() + (*neighbors)[0][i].J));
+        am -= w(2 * counter[0][i] * (h[1 + i].back() - (*neighbors)[0][i].J));
       }
       double B = (ap - am) / 2.;
       lB.push_back(B);
