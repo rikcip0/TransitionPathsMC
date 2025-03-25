@@ -141,6 +141,7 @@ public:
     for (int e = 1; e < fieldjumps.size(); e++)
     { // epochs loop
       double H;
+      //counter.size() is deg+1. so counter.size() - 1 is deg
       for (int i = counter.size() - 1; i > 0; i--)
       { // in such a way that at the end H = h[0]
         H = Hext + randomField[(*neighbors)[0][i - 1].interS[0]];
@@ -303,6 +304,7 @@ public:
     for (int e = 1; e < fieldjumps.size(); e++)
     { // epochs loop
       double H;
+      //counter.size() is deg+1. so counter.size() - 1 is deg
       for (int i = counter.size() - 1; i > 0; i--)
       { // in such a way that at the end H = h[0]
 
