@@ -341,8 +341,8 @@ public:
       double wjm = 1;
       if (fieldjumps[e].i == 0) // i.e., if it s a jump of a first neighbour (RC)
       {
-        wjp = w(2 * counter[0][fieldjumps[e].j] * (h[1 + fieldjumps[e].j].back() + (*neighbors)[0][fieldjumps[e].j].J)); // I think we should include the coupling here (RC)
-        wjm = w(2 * counter[0][fieldjumps[e].j] * (h[1 + fieldjumps[e].j].back() - (*neighbors)[0][fieldjumps[e].j].J)); // I think we should include the coupling here (RC)
+        wjp = w(2 * counter[0][fieldjumps[e].j] * (h[1 + fieldjumps[e].j].back() + (*neighbors)[0][fieldjumps[e].j].J));
+        wjm = w(2 * counter[0][fieldjumps[e].j] * (h[1 + fieldjumps[e].j].back() - (*neighbors)[0][fieldjumps[e].j].J));
       }
       double lambda = fieldjumps[e].t - fieldjumps[e - 1].t;
       double sqt = sqrt(B * B + Gamma * Gamma);

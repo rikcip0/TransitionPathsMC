@@ -46,9 +46,12 @@ def findFoldersWithString(parent_dir, target_strings):
 if len(sys.argv) > 1:
     archive_path = f"../../Data/Graphs"
     analysisVsSimTypesDict = {"all": "any"}
+    redo=False
     analysisType = sys.argv[1]
     additional_strings= sys.argv[2:]
-
+    if "redo" in additional_strings:
+        additional_strings.remove("redo")
+        redo=True
     if analysisType in analysisVsSimTypesDict:
         simType = analysisVsSimTypesDict[analysisType]
         if simType!="any":
@@ -73,7 +76,7 @@ if len(sys.argv) > 1:
 
     for i, run in enumerate(sorted(selected_runs, reverse=True)):
         print(f"Analyzing simulation #{i+1} out of {len(selected_runs)}\n")
-        singleRunAnalysis(run)
+        singleRunAnalysis(run,redoIfDone=redo)
     # Get the stories names in the folder
     print("Analysis completed.\n")
     

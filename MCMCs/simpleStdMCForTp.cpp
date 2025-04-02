@@ -129,7 +129,10 @@ int main(int argc, char *argv[])
   long sstart = time(NULL);
 
   if (!extremesFixed)
+  {
+    hout = 1.;
     sprintf(buffer, "inf_%.3g_%.2g_%i_%.3g", beta, Hext, Qstar, hout);
+  }
   else
     sprintf(buffer, "inf_%.3g_%.2g_inf_%i_inf", beta, Hext, Qstar);
 
@@ -199,9 +202,17 @@ int main(int argc, char *argv[])
       std::cout << "requiredBetaOfSExtraction value is not allowed!" << std::endl;
       return 1;
     }
-    if (!initializeSingleConfigurationFromParTemp(folder, N, refS, info, requiredBetaOfSExtraction, sIndex))
+    pair<bool, pair<double, int>> result = initializeSingleConfigurationFromParTemp(folder, N, refS, info, requiredBetaOfSExtraction, sIndex);
+    if (!result.first)
     {
+      std::cout << "Error in the initialization of the reference configuration" << std::endl;
       return 1;
+    }
+
+
+    if (argc == 13)
+    {
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PT_" + to_string(result.second.first).substr(0,4)+ "_"+to_string(result.second.second) +"/stdMCs/",  string(buffer) , sstart); // For Cluster
     }
   }
   else
@@ -209,22 +220,20 @@ int main(int argc, char *argv[])
     refS.assign(N, 1); // i.e. refS is all ups.
     info.first += "Reference configuration is FM conf (all +)";
     info.second += "56";
+    if (argc == 14 || argc == 16)
+    {
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/stdMCs/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
+    }
+    else
+    {
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/stdMCs/", string(buffer), sstart); // For Cluster
+    }
   }
 
-  if (extremesFixed)
-  {
-    hout = 1.;
-  }
+
 
   // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  if (argc == 14 || argc == 16)
-  {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/stdMCs/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
-  }
-  else
-  {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/stdMCs/", string(buffer), sstart); // For Cluster
-  }
+
 
   createFolder(folder);
   cout << "Simulation is in folder " << folder << endl;

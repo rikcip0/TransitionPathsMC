@@ -1884,7 +1884,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                      arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                     nGraphs=len(np.unique(graphID[filt])), yscale='log', functionsToPlotContinuously=[functions, filters])
                 
-            if studyName=="StudyInT":
+            if "StudyInT" in studyName:
                 toFit=['linear']
             if np.all(N[filt]==34) and np.all(beta[filt]<0.3):
                 toFit=['expo']
@@ -1980,7 +1980,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             [r"graphID"],
                             arrayForColorCoordinate=TDN
                             )
-
+        
         if len(np.unique(N[runGroupFilter]))>2: 
             myMultiRunStudy(runGroupFilter, "StudyInN", N, "N",
                             np.asarray(list(zip(h_ext, fieldType, fieldSigma,
@@ -1994,9 +1994,17 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                             colorMapSpecifier=np.full(len(normalizedQstar),"nan"),arrayForColorCoordinate=refConfMutualQ)
      
         if len(np.unique(T[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInT_allNs_withRescBetas", T,  "T",
+                            np.array(list(zip(h_ext, normalizedQstar, h_in, h_out,discretizedRescaledBetas_M))), [["Hext"],["Qstar","Hin","Hout"],[r"rbeta"]],
+                            np.array(list(zip(N, graphID))), [ "N","graphID"])
+        if len(np.unique(T[runGroupFilter]))>2:
             myMultiRunStudy(runGroupFilter,"StudyInT", T,  "T",
                             np.array(list(zip(N,h_ext, normalizedQstar, h_in, h_out,beta))), [["N","Hext"],["Qstar","Hin","Hout"],[r"beta"]],
                             np.array(list(zip( graphID))), [ "graphID"])
+        if len(np.unique(T[runGroupFilter]))>2:
+            myMultiRunStudy(runGroupFilter,"StudyInT_allNs", T,  "T",
+                            np.array(list(zip(h_ext, normalizedQstar, h_in, h_out,beta))), [["Hext"],["Qstar","Hin","Hout"],[r"beta"]],
+                            np.array(list(zip(N, graphID))), [ "N","graphID"])
         #""" 
         if sum((np.sum(fieldSigma == v) >= 8 and np.sum(fieldSigma == -v) >= 8) for v in np.unique(fieldSigma[fieldSigma > 0])) >= 1:
             myMultiRunStudy(runGroupFilter, "StudyInNProvaM_sigmaAbs", N, "N",

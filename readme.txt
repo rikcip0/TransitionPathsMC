@@ -1,10 +1,12 @@
 TODO:
 Simulations:
--DO ER N=160 con T=65 e configurazioni per video
--DO RRG sigma+-0.3
+-RRG: rinforzi, forse un N=160
+-ER: rinforzi, forse un N=120
+-RFIM sigma+-0.3: 160,
+    rinforzi sul resto
+-RRG SG: tutto da vedere
 
 PathsMCAnalysis/singleRunAnalysis:
--improve linear fits to take only linear parts and all the linear parts
 -implement what is needed to do jackknife on TI
 
 

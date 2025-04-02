@@ -217,6 +217,15 @@ int main(int argc, char **argv)
 #endif
   }
 
+
+
+  char buffer[200];
+  cout << extremesFixed << endl;
+  if (extremesFixed)
+    sprintf(buffer, "%.2g_%.4g_%.2g_inf_%i_inf", T, beta, Hext, Qstar);
+  else
+    sprintf(buffer, "%.2g_%.4g_%.2g_%.2g_%i_%.3g", T, beta, Hext, hin, Qstar, hout);
+
   pair<vector<int>, vector<int>> referenceConfigurations;
   referenceConfigurations.first.assign(N, 0);
   referenceConfigurations.second.assign(N, 0);
@@ -247,9 +256,10 @@ int main(int argc, char **argv)
       return 1;
     }
 
+    pair<bool,pair<double,pair<int,pair<int,int>>>> result =initializeReferenceConfigurationsFromParTemp_FirstOccurrence(folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption);
     if (!
 #ifndef QUENCHCONFS
-        initializeReferenceConfigurationsFromParTemp_FirstOccurrence(folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
+      result.first
     // initializeReferenceConfigurationsFromParTemp_Typical(folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
 #else
         initializeReferenceConfigurationsSeqQuenchingFromParTemp(Graph, folder, N, referenceConfigurations, info, requiredQif, requiredBetaOfSExtraction, configurationsChoiceOption)
@@ -259,6 +269,17 @@ int main(int argc, char **argv)
       cout << "Error in the start/end configurations initialization" << endl;
       return 1;
     }
+
+    if (argc == 16 || argc == 18)
+    {
+      //TOBEMODIFIED
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PT_"+to_string(result.second.first).substr(0, 4)+"_"+to_string(result.second.second.first).substr(0, 4) + "__"+ to_string(result.second.second.second.first)+"_"+to_string(result.second.second.second.second),string(buffer)+ "_sigma" + to_string(sigma), sstart); // For Cluster
+    }
+    else
+    {
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PT_"+to_string(result.second.first).substr(0, 4)+"_"+to_string(result.second.second.first).substr(0, 4) + "__"+ to_string(result.second.second.second.first)+"_"+to_string(result.second.second.second.second)+"/",string(buffer), sstart); // For Cluster
+    }
+
   }
   else
   {
@@ -267,11 +288,23 @@ int main(int argc, char **argv)
       cout << "Error in the start/end configurations initialization" << endl;
       return 1;
     }
+
+    if (argc == 16 || argc == 18)
+    {
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
+    }
+    else
+    {
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer), sstart); // For Cluster
+    }
+
   }
 
   s_in = referenceConfigurations.first;
   s_out = referenceConfigurations.second;
-
+  
+  //deprected:START
+  /*
   if (Qstar == -1)
   {
     if (!computeSelfOverlap_withGraph(Qstar, s_out, Graph, beta, info, N))
@@ -280,8 +313,12 @@ int main(int argc, char **argv)
       return 1;
     }
     if ((Qstar + N) % 2)
-      Qstar -= 1; // decrease by 1 if Qstar and N have different parity
+    Qstar -= 1; // decrease by 1 if Qstar and N have different parity
   }
+  */
+  //deprected:END
+
+
   cout << "Using Q*= " << Qstar << endl
        << endl;
 
@@ -291,22 +328,6 @@ int main(int argc, char **argv)
     mutualQ += s_in[i] * s_out[i];
   }
 
-  char buffer[200];
-  cout << extremesFixed << endl;
-  if (extremesFixed)
-    sprintf(buffer, "%.2g_%.4g_%.2g_inf_%i_inf", T, beta, Hext, Qstar);
-  else
-    sprintf(buffer, "%.2g_%.4g_%.2g_%.2g_%i_%.3g", T, beta, Hext, hin, Qstar, hout);
-
-  // folder = makeFolderNameFromBuffer(folder+"/DataForPathsMC/", string(buffer));   //Comment if on cluster
-  if (argc == 16 || argc == 18)
-  {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer) + "_sigma" + to_string(sigma), sstart); // For Cluster
-  }
-  else
-  {
-    folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PathsMCs/", string(buffer), sstart); // For Cluster
-  }
 
   createFolder(folder);
   cout << "Simulation is in folder " << folder << endl;

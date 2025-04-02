@@ -437,7 +437,7 @@ def txtToInfo(file_path, mappa):
     simulationCode_version = (int) (simulationCode_version)
     return data
 
-def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
+def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=False):
 
     simData = {}
     simData['configuration']= configurationsInfo
@@ -672,7 +672,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False):
     simData['lastMeasureMC'] = lastMeasureMc
     
 
-    if currentAnalysisVersion==analysisVersionOfLastAnalysis and lastMeasureMc==lastMeasureMcOfLastAnalysis:
+    if redoIfDone is False and currentAnalysisVersion==analysisVersionOfLastAnalysis and lastMeasureMc==lastMeasureMcOfLastAnalysis:
         print('Nor the analysis or the data changed from last analysis.\n\n')
         return None
 
@@ -1782,7 +1782,7 @@ def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
     simData['results']=results
     writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
 
-def singleRunAnalysis(run_Path):
+def singleRunAnalysis(run_Path,redoIfDone=False):
 
     standardMCSimIDs = [15]
     pathMCSimIDs = [10,100,11,110]
@@ -1808,6 +1808,6 @@ def singleRunAnalysis(run_Path):
     configurationInfo= txtToInfo(file_path, mappa)
     simTypeID = configurationInfo['simulationTypeId']
     if simTypeID in pathMCSimIDs:
-        singlePathMCAnalysis(run_Path=run_Path, configurationsInfo=configurationInfo)
+        singlePathMCAnalysis(run_Path=run_Path, configurationsInfo=configurationInfo, redoIfDone=redoIfDone)
     elif simTypeID in standardMCSimIDs:
         singleStandardMCAnalysis(run_Path=run_Path, configurationInfo=configurationInfo)

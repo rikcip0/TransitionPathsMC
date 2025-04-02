@@ -487,9 +487,9 @@
                 "shortDescription": "PT",
                 "nAdditionalParameters": 3,
                 "additionalParameters": [
-                    "configurationIndex",
+                    "fileOfExtractionName",
                     "betaOfExtraction",
-                    "fileOfExtractionName"
+                    "configurationIndex"
                 ]
             },
             "56": {

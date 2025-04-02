@@ -13,7 +13,7 @@
 
 using namespace std;
 
-bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta, int configurationsChoiceOption)
+pair<bool,pair<double,pair<int,pair<int,int>>>> initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta, int configurationsChoiceOption)
 {
 
     vector<int> s1 = refConfs.first;
@@ -68,7 +68,7 @@ bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string s
     {
         std::cerr << "Error opening the file." << std::endl;
         cout << fileName << endl;
-        return 1;
+        return {false,{0.,{2*N,{-1,-1}}}};
     }
 
     std::string line;
@@ -104,10 +104,10 @@ bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string s
     {
 
         if (!initializeVectorFromLine(fileName, secondConfIndex + 1, N, s2))
-            return false;
+            return {false,{0.,{2*N,{-1,-1}}}};
 
         if (!initializeVectorFromLine(fileName, firstConfIndex + 1, N, s1))
-            return false;
+            return {false,{0.,{2*N,{-1,-1}}}};
 
         cout << "Taking configurations " << firstConfIndex << " and " << secondConfIndex << " from " << fileName << endl;
         cout << "Mutual overlap: " << usedOverlap << endl;
@@ -126,7 +126,7 @@ bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string s
             chosenConfigurationIndex = secondConfIndex;
 
         if (!initializeVectorFromLine(fileName, chosenConfigurationIndex + 1, N, s1))
-            return false;
+            return {false,{0.,{2*N,{-1,-1}}}};
 
         for (int i = 0; i < N; i++)
             s2[i] = -s1[i];
@@ -143,11 +143,11 @@ bool initializeReferenceConfigurationsFromParTemp_FirstOccurrence(const string s
     }
     else
     {
-        return false;
+        return {false,{0.,{2*N,{-1,-1}}}};
     }
 
     refConfs = {s1, s2};
-    return true;
+    return {true,{usedPTBeta, {usedOverlap,{firstConfIndex,secondConfIndex}}}};
 }
 
 bool initializeReferenceConfigurationsFromParTemp_Typical(const string sourceFolder, int N, pair<vector<int>, vector<int>> &refConfs, pair<string, string> &details, int desiredOverlap, double desiredBeta, int configurationsChoiceOption)
@@ -350,7 +350,7 @@ bool initializeReferenceConfigurationsFromParTemp_Typical(const string sourceFol
     return true;
 }
 
-bool initializeSingleConfigurationFromParTemp(const string sourceFolder, int N, vector<int> &conf, pair<string, string> &details, double &desiredBeta, int nConfigurationToCopy)
+pair<bool,pair<double,int>> initializeSingleConfigurationFromParTemp(const string sourceFolder, int N, vector<int> &conf, pair<string, string> &details, double &desiredBeta, int nConfigurationToCopy)
 {
 
     vector<int> s = conf;
@@ -401,13 +401,14 @@ bool initializeSingleConfigurationFromParTemp(const string sourceFolder, int N, 
     cout << endl;
 
     if (!initializeVectorFromLine(fileName, nConfigurationToCopy + 1, N, s))
-        return false;
+        return std::pair<bool, std::pair<double, int>>{false, {0., 0}};
     details.first += "Taking configuration " + to_string(nConfigurationToCopy) + " from " + fileName + ".\n\n";
     details.second += to_string(nConfigurationToCopy) + " " + to_string(usedPTBeta) + " " + fileName + "\n";
 
     conf = s;
     desiredBeta = usedPTBeta;
-    return true;
+    return std::pair<bool, std::pair<double, int>>{true, {usedPTBeta, nConfigurationToCopy}};
+
 }
 
 /*
