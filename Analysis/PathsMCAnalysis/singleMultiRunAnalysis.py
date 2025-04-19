@@ -723,8 +723,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 for i, stdMcBeta in enumerate(stMC_beta[stdMC_filtForThisTAndInit]):
                                     stdMcTIbeta = stMC_TIbeta[stdMC_filtForThisTAndInit][i]
                                     if stdMcBeta< largestStdMcBetaToConsider:
+                                        print("E NONEEEEEEEEEEEEEE\n\n\n\n\n")
                                         continue
                                     pathsMcsToConsider = pathMCBetas_forThisTAndInit>=stdMcBeta
+                                    temp=pathMCBetas_forThisTAndInit[pathsMcsToConsider]
+                                    if(len(temp)==0):
+                                        continue
                                     smallestLEqPathMCBeta_index=np.nanargmin(pathMCBetas_forThisTAndInit[pathsMcsToConsider])
                                     PathsMcTIToCompare=pathMCTIs_forThisTAndInit[pathsMcsToConsider][smallestLEqPathMCBeta_index]
                                     if abs((stdMcTIbeta-PathsMcTIToCompare)/TIDifferenceMax)<0:#0.003:
@@ -1883,6 +1887,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     markerShapeVariables[filt], markerShapeVariablesNames,
                      arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
                     nGraphs=len(np.unique(graphID[filt])), yscale='log', functionsToPlotContinuously=[functions, filters])
+                
+            mainPlot, _ = plotWithDifferentColorbars(f"ZfunctionAndCurve_log_log", x[filt], xName, ZFromTIBeta[filt], "Z", "Probability of having Q(s(T), "+r"$s_{out}$) $\geq$"+"Q* vs "+ xName +"\n"+specificationLine,
+                    trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
+                    markerShapeVariables[filt], markerShapeVariablesNames,
+                     arrayForColorCoordinate[filt],colorMapSpecifier=colorMapSpecifier[filt],
+                    nGraphs=len(np.unique(graphID[filt])),xscale='log', yscale='log', functionsToPlotContinuously=[functions, filters])
                 
             if "StudyInT" in studyName:
                 toFit=['linear']

@@ -403,7 +403,7 @@ pair<bool,pair<double,int>> initializeSingleConfigurationFromParTemp(const strin
     if (!initializeVectorFromLine(fileName, nConfigurationToCopy + 1, N, s))
         return std::pair<bool, std::pair<double, int>>{false, {0., 0}};
     details.first += "Taking configuration " + to_string(nConfigurationToCopy) + " from " + fileName + ".\n\n";
-    details.second += to_string(nConfigurationToCopy) + " " + to_string(usedPTBeta) + " " + fileName + "\n";
+    details.second += "55 "+fileName+ " " +to_string(usedPTBeta) + " " + to_string(nConfigurationToCopy)+"\n";
 
     conf = s;
     desiredBeta = usedPTBeta;

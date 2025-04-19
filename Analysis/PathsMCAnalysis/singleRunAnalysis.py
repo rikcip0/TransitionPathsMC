@@ -17,7 +17,7 @@ from moviepy.editor import VideoClip
 from moviepy.video.io.bindings import mplfig_to_npimage
 import networkx as nx
 
-
+doAdditional2dHist=False
 simulationCode_version = None
 currentAnalysisVersion = 'singleRunAnalysisV0003'
 fieldTypesDict = {'1': "Bernoulli", '2': "Gaussian"}
@@ -1066,7 +1066,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
         return None
     
-    if len(Hist2D_Data):
+    if len(Hist2D_Data) and doAdditional2dHist:
         theseFiguresFolder= os.path.join(plotsFolder, 'additionalRelevantData')
         if not os.path.exists(theseFiguresFolder):
             os.makedirs(theseFiguresFolder)
