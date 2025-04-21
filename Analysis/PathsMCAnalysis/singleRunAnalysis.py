@@ -482,6 +482,43 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     Qstar = (int)(simData['configuration']['parameters']['Qstar'])
     Qstar/=N
     
+    matplotlib.rcParams.update({
+        # Font
+        'font.size': 20,              # Dimensione testo generale
+        'axes.titlesize': 22,         # Titolo asse
+        'axes.labelsize': 20,         # Etichette assi
+        'xtick.labelsize': 18,
+        'ytick.labelsize': 18,
+        'legend.fontsize': 18,
+        'figure.titlesize': 24,
+
+        # Linee
+        'lines.linewidth': 2.2,         # Spessore linee principali
+        'lines.markersize': 8,        # Dimensione marker
+
+        # Assi
+        'axes.linewidth': 2,          # Spessore contorno assi
+        'xtick.major.width': 2,       # Spessore ticks
+        'ytick.major.width': 2,
+        'xtick.major.size': 7,        # Lunghezza ticks
+        'ytick.major.size': 7,
+        
+        # Griglia (opzionale)
+        'axes.grid': True,           # Imposta a True se vuoi griglia leggera
+        'grid.linewidth': 1,
+        'grid.alpha': 0.5,
+
+        # Layout
+        'figure.dpi': 300,            # Risoluzione per export PNG
+        'savefig.dpi': 300,
+        'savefig.bbox': 'tight',      # Rimuove margini inutili
+        'pdf.fonttype': 42,           # Testo selezionabile nei PDF
+        'ps.fonttype': 42,
+        
+        # Font family (opzionale)
+        'font.family': 'sans-serif',
+    })
+
     totalMC = (int)(simData['configuration']['mcParameters']['MC'])
     mcEq = (int)(simData['configuration']['mcParameters']['MCeq'])
     mcPrint = (int)(simData['configuration']['mcParameters']['MCprint'])
@@ -1203,8 +1240,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     addInfoLines()
 
     plt.figure('energyVsM')
-    plt.title(f'Mean of energy vs M\n'+ titleSpecification)
-    plt.xlabel(r'M')
+    #plt.title(f'Mean of energy vs M\n'+ titleSpecification)
+    plt.xlabel(r'm')
     plt.ylabel(r'$energy$')
     a = meanAndSigmaForParametricPlot(M, energy)
     plt.errorbar(a[0],a[1],a[2], label='mean')
@@ -1212,7 +1249,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     if M_RedLine is not None:
         plt.axvline(M_RedLine[0], color='red', linestyle='dashed', linewidth=1, label=M_RedLine[1])
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    addInfoLines()
+    #addInfoLines()
     
     if not areConfigurationsFM:
         plt.figure('energyVsQin')
@@ -1322,13 +1359,14 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     addInfoLines(figure)
     
     
-    figure, mainPlot = multipleCurvesAndHist('M', 'M vs time'+'\n'+ titleSpecification,
-                                times, 't', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+    figure, mainPlot = multipleCurvesAndHist('M', #'M vs time'+'\n'+ titleSpecification,
+                                             '',
+                                times, 't', M, 'm', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                 isYToHist=True, histScale=histScale,  redLineAtYValueAndName=M_RedLine)
-    addInfoLines(figure)
+    #addInfoLines(figure)
     
-    figure, mainPlot = multipleCurvesAndHist('EnergyVsM', f'energy vs M'+'\n'+ titleSpecification,
-                                M, r'M', energy, 'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+    figure, mainPlot = multipleCurvesAndHist('EnergyVsM', f'energy vs m'+'\n'+ titleSpecification,
+                                M, r'm', energy, 'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                 isYToHist=True, histScale=histScale, redLineAtXValueAndName=M_RedLine)
     addInfoLines(figure)
     
@@ -1366,12 +1404,12 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         addInfoLines()
 
         figure, mainPlot = multipleCurvesAndHist('MVsQin', r'M vs $q_{in}$'+'\n'+ titleSpecification,
-                                    q_in, r'$q_{in}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    q_in, r'$q_{in}$', M, 'm', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                     isYToHist=True)
         addInfoLines(figure)
         
         figure, mainPlot = multipleCurvesAndHist('MVsQout', f'M vs ' +r'$q_{out}$'+'\n'+ titleSpecification,
-                                    q_out, r'$q_{out}$', M, 'M', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
+                                    q_out, r'$q_{out}$', M, 'm', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                     isYToHist=True, histScale=histScale)
         addInfoLines(figure)
 
@@ -1479,9 +1517,9 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
             x_limits = plt.xlim()
             y_limits = plt.ylim()
             if linearity_lowerIndex is not None:
-                plt.axvline(time[linearity_lowerIndex], linestyle='dashed', linewidth=1, color='red', label=r'$\tau_{trans}=$'+f'{time[linearity_lowerIndex]:.2f}')
+                plt.axvline(time[linearity_lowerIndex], linestyle='dashed', linewidth=1, color='blue', label=r'$\tau_{trans}=$'+f'{time[linearity_lowerIndex]:.2f}')
             if linearity_upperIndex is not None:
-                plt.axvline(time[linearity_upperIndex], linestyle='dashed', linewidth=1, color='green', label=r'$\tau_{lin. end}=$'+f'{time[linearity_upperIndex]:.2f}')
+                plt.axvline(time[linearity_upperIndex], linestyle='dashed', linewidth=1, color='blue', label=r'$\tau_{lin. end}=$'+f'{time[linearity_upperIndex]:.2f}')
             paramsLine = '\n'.join([f'{paramsNames[i]}={best_fit_params[i]:.3g}' for i in range(len(best_fit_params))])+'\n'
             plt.plot(time,funcToPlot(time, *best_fit_params), '--', label=paramsLine+r'$\chi^2_{r}$'+f'={chi:.3g}', linewidth= 0.8) 
             #plt.plot(time,funcToPlot(time, best_fit_params[0]), '--', label=r'k'+f'={best_fit_params[0]:.3g}\n'+r'$\chi^2_{r}$'+f'={chi:.3g}', linewidth= 0.8) 
@@ -1502,8 +1540,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
                 linearFitResults2['Chi'] = chi
 
 
-        addInfoLines()
-        plt.title(f'$\chi$ vs time\n'+titleSpecification)
+        #addInfoLines()
+        #plt.title(f'$\chi$ vs time\n'+titleSpecification)
         plt.xlabel('t')
         plt.ylabel(r'$\chi$')
 
@@ -1577,7 +1615,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
 
     plt.figure('ChiVsM')
     plt.plot(avM, avChi)
-    plt.title(f'$\chi$ vs '+r'M'+'\n'+titleSpecification)
+    plt.title(f'$\chi$ vs '+r'm'+'\n'+titleSpecification)
     plt.xlabel(r'$M$')
     plt.ylabel(r'$\chi$')
     addInfoLines()
@@ -1596,7 +1634,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     plt.plot(time, avM)
     plt.title(f'Magnetization conf. vs time\n'+titleSpecification)
     plt.xlabel('t')
-    plt.ylabel('M')
+    plt.ylabel('m')
     addInfoLines()
 
     plt.figure('QoutVsQin')
@@ -1615,7 +1653,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     plt.plot(avM, avQout, label=r'$q_{out}$')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
     plt.title(f'Qs vs M.\n'+titleSpecification)
-    plt.xlabel('M')
+    plt.xlabel('m')
     plt.ylabel(r'$Q$')
     plt.axhline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
     addInfoLines()

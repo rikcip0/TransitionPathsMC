@@ -1,12 +1,6 @@
-from copy import copy, deepcopy
-from matplotlib import cm
-from scipy.optimize import curve_fit
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.cm import ScalarMappable
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, Normalize
+from matplotlib.ticker import LogFormatterMathtext
 
 topPad= 3
 mainPlotGSLen=114
@@ -90,14 +84,14 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
                 x_min, x_max = np.min(histArray), np.max(histArray)
                 x_mean, x_VarSq = np.mean(histArray), np.var(histArray)**0.5
                 bins = np.arange(x_min - 1. / N, x_max + 2. / N, 2. / N)
-                ax_x.hist(histArray.flatten(), bins=bins, color='gray', alpha=0.7, density=True)
+                ax_x.hist(histArray.flatten(), bins=bins, color='grey', alpha=0.7, density=True)
                 if histScale != '':
                     ax_x.set_xscale(histScale)
                     
                 nPlottedXHistograms+=1
                 ax_x.xaxis.tick_bottom()
                 if nPlottedXHistograms<nTotalYHistograms:
-                    ax_x.tick_params(color='gray')
+                    ax_x.tick_params(color='black')
 
                 (thisHistMinimumX, thisHistMaximumX) = ax_x.get_xlim()
                 if minimumXToPlot is None:
@@ -110,7 +104,7 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
                 elif maximumXToPlot<thisHistMaximumX:
                     maximumXToPlot=thisHistMaximumX
                 
-                mean_line = ax_x.axvline(x_mean, color='black', linestyle='solid', linewidth=2)
+                mean_line = ax_x.axvline(x_mean+0.05, color='black', linestyle='dashed', linewidth=1.2)
                 sigma_lower = ax_x.axvline(x_mean - x_VarSq, color='green', linestyle='dashed', linewidth=1)
                 sigma_upper = ax_x.axvline(x_mean + x_VarSq, color='green', linestyle='dashed', linewidth=1)
                 if redLineAtXValueAndName is not None:
@@ -131,7 +125,6 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
             histArray, label = histArrayAndLabel
             
             ax_y = fig.add_subplot(gs[topPad:topPad+ mainPlotGSHeight, mainPlotGSLen+nPlottedYHistograms*(histogramGSPad+histogramGSLen)+histogramGSPad:mainPlotGSLen+(nPlottedYHistograms+1)*(histogramGSPad+histogramGSLen)])
-            
             q_in_min, q_in_max = np.min(histArray), np.max(histArray)
             q_in_mean, q_in_VarSq = np.mean(histArray), np.var(histArray)**0.5
             bins = np.arange(q_in_min - 1. / N, q_in_max + 2. / N, 2. / N)
@@ -143,9 +136,15 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
             nPlottedYHistograms+=1
             ax_y.yaxis.tick_right()
             if nPlottedYHistograms<=nTotalYHistograms:
-                ax_y.tick_params(color='gray')
-
-            mean_line = ax_y.axhline(q_in_mean, color='black', linestyle='solid', linewidth=2)
+                ax_y.tick_params(color='black')
+                
+            ax_y.tick_params(axis='x', labelsize=11)
+            if histScale == 'log':
+                ax_y.set_xscale('log', base=10)
+                #ax_y.set_xticks([1e-2, 1e0])
+                ax_y.get_xaxis().set_major_formatter(LogFormatterMathtext(base=10))
+            
+            mean_line = ax_y.axhline(q_in_mean, color='black', linestyle='dashed', linewidth=1.2)
             sigma_lower = ax_y.axhline(q_in_mean - q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
             sigma_upper = ax_y.axhline(q_in_mean + q_in_VarSq, color='green', linestyle='dashed', linewidth=1)
             if redLineAtYValueAndName is not None:
@@ -181,11 +180,14 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
 
     # Create curve legend on the left
     verticalPosition=0.775
+    
+    """
     if len(curve_labels)>0:
         fig.legend(curve_handles, curve_labels, loc='upper left', bbox_to_anchor=(-0.13, verticalPosition), frameon=True)
 
     if len(histogram_labels)>0:
         # Create histogram legend on the right
         fig.legend(histogram_handles, histogram_labels, loc='upper right', bbox_to_anchor=(1.10, verticalPosition), frameon=True, handlelength=0.75)
+    """
 
     return fig, mainPlot
