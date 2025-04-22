@@ -614,7 +614,6 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     def thermodynamicIntegration(filt, analysis_path):
         
         cleanFilt = np.zeros_like(filt, dtype=bool)
-        print("[DBG] id inizio TI:", cleanFilt.__array_interface__['data'][0], "sum:", np.sum(cleanFilt))
         TDN=[]
         TDTrajInit=[]
         TDT=[]
@@ -1066,7 +1065,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     
                                     if isinstance(thisCurveBetaMax, (int, float)):
                                         #print(betaGOverRealizations, betaMaxOverRealizations, thisCurveBetaMax, thisCurveBetaG)
-                                        rescaledBetas_M[TIFilt_forThisTAndInit] = (beta[TIFilt_forThisTAndInit])/(thisCurveBetaMax)*betaMaxOverRealizationsV
+                                        rescaledBetas_M[TIFilt_forThisTAndInit] = (beta[TIFilt_forThisTAndInit])-(thisCurveBetaMax)+betaMaxOverRealizationsV
                                         #minusLnKFromChi[TIFilt_forThisTAndInit] *= thisCurveBetaMax/betaMaxOverRealizations
                                         #minusLnKFromChi_2[TIFilt_forThisTAndInit] *= thisCurveBetaMax/betaMaxOverRealizations
                                         #minusLnKFromChi_2_scaled[TIFilt_forThisTAndInit] *= thisCurveBetaMax/betaMaxOverRealizations
@@ -1075,13 +1074,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                         level['rescaledZfunction_Max']=rescaledZfunction_M
                                         
                                     if isinstance(thisCurveBetaL, (int, float)):
-                                        rescaledBetas_L[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaL*betaLOverRealizationsV
+                                        rescaledBetas_L[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]-thisCurveBetaL+betaLOverRealizationsV
                                         def rescaledZfunction_L(bet, numBet=1., denBet=thisCurveBetaL, function=originalZfunction):
                                             return function(bet*denBet/numBet)
                                         level['rescaledZfunction_l']=rescaledZfunction_L
                                     
                                     if isinstance(thisCurveBetaG, (int, float)):
-                                        rescaledBetas_G[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaG*betaGOverRealizationsV
+                                        rescaledBetas_G[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]-thisCurveBetaG+betaGOverRealizationsV
                                         def rescaledZfunction_G(bet, numBet=1., denBet=thisCurveBetaG, function=originalZfunction):
                                             return function(bet*denBet/numBet)
                                         level['rescaledZfunction_g']=rescaledZfunction_G
