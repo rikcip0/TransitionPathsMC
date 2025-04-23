@@ -418,7 +418,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             f= theoreticalX<=1
             theoreticalX = theoreticalX[f]
             theoreticalY = theoreticalY[f] 
-        plt.plot(theoreticalX, theoreticalY, linestyle='--', marker=' ', label='cavity')
+        plt.plot(theoreticalX, theoreticalY, linestyle='--', marker=' ', label='Theory')
     
     if linesAtXValueAndName is not None:
         plt.plot([],[], label=f"          ", marker=None, color="None")
@@ -435,11 +435,13 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             plt.plot([],[], label=f"{l_Name}", linestyle='dashed', marker=' ', color=l_color)
     
     handles, labels = ax1.get_legend_handles_labels()
+    """
     fig.legend(handles, labels,
         bbox_to_anchor=(1.05, 1.0),
         loc='upper left',
         borderaxespad=0.,
         bbox_transform=ax1.transAxes)
+    """
 
     theory_handles_labels = [(h, l) for h, l in zip(handles, labels) if l == 'Theory']
     if theory_handles_labels:

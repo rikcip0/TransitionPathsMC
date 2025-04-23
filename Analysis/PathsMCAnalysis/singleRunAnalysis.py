@@ -518,6 +518,13 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         # Font family (opzionale)
         'font.family': 'sans-serif',
     })
+    
+    matplotlib.rcParams.update({
+    # …il tuo blocco esistente…
+    'font.family':       'sans-serif',            # rimane il family per testo, tick, legende…
+    'font.sans-serif':   ['Arial','DejaVu Sans'], # scegli il sans-serif che ti piace per il testo
+    'mathtext.fontset':  'cm',                    # o 'stix' se preferisci STIX
+    })
 
     totalMC = (int)(simData['configuration']['mcParameters']['MC'])
     mcEq = (int)(simData['configuration']['mcParameters']['MCeq'])
@@ -1005,11 +1012,14 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
                                       plotBoth=True):
         results['thermalization'][quantityShortName] = {}
 
+        # 3) Usi β come plain‑text (Unicode) e J in math‑mode con \mathrm
         if plotBoth:
             plt.figure(quantityShortName)
             plt.title(quantityFullName+' vs MC\n'+titleSpecification)
             plt.plot(mcSweeps, quantity)
             plt.xlabel('MC sweep')
+            plt.xlabel(r"$\beta\,J$")
+            
             plt.ylabel(quantityLabelName)
             addInfoLines()
 
