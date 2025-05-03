@@ -549,7 +549,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         Qif = -1
         graphInfo_Line = 'FM '+graphInfo_Line
         areConfigurationsFM=True
-        M_RedLine = [Qstar, 'm*']
+        #M_RedLine = [Qstar, 'm*']
         Qout_RedLine = [Qstar, 'q*']
     else:
         Qif = (int)(simData['configuration']['referenceConfigurationsInfo']['mutualOverlap'])
@@ -1357,16 +1357,16 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     nRandomTrajs= np.min([nMaxTrajsToPlot, nTrajs-1])-1
     someTrajs= np.array([0]) #non è quella dell'inizializzazione, ma quella subito dopo
     if nRandomTrajs>0:
-        someTrajs = np.append(someTrajs, np.asarray([nTrajs-2]))
-        someTrajs = np.sort(np.append(someTrajs, np.random.choice(np.arange(1, nTrajs-2), nRandomTrajs-1, replace=False)))
+        someTrajs = np.append(someTrajs, np.asarray([nTrajs-4]))
+        someTrajs = np.sort(np.append(someTrajs, np.random.choice(np.arange(1, nTrajs-4), nRandomTrajs-1, replace=False)))
     
     someTrajs_MC=[tj*mcPrint for tj in someTrajs]
     titleSpecification = 'considering some sampled trajectories'
     
-    figure, mainPlot = multipleCurvesAndHist('energy', r'Energy vs time'+'\n'+ titleSpecification,
+    figure, mainPlot = multipleCurvesAndHist('energy','',# r'Energy vs time'+'\n'+ titleSpecification,
                                 times, 't', energy, r'energy', N, nameForCurve= 'traj', curvesIndeces=someTrajs,
                                 isYToHist=True, histScale=histScale)
-    addInfoLines(figure)
+    #addInfoLines(figure)
     
     
     figure, mainPlot = multipleCurvesAndHist('M', #'M vs time'+'\n'+ titleSpecification,

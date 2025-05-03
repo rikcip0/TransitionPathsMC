@@ -155,6 +155,7 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
             
             # Add histogram legend handles
             (thisHistMinimumY, thisHistMaximumY) = ax_y.get_ylim()
+            """
             if minimumYToPlot is None:
                 minimumYToPlot= thisHistMinimumY
             elif minimumYToPlot>thisHistMinimumY:
@@ -165,11 +166,13 @@ def multipleCurvesAndHist(name, title, xArray, xName, yArray, yName, N, yArrayEr
             elif maximumYToPlot<thisHistMaximumY:
                 maximumYToPlot=thisHistMaximumY
             yHistAxes.append(ax_y)
-            
+            """
+    """
     for ax in yHistAxes:
         ax.set_ylim((minimumYToPlot, maximumYToPlot))
     mainPlot.set_ylim((minimumYToPlot, maximumYToPlot))
     
+    """        
     if nTotalYHistograms>0:
         histogram_handles = [mean_line, sigma_upper]
         
