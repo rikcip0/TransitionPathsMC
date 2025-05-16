@@ -1,9 +1,10 @@
 TODO:
+Vedi tutti i warning di compilazione
+Compila tutto con O2
 Simulations:
 -RRG: rinforzi, forse un N=160
--ER: rinforzi, forse un N=120
--RFIM sigma+-0.3: 160,
-    rinforzi sul resto
+-ER: rinforzi con grande tau, N=200. rifai N=160 g8797
+-RFIM rinforzi con grande tau, N=180,200
 -RRG SG: tutto da vedere
 
 PathsMCAnalysis/singleRunAnalysis:
@@ -19,7 +20,6 @@ PathsMCAnalysis/singleMultiRunAnalysis:
 -improve thermodynamic integration data curve by curve fucntion
 
 Graphs:
--implement real graphs generation and acquisition by simulation code
 -implement power-law graphs generation and acquisition by simulation code
 
 

@@ -1989,7 +1989,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
     for runGroupFilter, runGroupName in selectedRunGroups_FiltersAndNames:
         
         analysis_path = os.path.join(parentAnalysis_path, runGroupName)
-        #runGroupFilter=np.logical_and.reduce([runGroupFilter,fieldSigma==0.,normalizedQstar==0.6])
+        runGroupFilter=np.logical_and.reduce([runGroupFilter,fieldSigma==0.,normalizedQstar==0.6])
         #runGroupFilter=np.logical_and.reduce([runGroupFilter,fieldSigma==0.,normalizedQstar==0.6])
         #print(np.nancumsum(realTime*nMeasures," seconds"))
         #return
