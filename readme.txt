@@ -5,7 +5,7 @@ Simulations:
 -RRG: rinforzi, forse un N=160
 -ER: rinforzi con grande tau, N=200. rifai N=160 g8797
 -RFIM rinforzi con grande tau, N=180,200
--RRG SG: tutto da vedere
+-RRG SG: tutto da vedere, N=120 interessanti: 4905, 4911, 6699
 
 PathsMCAnalysis/singleRunAnalysis:
 -implement what is needed to do jackknife on TI
