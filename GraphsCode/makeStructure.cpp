@@ -239,7 +239,7 @@ int main(int argc, char **argv)
         }
 
     // check self-links
-    for (int i = 0; i < list.size() / 2; i += 2)
+    for (int i = 0; i < list.size() / 2; i++)
       if (list[2 * i] == list[2 * i + 1])
       {
         cout << i << " " << list[2 * i] << " " << list[2 * i + 1] << endl;

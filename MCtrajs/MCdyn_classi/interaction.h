@@ -28,14 +28,13 @@ public:
         interS[0] = _interactingSpin;
     }
 
-    /*
-        rInteraction(int _J, vector<int> _interactingSpins) // Generic p-interaction (vector _interactingSpins is then long p-1)
-        {
-            J = _J;
-            interS.resize(1);
-            interS = _interactingSpin;
-        }
-    */
+    rInteraction(int _J, vector<int> _interactingSpins) // Generic p-interaction (vector _interactingSpins is then long p-1)
+    {
+        J = _J;
+        interS.resize(1);
+        interS = _interactingSpins;
+    }
+
 
     // action
     operator int() const // useful to not change Zamponi Code

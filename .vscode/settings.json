@@ -114,7 +114,17 @@
     "format": "cpp",
     "iomanip": "cpp",
     "span": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "list": "cpp",
+    "set": "cpp",
+    "*.ipp": "cpp",
+    "rope": "cpp",
+    "forward_list": "cpp",
+    "unordered_set": "cpp",
+    "slist": "cpp",
+    "ranges": "cpp",
+    "regex": "cpp",
+    "valarray": "cpp"
   },
   "makefile.configureOnOpen": true,
   "search.useIgnoreFiles": false,
