@@ -80,7 +80,7 @@ if len(sys.argv) > 1:
             stringToFind= stringToFindGraph
             analysisToDo=singleStructureAnalysis
         print("AA")
-        selected_runs = findFoldersWithString(archive_path, [stringToFind, *additional_strings])
+        selected_runs = findFoldersWithString(archive_path, [stringToFindGraph, *additional_strings])
         print("AA2")
         if not selected_runs:
             raise FileNotFoundError(f"No files of type  found in the specified path.")

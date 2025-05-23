@@ -16,7 +16,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                                 markerEdgeVariable, edge_shortDescription, edgeColorPerVar,
                                 markerShapeVariable, markerShapeVariableNames,
                                 arrayForColorCoordinate, colorMapSpecifier=None,
-                                edgeColorVariableName='Coupling',
+                                edgeColorVariableName='Initialization',
                                 colorCoordinateVariableName='', colorMapSpecifierName='',
                                 dynamicalTicksForColorbars=False,
                                 additionalMarkerTypes=None,
@@ -39,13 +39,17 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     fittingOverDifferentShapes=True
     #checking if enough non-nan values
     valid_indices = np.isfinite(x) & np.isfinite(y)
+    if "betTentative" in name:
+        valid_indices = np.logical_and(valid_indices, x<=1)
     x=x[valid_indices]
     y=y[valid_indices]
+
     if(len(y)<3):
          return None, None
     markerEdgeVariable = markerEdgeVariable[valid_indices]
     markerShapeVariable = markerShapeVariable[valid_indices]
     arrayForColorCoordinate = arrayForColorCoordinate[valid_indices]
+    keyIsNan=False
     if colorMapSpecifier is not None:
         colorMapSpecifier = colorMapSpecifier[valid_indices]
         uniqueColorMapsSpecifiers = np.sort(np.unique(colorMapSpecifier))
@@ -53,6 +57,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     else:
         colorMapSpecifier=np.full(len(x),"nan",dtype=np.float64)
         nColorbars=1
+        keyIsNan=True
         uniqueColorMapsSpecifiers=np.array(["nan"])
     uniqueColorMapsSpecifiers = uniqueColorMapsSpecifiers.astype(str)
     colorMapSpecifier = np.asarray(colorMapSpecifier, dtype=str)
@@ -79,6 +84,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     values = np.linspace(1., 0.9, 256)
 
     if nColorbars == 1:
+        print("ASSERTO", uniqueColorMapsSpecifiers[0])
         cmaps[uniqueColorMapsSpecifiers[0]] = plt.cm.gnuplot
     else:
         # Creazione delle colorbar
@@ -91,7 +97,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             hues = np.full_like(saturations, hsv_color[0])  # Usa la hue originale
             hsv_colors = np.stack([hues, saturations, values], axis=1)
             rgb_colors = hsv_to_rgb(hsv_colors)  # Converti di nuovo in RGB
-            
+            print("ASSEWRGNO", val)
             # Creare la colormap per la colorbar corrente
             cmaps[val] = ListedColormap(rgb_colors)
 
@@ -219,8 +225,10 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     if len(x[condition]) == 0:
                         continue
                     if len(uniqueColorCoordinates)>1:
+                        print("QUI", np.min(uniqueColorCoordinates), np.max(uniqueColorCoordinates))
                         norm = Normalize(vmin=np.min(uniqueColorCoordinates), vmax=np.max(uniqueColorCoordinates))
                     else:
+                        print("QUA")
                         norm = lambda x: 0.5
                     color = cmaps[selectedColorMap](norm(q))
 
@@ -251,7 +259,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                         popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x[fitCondition], y[fitCondition])
                         c = popt[0]
                         m= popt[1]
-                        mErr =pcov[1,1]
+                        mErr = np.sqrt(pcov[1,1])
                         plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color=color)
                         plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color=color)
                         plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
@@ -262,7 +270,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                         popt, pcov = curve_fit(lambda x, c, a:  c+(x*x*a), x[fitCondition], y[fitCondition])
                         c = popt[0]
                         a= popt[1]
-                        mErr =pcov[1,1]
+                        mErr =np.sqrt(pcov[1,1])
                         plt.plot([], [], label=r'c+aT^{2}', linestyle='--', marker=marker, color=color)
                         plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color=color)
                         plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
@@ -276,7 +284,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x[fitCondition], y[fitCondition])
                     c = popt[0]
                     m= popt[1]
-                    mErr =pcov[1,1]
+                    mErr = np.sqrt(pcov[1,1])
                     plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color='grey')
                     plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color='grey')
                     plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
@@ -286,7 +294,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     popt, pcov = curve_fit(lambda x, c, a:  c+(x*x*a), x[fitCondition], y[fitCondition])
                     c = popt[0]
                     a= popt[1]
-                    mErr =pcov[1,1]
+                    mErr = np.sqrt(pcov[1,1])
                     plt.plot([], [], label=r'c+aT^{2}', linestyle='--', marker=marker, color='grey')
                     plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color='grey')
                     plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
@@ -301,7 +309,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     c = popt[0]
                     m= popt[1] 
                     s= popt[2] 
-                    mErr =pcov[1,1]
+                    mErr = np.sqrt(pcov[1,1])
                     #s =popt[2]
                     plt.plot(xToPlot, c*(1.-np.exp(-(xToPlot-s)*m)), linestyle='--', marker='', color='grey')
                     plt.plot([], [], label=f'exp0', linestyle='--', marker=marker, color='grey')
@@ -312,7 +320,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x, y)
                     c = popt[0]
                     m= popt[1]
-                    mErr =pcov[1,1]
+                    mErr = np.sqrt(pcov[1,1])
                     plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color='grey')
                     plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color='grey')
                     plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
@@ -333,7 +341,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                 c=popt[2]
                 delta=popt[3]
                 d= c/(delta*delta) 
-                mErr =pcov[1,1]
+                mErr = np.sqrt(pcov[1,1])
                 plt.plot(xToPlot, model2(xToPlot,a,b,c,delta), linestyle='--', marker='x', color='grey')
                 plt.plot([], [], label=f'exp02', linestyle='--', marker=marker, color='grey')
                 plt.plot([], [], label=f's={s:.3g} ' +f'ty={c:.3g} ' + r'xt'+f'={xt:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
@@ -343,7 +351,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     popt, pcov = curve_fit(lambda x, c,a:  c+(a*x**2.), x, y)
                     c = popt[0]
                     a= popt[1]
-                    mErr =pcov[1,1]
+                    mErr = np.sqrt(pcov[1,1])
                     plt.plot([], [], label=r'$c+aT^{2}$', linestyle='--', marker=marker, color='grey')
                     plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color='grey')
                     plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
@@ -356,7 +364,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                 c=0.
                 k1= popt[0]
                 k2= popt[1]
-                k1Err =pcov[1,1]
+                k1Err = np.sqrt(pcov[1,1])
                 plt.plot(xToPlot, mix(xToPlot,k1,k2), linestyle='--', marker='', color='grey')
                 plt.plot([], [], label=f'c={c:.3g} '+f'k1={k1:.3g} ' + r'k2'+f'={k2:.3g}', linestyle='--', marker=marker, color='grey')
                 fitResult= m, c, mErr
@@ -365,7 +373,10 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         for additionalMarkerType in additionalMarkerTypes_Unused:
             additional_X = np.asarray(additionalMarkerType[0])
             additional_Y = np.asarray(additionalMarkerType[1])
-            additional_correspBetaOfExAndQif = np.asarray(additionalMarkerType[2])
+            print(additionalMarkerType)
+            print("EECC", additionalMarkerType[2])
+            additional_correspBetaOfExAndQif = np.transpose(np.asarray(additionalMarkerType[2]))
+            additional_correspBetaOfExAndQif[1]=additional_correspBetaOfExAndQif[1].astype(np.float64)
             additionalXSort = np.argsort(additional_X)
 
             additional_X = additional_X[additionalXSort]
@@ -376,11 +387,18 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             for BetaOfExAndQif in additional_correspBetaOfExAndQif:
                     if BetaOfExAndQif[0] is None:
                         continue
+                    print(BetaOfExAndQif[0])
                     BetaOfExAndQif[0] = str(BetaOfExAndQif[0])
                     condition = np.all(additional_correspBetaOfExAndQif == BetaOfExAndQif, axis=1)
                     if len(additional_X[condition]) == 0:
                         continue
-                    color = cmaps[BetaOfExAndQif[0]](norm(BetaOfExAndQif[1]))
+                    print(BetaOfExAndQif)
+                    if keyIsNan:
+                        BetaOfExAndQif[0]='nan'
+                    print(cmaps)
+                    print(str(BetaOfExAndQif[0]))
+                    print(norm(BetaOfExAndQif[1].astype(np.float64)))
+                    color = cmaps[str(BetaOfExAndQif[0])](norm(BetaOfExAndQif[1].astype(np.float64)))
                     ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40, alpha=0.01)
 
     plottedYs = np.asarray(plottedYs)
@@ -392,6 +410,10 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
 
     if theoreticalX is not None:
         plt.plot([],[], label=f"          ", marker=None, color="None")
+        if "betTentative" in name:
+            f= theoreticalX<=1
+            theoreticalX = theoreticalX[f]
+            theoreticalY = theoreticalY[f] 
         plt.plot(theoreticalX, theoreticalY, linestyle='--', marker=' ', label='cavity')
     
     if linesAtXValueAndName is not None:

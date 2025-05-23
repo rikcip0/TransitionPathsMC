@@ -273,11 +273,11 @@ int main(int argc, char **argv)
     if (argc == 16 || argc == 18)
     {
       //TOBEMODIFIED
-      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PT_"+to_string(result.second.first).substr(0, 4)+"_"+to_string(result.second.second.first).substr(0, 4) + "__"+ to_string(result.second.second.second.first)+"_"+to_string(result.second.second.second.second),string(buffer)+ "_sigma" + to_string(sigma), sstart); // For Cluster
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PT_"+to_string(result.second.first).substr(0, 4)+"_"+to_string(result.second.second.first).substr(0, 4) + "__"+ to_string(result.second.second.second.first)+"_"+to_string(result.second.second.second.second)+"/PathsMCs/",string(buffer)+ "_sigma" + to_string(sigma), sstart); // For Cluster
     }
     else
     {
-      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PT_"+to_string(result.second.first).substr(0, 4)+"_"+to_string(result.second.second.first).substr(0, 4) + "__"+ to_string(result.second.second.second.first)+"_"+to_string(result.second.second.second.second)+"/",string(buffer), sstart); // For Cluster
+      folder = makeFolderNameFromBuffer_ForCluster(folder + "DataForPathsMC/PT_"+to_string(result.second.first).substr(0, 4)+"_"+to_string(result.second.second.first).substr(0, 4) + "__"+ to_string(result.second.second.second.first)+"_"+to_string(result.second.second.second.second)+"/PathsMCs/",string(buffer), sstart); // For Cluster
     }
 
   }
@@ -415,12 +415,13 @@ int main(int argc, char **argv)
   vector<vector<int>> ris(3, vector<int>(Np, 0));
   vector<vector<double>> risQ(3, vector<double>(Np, 0.));
   vector<double> chiQ(Np, 0);
-
+  /*
   for(int i=0;i<N;i++){
     cout<<i<<" "<<endl;
     for(int j=0;j<Graph[i][0].size();j++)
-      cout<<Graph[i][0][j].interS[0]<<" "<<Graph[i][0][j].J<<endl;
+    cout<<Graph[i][0][j].interS[0]<<" "<<Graph[i][0][j].J<<endl;
   }
+  */
   vector<int> mileStones = {mutualQ, 0, (int)((Qstar + 1) / 2), Qstar};
   pair<vector<vector<long int>>, vector<vector<long int>>> fracOfTrajsInCone;
   fracOfTrajsInCone.first = vector<vector<long int>>(mileStones.size(), vector<long int>(Np, 0));

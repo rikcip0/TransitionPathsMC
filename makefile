@@ -31,45 +31,51 @@ compileStdInAndOut:
 	@echo .
 
 compileSimpleStdMC:
-	@cd MCMCs && g++ simpleStdMcForTp.cpp -o stMC.exe -DFIXEDEXT
+	@cd MCMCs && g++ -O2 simpleStdMcForTp.cpp -o stMC.exe -DFIXEDEXT
 	@echo Program compiled in stMC
 	@echo .
 
 compileMC2:
-	@cd standardMCs && g++ MCMC.cpp -o MCWithEnAndQ.exe -DFIXEDEXT
+	@cd MCMCs && g++ MCMC.cpp -o MCWithEnAndQ.exe -DFIXEDEXT
 	@echo Program compiled in MCWithEnAndQ
 	@echo .
 
+compileMCDynWithQout:
+	@cd MCMCs && \
+	g++ -O3 manyMCMCsWithQout.cpp -o mcDyn_WQout2.exe -DSTARTFIXEDANDHARDEND 
+	@echo "Programma compilato mcDyn_WQout.exe"
+
+
 compileAllSims:
 	cd MCtrajs && \
-	g++ transitionPaths.cpp -o tp.exe && \
-	g++ transitionPaths.cpp -o tp_QuenC.exe -DQUENCHCONFS && \
-	g++ transitionPaths.cpp -o tp_TrajRan.exe -DINITRANDOM && \
-	g++ transitionPaths.cpp -o tp_Anneal.exe -DINITANNEALING && \
-	g++ transitionPaths.cpp -o tp_FixExt.exe -DFIXEDEXT && \
-	g++ transitionPaths.cpp -o tp_TrajRan_FixExt.exe -DINITRANDOM -DFIXEDEXT && \
-	g++ transitionPaths.cpp -o tp_Anneal_FixExt.exe -DINITANNEALING -DFIXEDEXT && \
-	g++ transitionPaths.cpp -o tp_QuenC_TrajRan.exe -DQUENCHCONFS -DINITRANDOM && \
-	g++ transitionPaths.cpp -o tp_QuenC_Anneal.exe -DQUENCHCONFS -DINITANNEALING && \
-	g++ transitionPaths.cpp -o tp_QuenC_FixExt.exe -DQUENCHCONFS -DFIXEDEXT && \
-	g++ transitionPaths.cpp -o tp_QuenC_TrajRan_FixExt.exe -DQUENCHCONFS -DINITRANDOM -DFIXEDEXT && \
-	g++ transitionPaths.cpp -o tp_QuenC_Anneal_FixExt.exe -DQUENCHCONFS -DINITANNEALING -DFIXEDEXT
+	g++ -O2 transitionPaths.cpp -o tp.exe && \
+	g++ -O2 transitionPaths.cpp -o tp_QuenC.exe -DQUENCHCONFS && \
+	g++ -O2 transitionPaths.cpp -o tp_TrajRan.exe -DINITRANDOM && \
+	g++ -O2 transitionPaths.cpp -o tp_Anneal.exe -DINITANNEALING && \
+	g++ -O2 transitionPaths.cpp -o tp_FixExt.exe -DFIXEDEXT && \
+	g++ -O2 transitionPaths.cpp -o tp_TrajRan_FixExt.exe -DINITRANDOM -DFIXEDEXT && \
+	g++ -O2 transitionPaths.cpp -o tp_Anneal_FixExt.exe -DINITANNEALING -DFIXEDEXT && \
+	g++ -O2 transitionPaths.cpp -o tp_QuenC_TrajRan.exe -DQUENCHCONFS -DINITRANDOM && \
+	g++ -O2 transitionPaths.cpp -o tp_QuenC_Anneal.exe -DQUENCHCONFS -DINITANNEALING && \
+	g++ -O2 transitionPaths.cpp -o tp_QuenC_FixExt.exe -DQUENCHCONFS -DFIXEDEXT && \
+	g++ -O2 transitionPaths.cpp -o tp_QuenC_TrajRan_FixExt.exe -DQUENCHCONFS -DINITRANDOM -DFIXEDEXT && \
+	g++ -O2 transitionPaths.cpp -o tp_QuenC_Anneal_FixExt.exe -DQUENCHCONFS -DINITANNEALING -DFIXEDEXT
 	@echo All programs compiled.
 
 compileAllSims_Idra:
 	cd MCtrajs && \
-	g++ -std=c++11 transitionPaths.cpp -o tp.exe && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC.exe -DQUENCHCONFS && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_TrajRan.exe -DINITRANDOM && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_Anneal.exe -DINITANNEALING && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_FixExt.exe -DFIXEDEXT && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_TrajRan_FixExt.exe -DINITRANDOM -DFIXEDEXT && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_Anneal_FixExt.exe -DINITANNEALING -DFIXEDEXT && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_TrajRan.exe -DQUENCHCONFS -DINITRANDOM && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_Anneal.exe -DQUENCHCONFS -DINITANNEALING && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_FixExt.exe -DQUENCHCONFS -DFIXEDEXT && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_TrajRan_FixExt.exe -DQUENCHCONFS -DINITRANDOM -DFIXEDEXT && \
-	g++ -std=c++11 transitionPaths.cpp -o tp_QuenC_Anneal_FixExt.exe -DQUENCHCONFS -DINITANNEALING -DFIXEDEXT
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp.exe && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_QuenC.exe -DQUENCHCONFS && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_TrajRan.exe -DINITRANDOM && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_Anneal.exe -DINITANNEALING && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_FixExt.exe -DFIXEDEXT && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_TrajRan_FixExt.exe -DINITRANDOM -DFIXEDEXT && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_Anneal_FixExt.exe -DINITANNEALING -DFIXEDEXT && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_QuenC_TrajRan.exe -DQUENCHCONFS -DINITRANDOM && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_QuenC_Anneal.exe -DQUENCHCONFS -DINITANNEALING && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_QuenC_FixExt.exe -DQUENCHCONFS -DFIXEDEXT && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_QuenC_TrajRan_FixExt.exe -DQUENCHCONFS -DINITRANDOM -DFIXEDEXT && \
+	g++ -O2 -std=c++11 transitionPaths.cpp -o tp_QuenC_Anneal_FixExt.exe -DQUENCHCONFS -DINITANNEALING -DFIXEDEXT
 	@echo All programs compiled.
 
 

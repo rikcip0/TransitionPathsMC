@@ -5,7 +5,7 @@ import sys
 
 from singlePTAnalysis import singlePTAnalysis
 
-nameOfFoldersContainingRuns=["graph1086","graph1089", "graph1095","graph1097"]#,"graph1149","graph5492","graph9450","graph5508","graph3991","graph2473", "graph9351", "graph9366", "graph5657"]
+nameOfFoldersContainingRuns=["graph"]#,"graph1149","graph5492","graph9450","graph5508","graph3991","graph2473", "graph9351", "graph9366", "graph5657"]
 
 def findFoldersWithString(parent_dir, target_strings):
     result = []
@@ -18,7 +18,7 @@ def findFoldersWithString(parent_dir, target_strings):
             for dir_name in dirs:
                 full_path = os.path.join(root, dir_name)
                 # Controlla se il nome della cartella corrente è "stdMCs" o "PathsMCs"
-                if dir_name in nameOfFoldersContainingRuns:
+                if "graph" in dir_name:
                     # Cerca le cartelle che contengono "_run" nel loro nome
                     rightLevelReached=True
                     for subdir in os.listdir(full_path):
