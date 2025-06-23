@@ -61,7 +61,23 @@ def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.5, onlyEnd=False):
         if onlyEnd:
             jMin = np.maximum(largestIndexOfTimeLargerThanTminus2, i+minimumLength)
         for j in range(jMin, len(x)-1, minimumShifting):
-            popt, pcov = curve_fit(linear, x[i:j], y[i:j], sigma=yerr[i:j], method='lm', p0=[1/x[-1],0.6])
+            
+            try:
+                popt, pcov = curve_fit(
+                    linear, x[i:j], y[i:j],
+                sigma=yerr[i:j],
+                method='lm',
+                p0=[1/x[-1], -0.6],
+                maxfev=5000
+                )
+            except RuntimeError as e:
+                import warnings
+                warnings.warn(
+                f"[progressiveLinearFit] fit fallito per i={i}, j={j}: {e}",
+                RuntimeWarning
+                )
+                continue
+            
             slope = popt[0]
             intercept = popt[1]
             chi_r_value = np.nansum(((y[i:j]-(linear(x[i:j],*popt)))/yerr[i:j])**2.)/(j-i)

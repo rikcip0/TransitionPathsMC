@@ -45,6 +45,20 @@ double energy_Graph(vector<int> s, int N, vector<vector<vector<rInteraction>>> G
     return energy;
 }
 
+bool MCStep_withGraph(vector<int> &s, int I, int N, vector<vector<vector<rInteraction>>> Graph, double beta, double h_ext, vector<double> randomField)
+{
+
+    double locField;
+
+    locField = h_ext + randomField[I];
+    for (int j = 0; j < (Graph)[I][0].size(); j++)
+    {
+        locField += s[Graph[I][0][j]] * Graph[I][0][j].J;
+    }
+    if (locField * s[I] < 0 || exp(-2 * beta * locField * s[I]) > Xrandom())
+        s[I] = -s[I];
+    return true;
+}
 
 bool MCSweep_withGraph(vector<int> &s, int N, vector<vector<vector<rInteraction>>> Graph, double beta, double h_ext, vector<double> randomField)
 {
@@ -94,12 +108,12 @@ bool MCSweep_withGraph2(vector<int> &s, vector<int> referenceConf, int N, vector
 }
 
 bool MCSweep_withGraph_variant(vector<int> &s, int N, vector<vector<vector<rInteraction>>> Graph, double beta, double Hext, vector<double> randomField,
-                                int &mag, int lowerMeasuredMag, int &nextMeasMag, int magIncrement,  long long int t,
-                                vector<double> &logFirstTime, vector<double> &logFirstTimeSquared,
-                                vector<double> &firstBarrier, vector<long double> &barrierSum,
-                                vector<long long int> &num, vector<int> s_out)
+                               int &mag, int lowerMeasuredMag, int &nextMeasMag, int magIncrement, long long int t,
+                               vector<double> &logFirstTime, vector<double> &logFirstTimeSquared,
+                               vector<double> &firstBarrier, vector<long double> &barrierSum,
+                               vector<long long int> &num, vector<int> s_out)
 {
-    //cout<<"APRO FIUNZ"<<endl;
+    // cout<<"APRO FIUNZ"<<endl;
     int I;
     double locField;
     for (int i = 0; i < N; i++)
@@ -113,40 +127,39 @@ bool MCSweep_withGraph_variant(vector<int> &s, int N, vector<vector<vector<rInte
         }
         if (locField * s[I] < 0 || exp(-2 * beta * locField * s[I]) > Xrandom())
         {
-            //cout<<"FLIPPO"<<endl;
+            // cout<<"FLIPPO"<<endl;
             s[I] = -s[I];
-            mag+=2*s[I]*s_out[I];
+            mag += 2 * s[I] * s_out[I];
             if (mag >= lowerMeasuredMag)
             {
-            //cout<<"entro"<<endl;
+                // cout<<"entro"<<endl;
                 if (mag == nextMeasMag)
                 {
-                    //cout<<"qui 1"<<endl;
-                    //printf(" %i %f %lli\n", mag, energy_Graph(s, N, Graph, Hext, randomField), t);
-                    //cout<<"qui 2"<<endl;
-                    // fflush(stdout);
+                    // cout<<"qui 1"<<endl;
+                    // printf(" %i %f %lli\n", mag, energy_Graph(s, N, Graph, Hext, randomField), t);
+                    // cout<<"qui 2"<<endl;
+                    //  fflush(stdout);
                     logFirstTime[(N - mag) / 2] += log(t);
-                    //cout<<"qui 3"<<endl;
+                    // cout<<"qui 3"<<endl;
                     logFirstTimeSquared[(N - mag) / 2] += (log(t) * log(t));
-                    //cout<<"qui 4"<<endl;
+                    // cout<<"qui 4"<<endl;
                     firstBarrier[(N - mag) / 2] += (double)(energy_Graph(s, N, Graph, Hext, randomField));
-                    //cout<<"qui 5"<<endl;
+                    // cout<<"qui 5"<<endl;
                     nextMeasMag = mag + magIncrement;
-                    //cout<<"qui 6"<<endl;
+                    // cout<<"qui 6"<<endl;
                 }
-                    //cout<<"qui 7"<<endl;
-                    //cout<<mag<<" "<<N-mag<<endl;
+                // cout<<"qui 7"<<endl;
+                // cout<<mag<<" "<<N-mag<<endl;
                 barrierSum[(N - mag) / 2] += energy_Graph(s, N, Graph, Hext, randomField);
-                    //cout<<"qui 8"<<endl;
+                // cout<<"qui 8"<<endl;
                 num[(N - mag) / 2]++;
-                    //cout<<"qui 9"<<endl;
+                // cout<<"qui 9"<<endl;
             }
         }
     }
-    //cout<<"ESCO"<<endl;
+    // cout<<"ESCO"<<endl;
     return true;
 }
-
 
 bool MCSweep_withJs(vector<int> s, int N, double **J, double beta)
 {
