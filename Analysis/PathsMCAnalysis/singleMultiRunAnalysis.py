@@ -1583,7 +1583,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                     fig = plt.figure(fig_name)
                     filename = os.path.join(folderToPlot, f'{fig_name}.png')
                     print(filename)
-                    fig.savefig(filename, dpi=300, dpi=300, bbox_inches='tight')
+                    fig.savefig(filename, dpi=300, bbox_inches='tight')
                 plt.close('all')
 
             def considerToPlotT(theseFiguresFolder):    
