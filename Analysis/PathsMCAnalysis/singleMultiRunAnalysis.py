@@ -794,11 +794,11 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 #print("C", smallestPathsMcBetaToConsider)
                                 stdMC_filtForThisTAndInit_used = np.logical_and(stdMC_filtForThisTAndInit, stMC_beta <= largestStdMcBetaToConsider)
                                 pathsMC_filtForThisTAndInit_used = np.logical_and(pathMCFilter_forThisTAndInit, beta >= smallestPathsMcBetaToConsider)
+                                
                                 temp = np.sort(np.concatenate([stMC_beta[stdMC_filtForThisTAndInit_used], beta[pathsMC_filtForThisTAndInit_used]]))
-                                print(temp)
                                 maxBetaNotTooSpaced = np.nanmax([temp[i] for i in range(len(temp)-1,0,-1) if temp[i] - temp[i-1] <= 0.101])
+                                
                                 stdMC_filtForThisTAndInit_used = np.logical_and(stdMC_filtForThisTAndInit_used, stMC_beta <= maxBetaNotTooSpaced)
-                                print("maxBetaNotTooSpaced", maxBetaNotTooSpaced)   
                                 pathsMC_filtForThisTAndInit_used = np.logical_and(pathsMC_filtForThisTAndInit_used, beta <= maxBetaNotTooSpaced+0.1)
                                 stdMC_filtForThisTAndInit_unused = np.logical_and(stdMC_filtForThisTAndInit, ~stdMC_filtForThisTAndInit_used)
                                 pathsMC_filtForThisTAndInit_unused = np.logical_and(pathMCFilter_forThisTAndInit, ~pathsMC_filtForThisTAndInit_used)
@@ -952,9 +952,9 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     kFromChi[index] = ZFromTIBeta[index] * chi_m[index]
                                     kFromChi_InBetween[index] = ZFromTIBeta[index] * chi_m2[index]
                                     kFromChi_InBetween_Scaled[index] = kFromChi_InBetween[index]/scale2[index]
-                                    minusLnKFromChi[index]=-np.log(kFromChi[index] )/beta[index]
-                                    minusLnKFromChi_2[index]=-np.log(kFromChi_InBetween[index] )/beta[index]
-                                    minusLnKFromChi_2_scaled[index]=-np.log(kFromChi_InBetween_Scaled[index] )/beta[index]
+                                    minusLnKFromChi[index]=-np.log(kFromChi[index] )
+                                    minusLnKFromChi_2[index]=-np.log(kFromChi_InBetween[index] )
+                                    minusLnKFromChi_2_scaled[index]=-np.log(kFromChi_InBetween_Scaled[index] )
                                     tentativeBarrier[index] = -np.log(kFromChi[index])/(N[index])
                                     tentativeBarrier_2[index] = -np.log(kFromChi_InBetween[index])/(N[index])
                                     tentativeBarrier_3[index] = -np.log(kFromChi_InBetween_Scaled[index])/(N[index])
