@@ -565,7 +565,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         Qif = -1
         graphInfo_Line = 'FM '+graphInfo_Line
         areConfigurationsFM=True
-        #M_RedLine = [Qstar, 'm*']
+        M_RedLine = [Qstar, 'm*']
         Qout_RedLine = [Qstar, 'q*']
     else:
         Qif = (int)(simData['configuration']['referenceConfigurationsInfo']['mutualOverlap'])
