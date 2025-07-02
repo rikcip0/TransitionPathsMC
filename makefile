@@ -31,7 +31,7 @@ compileStdInAndOut:
 	@echo .
 
 compileSimpleStdMC:
-	@cd MCMCs && g++ simpleStdMcForTp.cpp -o stMC.exe -DFIXEDEXT
+	@cd MCMCs && g++ -O2 simpleStdMcForTp.cpp -o stMC.exe -DFIXEDEXT
 	@echo Program compiled in stMC
 	@echo .
 

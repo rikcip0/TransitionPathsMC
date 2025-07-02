@@ -49,6 +49,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     markerEdgeVariable = markerEdgeVariable[valid_indices]
     markerShapeVariable = markerShapeVariable[valid_indices]
     arrayForColorCoordinate = arrayForColorCoordinate[valid_indices]
+    keyIsNan=False
     if colorMapSpecifier is not None:
         colorMapSpecifier = colorMapSpecifier[valid_indices]
         uniqueColorMapsSpecifiers = np.sort(np.unique(colorMapSpecifier))
@@ -56,6 +57,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     else:
         colorMapSpecifier=np.full(len(x),"nan",dtype=np.float64)
         nColorbars=1
+        keyIsNan=True
         uniqueColorMapsSpecifiers=np.array(["nan"])
     uniqueColorMapsSpecifiers = uniqueColorMapsSpecifiers.astype(str)
     colorMapSpecifier = np.asarray(colorMapSpecifier, dtype=str)
@@ -66,7 +68,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         
     cmaps = {}
     # Creare la colormap 'cool'
-    gnuplot_map = plt.cm.gnuplot
+    gnuplot_map = plt.cm.cool
 
     # Numero di colorbar
     num_colorbars = len(uniqueColorMapsSpecifiers)
@@ -82,7 +84,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     values = np.linspace(1., 0.9, 256)
 
     if nColorbars == 1:
-        cmaps[uniqueColorMapsSpecifiers[0]] = plt.cm.gnuplot
+        cmaps[uniqueColorMapsSpecifiers[0]] = plt.cm.cool
     else:
         # Creazione delle colorbar
         for i, (val, color) in enumerate(zip(uniqueColorMapsSpecifiers, gnuplot_colors)):
@@ -94,7 +96,6 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             hues = np.full_like(saturations, hsv_color[0])  # Usa la hue originale
             hsv_colors = np.stack([hues, saturations, values], axis=1)
             rgb_colors = hsv_to_rgb(hsv_colors)  # Converti di nuovo in RGB
-            
             # Creare la colormap per la colorbar corrente
             cmaps[val] = ListedColormap(rgb_colors)
 
@@ -368,7 +369,10 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         for additionalMarkerType in additionalMarkerTypes_Unused:
             additional_X = np.asarray(additionalMarkerType[0])
             additional_Y = np.asarray(additionalMarkerType[1])
-            additional_correspBetaOfExAndQif = np.asarray(additionalMarkerType[2])
+            additional_correspBetaOfExAndQif = np.transpose(np.asarray(additionalMarkerType[2]))
+            if len(additional_correspBetaOfExAndQif)==0:
+                continue
+            additional_correspBetaOfExAndQif[1]=additional_correspBetaOfExAndQif[1].astype(np.float64)
             additionalXSort = np.argsort(additional_X)
 
             additional_X = additional_X[additionalXSort]
@@ -383,7 +387,10 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     condition = np.all(additional_correspBetaOfExAndQif == BetaOfExAndQif, axis=1)
                     if len(additional_X[condition]) == 0:
                         continue
-                    color = cmaps[BetaOfExAndQif[0]](norm(BetaOfExAndQif[1]))
+                    if keyIsNan:
+                        BetaOfExAndQif[0]='nan'
+
+                    color = cmaps[str(BetaOfExAndQif[0])](norm(BetaOfExAndQif[1].astype(np.float64)))
                     ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40, alpha=0.01)
 
     plottedYs = np.asarray(plottedYs)
