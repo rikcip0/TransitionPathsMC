@@ -348,6 +348,8 @@ public:
       double sqt = sqrt(B * B + Gamma * Gamma);
       double tah = tanh(lambda * sqt);
       // 0 is +, 1 is -; W[s][s'] = W(s -> s') = w(s') <s'| exp(-l L) |s>
+
+      //RC: maybe normalizing  W would avoid numerical problems without resorting to long double
       W[0][0] = wjp * (1 + B / sqt * tah);
       W[1][0] = wjp * Gamma / sqt * tah * ex;
       W[0][1] = wjm * Gamma / sqt * tah / ex;
