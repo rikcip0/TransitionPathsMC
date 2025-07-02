@@ -16,7 +16,8 @@ using namespace std;
 
 #define startingBeta 0.2
 #define deltaBetaStd 0.01
-#define sweepsPerBeta 100
+#define MCeqOVMCToArrive 5
+#define MCeqOvMCAnnealingStart 500
 
 bool initializeTrajectoriesFromRefConfs(int N, double T, vector<straj> &trajsToInitialize, pair<string, string> &details, pair<vector<int>, vector<int>> refConfs, bool swapConfs = false)
 {
@@ -103,14 +104,14 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing(int N, double T, vector<st
         }
     }
     double annealingBeta = betaToStart;
-    int MCAtBetaStart = MCeq / 1000;
+    int MCAtBetaStart = MCeq / MCeqOvMCAnnealingStart;
     if (MCAtBetaStart == 0)
     {
 
         MCAtBetaStart = 1;
     }
 
-    int MCToArrive = MCeq / 20;
+    int MCToArrive = MCeq / MCeqOVMCToArrive;
     double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - betaToStart));
     double MCAtBetaAnn = MCAtBetaStart;
 
@@ -181,10 +182,10 @@ bool initializeTrajectoriesFromRefConfs_WithAnnealing_FixingEnd(int N, double T,
         }
     }
     double annealingBeta = betaToStart;
-    int MCAtBetaStart = MCeq / 1000;
+    int MCAtBetaStart = MCeq / MCeqOvMCAnnealingStart;
     if (MCAtBetaStart == 0)
         MCAtBetaStart = 1;
-    int MCToArrive = MCeq / 20;
+    int MCToArrive = MCeq / MCeqOVMCToArrive;
     double factor = pow((((double)MCToArrive) / MCAtBetaStart), (deltaBeta) / (double)(beta - betaToStart));
     double MCAtBetaAnn = MCAtBetaStart;
 
