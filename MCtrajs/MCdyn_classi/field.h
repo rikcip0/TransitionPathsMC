@@ -11,7 +11,7 @@ using namespace std;
 
 struct neighjump
 {
-  double t;
+  long double t;
   int i;
   int j;
 };
@@ -26,9 +26,9 @@ public:
   vector<double> randomField;
 
   vector<neighjump> fieldjumps;
-  vector<vector<double>> h;
-  vector<double> lGamma;
-  vector<double> lB;
+  vector<vector<long double>> h;
+  vector<long double> lGamma;
+  vector<long double> lB;
   //  vector<double> lM;
 
   vector<matrice> WM;
@@ -78,7 +78,7 @@ public:
     }
   }
 
-  double w(double x) { return exp(-beta * x / 2); } // transition rate, w(x)=w(-x) exp(-beta x)
+  long double w(long double x) { return exp(-beta * x / 2); } // transition rate, w(x)=w(-x) exp(-beta x)
 
   void construct_field(vector<vector<rInteraction>> *neighbors, vector<straj> *traj, double hstart, double hend, int siteIndex)
   {
@@ -154,34 +154,34 @@ public:
       for (int j = 0; j < counter[0].size(); j++)
         H += counter[0][j] * (*neighbors)[0][j].J; // I think we should include the coupling here (RC)
       h[0].push_back(H);
-      double wp = w(2 * H);
-      double ex = exp(beta * H); // NDR, h[0], local field on the spin updating, is used only here (and hence in Gamma) (RC)
-      double wm = wp * ex * ex;  // so for detailed balance it is now w(-2*H) (RC)
-      double Gamma = wp * ex;
+      long double wp = w(2 * H);
+      long double ex = exp(beta * H); // NDR, h[0], local field on the spin updating, is used only here (and hence in Gamma) (RC)
+      long double wm = wp * ex * ex;  // so for detailed balance it is now w(-2*H) (RC)
+      long double Gamma = wp * ex;
       lGamma.push_back(Gamma);
-      double ap = -wp;
-      double am = -wm;
+      long double ap = -wp;
+      long double am = -wm;
       for (int i = 0; i < counter[0].size(); i++)
       {
         ap -= w(2 * counter[0][i] * (h[1 + i].back() + (*neighbors)[0][i].J)); // I think we should include the coupling here (RC)
         am -= w(2 * counter[0][i] * (h[1 + i].back() - (*neighbors)[0][i].J)); // I think we should include the coupling here (RC)
       }
-      double B = (ap - am) / 2.;
+      long double B = (ap - am) / 2.;
       lB.push_back(B);
       //      double M=(ap+am)/2.;
       //      lM.push_back(M);
       // computation of transfer matrices
       matrice W;
-      double wjp = 1; // p stands for plus, m for minus. It is referred to the spin sign (RC)
-      double wjm = 1;
+      long double wjp = 1; // p stands for plus, m for minus. It is referred to the spin sign (RC)
+      long double wjm = 1;
       if (fieldjumps[e].i == 0) // i.e., if it s a jump of a first neighbour (RC)
       {
         wjp = w(2 * counter[0][fieldjumps[e].j] * (h[1 + fieldjumps[e].j].back() + (*neighbors)[0][fieldjumps[e].j].J)); // I think we should include the coupling here (RC)
         wjm = w(2 * counter[0][fieldjumps[e].j] * (h[1 + fieldjumps[e].j].back() - (*neighbors)[0][fieldjumps[e].j].J)); // I think we should include the coupling here (RC)
       }
-      double lambda = fieldjumps[e].t - fieldjumps[e - 1].t;
-      double sqt = sqrt(B * B + Gamma * Gamma);
-      double tah = tanh(lambda * sqt);
+      long double lambda = fieldjumps[e].t - fieldjumps[e - 1].t;
+      long double sqt = sqrt(B * B + Gamma * Gamma);
+      long double tah = tanh(lambda * sqt);
       // 0 is +, 1 is -; W[s][s'] = W(s -> s') = w(s') <s'| exp(-l L) |s>
       W[0][0] = wjp * (1 + B / sqt * tah);
       W[1][0] = wjp * Gamma / sqt * tah * ex;
@@ -190,8 +190,8 @@ public:
 
       if (fieldjumps.size() == 2)
       {
-        double wstart = exp(hstart);
-        double wend = exp(hend);
+        long double wstart = exp(hstart);
+        long double wend = exp(hend);
         W[0][0] *= (wstart * wend);
         W[0][1] *= (wstart / wend);
         W[1][0] *= (wend / wstart);
@@ -200,7 +200,7 @@ public:
       }
       else if (e == 1)
       {
-        double wstart = exp(hstart);
+        long double wstart = exp(hstart);
         W[0][0] *= wstart;
         W[0][1] *= wstart;
         W[1][0] /= wstart;
@@ -210,7 +210,7 @@ public:
       }
       else if (e == fieldjumps.size() - 1)
       {
-        double wend = exp(hend);
+        long double wend = exp(hend);
         W[0][0] *= wend;
         W[1][0] *= wend;
         W[0][1] /= wend;
@@ -319,34 +319,34 @@ public:
         H += counter[0][j] * (*neighbors)[0][j].J; 
       h[0].push_back(H);
       // cout<<"epoch e "<<e<<"\n H="<<H<<" fj.i,j,t="<<fieldjumps[e].i<<" "<<fieldjumps[e].j<<" "<<fieldjumps[e].t<<endl;
-      double wp = w(2 * H);
-      double ex = exp(beta * H); // NDR, h[0], local field on the spin updating, is used only here (and hence in Gamma) (RC)
-      double wm = wp * ex * ex;  // so for detailed balance it is now w(-2*H) (RC)
-      double Gamma = wp * ex;
+      long double wp = w(2 * H);
+      long double ex = exp(beta * H); // NDR, h[0], local field on the spin updating, is used only here (and hence in Gamma) (RC)
+      long double wm = wp * ex * ex;  // so for detailed balance it is now w(-2*H) (RC)
+      long double Gamma = wp * ex;
       lGamma.push_back(Gamma);
-      double ap = -wp;
-      double am = -wm;
+      long double ap = -wp;
+      long double am = -wm;
       for (int i = 0; i < counter[0].size(); i++)
       {
         ap -= w(2 * counter[0][i] * (h[1 + i].back() + (*neighbors)[0][i].J));
         am -= w(2 * counter[0][i] * (h[1 + i].back() - (*neighbors)[0][i].J));
       }
-      double B = (ap - am) / 2.;
+      long double B = (ap - am) / 2.;
       lB.push_back(B);
       //      double M=(ap+am)/2.;
       //      lM.push_back(M);
       // computation of transfer matrices
       matrice W;
-      double wjp = 1; // p stands for plus, m for minus. It is referred to the spin sign (RC)
-      double wjm = 1;
+      long double wjp = 1; // p stands for plus, m for minus. It is referred to the spin sign (RC)
+      long double wjm = 1;
       if (fieldjumps[e].i == 0) // i.e., if it s a jump of a first neighbour (RC)
       {
         wjp = w(2 * counter[0][fieldjumps[e].j] * (h[1 + fieldjumps[e].j].back() + (*neighbors)[0][fieldjumps[e].j].J));
         wjm = w(2 * counter[0][fieldjumps[e].j] * (h[1 + fieldjumps[e].j].back() - (*neighbors)[0][fieldjumps[e].j].J));
       }
-      double lambda = fieldjumps[e].t - fieldjumps[e - 1].t;
-      double sqt = sqrt(B * B + Gamma * Gamma);
-      double tah = tanh(lambda * sqt);
+      long double lambda = fieldjumps[e].t - fieldjumps[e - 1].t;
+      long double sqt = sqrt(B * B + Gamma * Gamma);
+      long double tah = tanh(lambda * sqt);
       // 0 is +, 1 is -; W[s][s'] = W(s -> s') = w(s') <s'| exp(-l L) |s>
       W[0][0] = wjp * (1 + B / sqt * tah);
       W[1][0] = wjp * Gamma / sqt * tah * ex;
@@ -427,7 +427,7 @@ public:
     int_s.resize(fieldjumps.size());
     // generate init and final spin
     {
-      double den = TM.back()[0][0] + TM.back()[1][0] + TM.back()[0][1] + TM.back()[1][1];
+      long double den = TM.back()[0][0] + TM.back()[1][0] + TM.back()[0][1] + TM.back()[1][1];
       int s0;
       int sT;
       double Xr = Xrandom();
@@ -456,7 +456,7 @@ public:
     }
     // done
     // generate intermediate spins
-    double w0, w1;
+    long double w0, w1;
     for (int e = fieldjumps.size() - 2; e > 0; e--)
     {
       w0 = TM[e - 1][int_s[0]][0] * WM[e][0][int_s[e + 1]];
@@ -467,36 +467,36 @@ public:
     // end of generation
   }
 
-  double P0(int e, int currents, double lambda)
+  long double P0(int e, int currents, long double lambda)
   {
-    double hz = (1 - 2 * currents) * lB[e - 1]; // it is simply sigma*B (RC)
-    double sqt = sqrt(lB[e - 1] * lB[e - 1] + lGamma[e - 1] * lGamma[e - 1]);
+    long double hz = (1 - 2 * currents) * lB[e - 1]; // it is simply sigma*B (RC)
+    long double sqt = sqrt(lB[e - 1] * lB[e - 1] + lGamma[e - 1] * lGamma[e - 1]);
     //    double sih=sinh(lambda*sqt);
     //    double coh=cosh(lambda*sqt);
     //    return exp(lambda*hz)/( coh + hz/sqt*sih );
-    double e1 = exp(-lambda * (sqt - hz));
-    double e2 = exp(-2 * lambda * sqt);
+    long double e1 = exp(-lambda * (sqt - hz));
+    long double e2 = exp(-2 * lambda * sqt);
     return 2 * e1 / ((1 + hz / sqt) + (1 - hz / sqt) * e2); // it is indeed equiv. to RHS of eq. 35 (RC)
   }
 
-  double draw_time_ss(int e, int currents, double lambda)
+  long double draw_time_ss(int e, int currents, long double lambda)
   {
-    double hz = lB[e - 1] * (1 - 2 * currents); // it is simply sigma*B (RC)
-    double hx = lGamma[e - 1];
-    double sqt = sqrt(hz * hz + hx * hx);
-    //    double a=sqt*cosh(lambda*sqt)+hz*sinh(lambda*sqt);
-    double a = sqt * (1 + exp(-2 * lambda * sqt)) + hz * (1 - exp(-2 * lambda * sqt));
-    //    double b=exp(hz*lambda)*sqt;
-    double b = 2 * sqt * exp(-lambda * (sqt - hz));
-    double t_min = 0.;
-    double t_max = lambda;
+    long double hz = lB[e - 1] * (1 - 2 * currents); // it is simply sigma*B (RC)
+    long double hx = lGamma[e - 1];
+    long double sqt = sqrt(hz * hz + hx * hx);
+    //    long double a=sqt*cosh(lambda*sqt)+hz*sinh(lambda*sqt);
+    long double a = sqt * (1 + exp(-2 * lambda * sqt)) + hz * (1 - exp(-2 * lambda * sqt));
+    //    long double b=exp(hz*lambda)*sqt;
+    long double b = 2 * sqt * exp(-lambda * (sqt - hz));
+    long double t_min = 0.;
+    long double t_max = lambda;
     double dum = Xrandom();
-    double t;
+    long double t;
     while (t_max - t_min > 0.00000001 * lambda)
     {
       t = .5 * (t_min + t_max);
       //      double bb=exp(hz*t)*(sqt*cosh((lambda-t)*sqt)+hz*sinh((lambda-t)*sqt));
-      double bb = (sqt + hz) * exp(-t * (sqt - hz)) + (sqt - hz) * exp(t * (hz + sqt) - 2 * lambda * sqt);
+      long double bb = (sqt + hz) * exp(-t * (sqt - hz)) + (sqt - hz) * exp(t * (hz + sqt) - 2 * lambda * sqt);
       if ((a - bb) / (a - b) < dum)
         t_min = t;
       else
@@ -506,20 +506,20 @@ public:
     return t;
   }
 
-  double draw_time_sms(int e, int currents, double lambda)
+  long double draw_time_sms(int e, int currents, long double lambda)
   {
-    double hz = lB[e - 1] * (1 - 2 * currents);
-    double hx = lGamma[e - 1];
-    double sqt = sqrt(hz * hz + hx * hx);
-    double t_min = 0.;
-    double t_max = lambda;
+    long double hz = lB[e - 1] * (1 - 2 * currents);
+    long double hx = lGamma[e - 1];
+    long double sqt = sqrt(hz * hz + hx * hx);
+    long double t_min = 0.;
+    long double t_max = lambda;
     double dum = Xrandom();
-    double t;
+    long double t;
     while (t_max - t_min > 0.00000001 * lambda)
     {
       t = .5 * (t_min + t_max);
-      //      double f=1.-(exp(hz*t)*sinh((lambda-t)*sqt)/sinh(lambda*sqt));
-      double f = 1. - (exp(-t * (sqt - hz)) - exp(t * (hz + sqt) - 2 * lambda * sqt)) / (1. - exp(-2 * lambda * sqt));
+      //      long double f=1.-(exp(hz*t)*sinh((lambda-t)*sqt)/sinh(lambda*sqt));
+      long double f = 1. - (exp(-t * (sqt - hz)) - exp(t * (hz + sqt) - 2 * lambda * sqt)) / (1. - exp(-2 * lambda * sqt));
       if (f < dum)
         t_min = t;
       else
@@ -535,8 +535,8 @@ public:
     newtraj.sT = 1 - 2 * int_s.back();
     int currents; // this is still in the 0(+) 1(-) notation (RC)
     int targets;  // this is still in the 0(+) 1(-) notation (RC)
-    double length;
-    double currenttime;
+    long double length;
+    long double currenttime;
     for (int e = 1; e < fieldjumps.size(); e++)
     {
       currents = int_s[e - 1];
@@ -548,12 +548,12 @@ public:
       {
         if (currents == targets)
         {
-          double proba = P0(e, currents, length);
+          long double proba = P0(e, currents, length);
           if (Xrandom() < proba)
             undone = false;
           else
           {
-            double tjump = draw_time_ss(e, currents, length);
+            long double tjump = draw_time_ss(e, currents, length);
             currenttime += tjump;
             length -= tjump;
             currents = 1 - currents;
@@ -562,7 +562,7 @@ public:
         }
         else
         {
-          double tjump = draw_time_sms(e, currents, length);
+          long double tjump = draw_time_sms(e, currents, length);
           currenttime += tjump;
           length -= tjump;
           currents = 1 - currents;
