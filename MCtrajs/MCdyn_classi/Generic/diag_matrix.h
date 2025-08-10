@@ -22,7 +22,7 @@ template<class T, int n> class CMatrix{
   }
 };
 
-typedef CMatrix<double,NCUT> matrice;
+typedef CMatrix<long double,NCUT> matrice;
 
 matrice zeromatrix() {
   matrice z;
@@ -48,21 +48,21 @@ matrice per(matrice A,matrice B) {
 
 /* auxiliary functions */
 
-inline double pythag(double a, double b){
+inline long double pythag(long double a, long double b){
   return sqrt(a*a+b*b);
 }
-void tqli(double * d, double * e, int n,matrice * z){
+void tqli(long double * d, long double * e, int n,matrice * z){
   /* input: d[0,...,n-1]: diagonal; e[0,...,n-2]: 1st layer, e[n-1]=0 */
   /* input: z must be the identity matrix */
   /* output: d[0,...,n-1]: eigenvalues; z[][0,...,n-1] eigenvectors */
   int m,l,iter,i,k;
-  double s,r,p,g,f,dd,c,b;
+  long double s,r,p,g,f,dd,c,b;
   for(l=0;l<n;l++){                                            // l->l-1
     iter=0;
     do{
       for(m=l;m<n-1;m++){                                      // m->m-1
 	dd=fabs(d[m])+fabs(d[m+1]);
-	if ((double)(fabs(e[m])+dd) == dd) break;
+	if ((long double)(fabs(e[m])+dd) == dd) break;
       }
       if(m!=0){                                                // m->m-1
 	g=(d[l+1]-d[l])/(2.0*e[l]);
@@ -99,7 +99,7 @@ void tqli(double * d, double * e, int n,matrice * z){
     } while (m != l);
     }
 }
-void tred2(matrice * a, int n, double d[], double e[])
+void tred2(matrice * a, int n, long double d[], long double e[])
 //Householder reduction of a real, symmetric matrix a[0..n-1][0..n-1]. On output, a is replaced
 //by the orthogonal matrix Q effecting the transformation. d[0..n-1] returns the diagonal elements
 //of the tridiagonal matrix, and e[0..n-1] the off-diagonal elements, with e[0]=0. Several
@@ -171,11 +171,11 @@ void tred2(matrice * a, int n, double d[], double e[])
     for (j=1;j<=l;j++) (*a)[j-1][i-1]=(*a)[i-1][j-1]=0.0; //matrix for next iteration.
   }
 }
-void mdiag(matrice *a,int n,double * d){
+void mdiag(matrice *a,int n,long double * d){
   /* input: a matrix to be diagonalized */
   /* output: d[0,...,n-1]: eigenvalues; a[][0,...,n-1] eigenvectors */
 
-  double e[n];
+  long double e[n];
   /* reduction to tridiag matrix */
   tred2(a,n,d,e);
   /* stupid shift to match tqli */

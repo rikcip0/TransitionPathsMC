@@ -81,12 +81,15 @@ int main(int argc, char *argv[])
 
     // Read seed, N, p, C (assuming these are the first 4 integers in the file)
     int num;
-    for (int i = 0; i < 4; ++i)
-    {
-        if (!(file >> num))
+    if (type<1){
+
+        for (int i = 0; i < 4; ++i)
         {
-            std::cerr << "Error reading from the file\n";
-            return 1;
+            if (!(file >> num))
+            {
+                std::cerr << "Error reading from the file\n";
+                return 1;
+            }
         }
     }
 
