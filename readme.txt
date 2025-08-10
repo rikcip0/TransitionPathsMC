@@ -7,7 +7,8 @@ Simulations:
 
 
 -RFIM rinforzi con grande tau, N=180,200
--RRG SG: tutto da vedere, N=120 interessanti: 4905, 4911, 6699
+-RRG SG: 
+N60: sistema fino a beta=1
 
 PathsMCAnalysis/singleRunAnalysis:
 -implement what is needed to do jackknife on TI

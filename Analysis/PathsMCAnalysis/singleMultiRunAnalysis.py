@@ -380,6 +380,51 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
         'mathtext.fontset':  'cm',                    # o 'stix' se preferisci STIX
         })
 
+        
+        matplotlib.rcParams.update({
+            # Font
+            'font.size': 20,              # Dimensione testo generale
+            'axes.titlesize': 22,         # Titolo asse
+            'axes.labelsize': 20,         # Etichette assi
+            'xtick.labelsize': 18,
+            'ytick.labelsize': 18,
+            'legend.fontsize': 18,
+            'figure.titlesize': 24,
+
+            # Linee
+            'lines.linewidth': 2.2,         # Spessore linee principali
+            'lines.markersize': 8,        # Dimensione marker
+
+            # Assi
+            'axes.linewidth': 2,          # Spessore contorno assi
+            'xtick.major.width': 2,       # Spessore ticks
+            'ytick.major.width': 2,
+            'xtick.major.size': 7,        # Lunghezza ticks
+            'ytick.major.size': 7,
+            
+            # Griglia (opzionale)
+            'axes.grid': True,           # Imposta a True se vuoi griglia leggera
+            'grid.linewidth': 1,
+            'grid.alpha': 0.5,
+
+            # Layout
+            'figure.dpi': 300,            # Risoluzione per export PNG
+            'savefig.dpi': 300,
+            'savefig.bbox': 'tight',      # Rimuove margini inutili
+            'pdf.fonttype': 42,           # Testo selezionabile nei PDF
+            'ps.fonttype': 42,
+            
+            # Font family (opzionale)
+            'font.family': 'sans-serif',
+        })
+        
+        matplotlib.rcParams.update({
+        # …il tuo blocco esistente…
+        'font.family':       'sans-serif',            # rimane il family per testo, tick, legende…
+        'font.sans-serif':   ['Arial','DejaVu Sans'], # scegli il sans-serif che ti piace per il testo
+        'mathtext.fontset':  'cm',                    # o 'stix' se preferisci STIX
+        })
+
 
         #trajsJumpsInitID.append(item['configuration']['trajs_jumpsInitialization']['ID'])
         runPath.append(item['Path'])

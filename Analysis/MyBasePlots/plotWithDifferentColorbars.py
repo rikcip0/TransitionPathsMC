@@ -1,5 +1,5 @@
 from copy import copy, deepcopy
-from matplotlib import cm
+import matplotlib as mpl
 from matplotlib.ticker import ScalarFormatter
 from scipy.optimize import curve_fit
 import numpy as np
@@ -7,6 +7,32 @@ from matplotlib.cm import ScalarMappable
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, Normalize, hsv_to_rgb, rgb_to_hsv
+
+mpl.rcParams.update({
+    'font.size': 20,
+    'axes.titlesize': 22,
+    'axes.labelsize': 20,
+    'xtick.labelsize': 18,
+    'ytick.labelsize': 18,
+    'legend.fontsize': 18,
+    'figure.titlesize': 24,
+    'lines.linewidth': 2.2,
+    'lines.markersize': 8,
+    'axes.linewidth': 2.2,
+    'xtick.major.width': 2.2,
+    'ytick.major.width': 2.2,
+    'xtick.major.size': 7,
+    'ytick.major.size': 7,
+    'axes.grid': True,
+    'grid.linewidth': 1,
+    'grid.alpha': 0.5,
+    'figure.dpi': 300,
+    'savefig.dpi': 300,
+    'savefig.bbox': 'tight',
+    'pdf.fonttype': 42,
+    'ps.fonttype': 42,
+    'font.family': 'sans-serif',
+})
 
 markers = ['s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h','s', '^', 'o', 'D', 'v', 'p', 'h', 's', '^', 'o', 'D', 'v', 'p', 'h']
 
@@ -24,15 +50,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                                 yerr=None, fitTypes= [], xscale='', yscale ='', fittingOverDifferentEdges=True, nGraphs=None,
                                 functionsToPlotContinuously = None, theoreticalX=None, theoreticalY=None,
                                 linesAtXValueAndName=None, linesAtYValueAndName=None,):
-    plt.rcParams.update({
-    'font.size': 14,           # dimensione font globale
-    'axes.titlesize': 16,      # dimensione del titolo degli assi
-    'axes.labelsize': 14,      # dimensione delle etichette degli assi
-    'xtick.labelsize': 12,     # dimensione dei tick sull'asse x
-    'ytick.labelsize': 12,     # dimensione dei tick sull'asse y
-    'legend.fontsize': 13,     # dimensione del testo della legenda
-    'figure.titlesize': 18,    # dimensione del titolo della figura (se usato)
-    })
+
     
     x=np.array(x)
     y=np.array(y)
@@ -59,6 +77,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
         nColorbars=1
         keyIsNan=True
         uniqueColorMapsSpecifiers=np.array(["nan"])
+    nColorbars=0
     uniqueColorMapsSpecifiers = uniqueColorMapsSpecifiers.astype(str)
     colorMapSpecifier = np.asarray(colorMapSpecifier, dtype=str)
         
@@ -146,8 +165,8 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
     total_fig_height = base_height + nColorbars * (colorbar_height + spacing_height)
     total_fig_length= 1.2*total_fig_height
     # Crea la figura con constrained_layout per un migliore posizionamento automatico degli elementi
-    fig = plt.figure(name, figsize=(total_fig_length, total_fig_height))#, constrained_layout=True)
-
+    fig = plt.figure(name, constrained_layout=True)
+    fig = plt.figure(name)#, figsize=(total_fig_length, total_fig_height))#, constrained_layout=True)
     # Crea la griglia (gs) con le righe definite
     gs = fig.add_gridspec(total_rows, 1, height_ratios=height_ratios)
 
@@ -406,7 +425,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             f= theoreticalX<=1
             theoreticalX = theoreticalX[f]
             theoreticalY = theoreticalY[f] 
-        plt.plot(theoreticalX, theoreticalY, linestyle='--', marker=' ', label='cavity')
+        plt.plot(theoreticalX, theoreticalY, linestyle='--', marker=' ', label='Theory')
     
     if linesAtXValueAndName is not None:
         plt.plot([],[], label=f"          ", marker=None, color="None")
@@ -421,16 +440,23 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
             l_Value, l_Name, l_color = l
             plt.axhline(l_Value, color=l_color, linestyle='dashed', marker=' ', linewidth=1)
             plt.plot([],[], label=f"{l_Name}", linestyle='dashed', marker=' ', color=l_color)
-        
+    
     handles, labels = ax1.get_legend_handles_labels()
+    """
     fig.legend(handles, labels,
-            bbox_to_anchor=(1.05, 1.0),
-            loc='upper left',
-            borderaxespad=0.,
-            bbox_transform=ax1.transAxes)
+        bbox_to_anchor=(1.05, 1.0),
+        loc='upper left',
+        borderaxespad=0.,
+        bbox_transform=ax1.transAxes)
+    """
+
+    theory_handles_labels = [(h, l) for h, l in zip(handles, labels) if l == 'Theory']
+    if theory_handles_labels:
+        handles, labels = zip(*theory_handles_labels)
+        ax1.legend(handles, labels, loc='upper left')
     
     sm = ['']*nColorbars
-
+    uniqueColorMapsSpecifiers=[]
     for i, thisColorMapSpecifier in enumerate(uniqueColorMapsSpecifiers):
         # Crea l'asse per la colorbar (non serve l'asse extra ax_cb, se non lo usi per altro)
         ax_colorbar = fig.add_subplot(gs[2 + 2 * i, 0])
