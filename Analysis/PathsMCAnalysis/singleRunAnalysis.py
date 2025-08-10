@@ -453,7 +453,7 @@ def txtToInfo(file_path, mappa):
     simulationCode_version = (int) (simulationCode_version)
     return data
 
-def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=False):
+def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=False, threeFitS=None):
 
     simData = {}
     simData['configuration']= configurationsInfo
@@ -1480,7 +1480,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     linearFitResults2['c'] = 'nan'
     linearFitResults2['Chi'] = 'nan'
 
-    for fitTypeAndName in [["", progressiveLinearFit, True], ["InBetween", progressiveLinearFit, False]]:#, ["2", provaEmail2,False], ["3", provaEmail3, False], ["2e3", provaEmail23, False], ["exp", provaEmailExp, False]]:#, ["2e3_4", provaEmail234]]: #:
+    for fitTypeAndName in [["", progressiveLinearFit, True], ["InBetween", progressiveLinearFit, False]]:#, ["2", provaEmail2,False]:#, ["3", provaEmail3, False], ["2e3", provaEmail23, False], ["exp", provaEmailExp, False]]:#, ["2e3_4", provaEmail234]]: #:
         plt.figure('Chi'+fitTypeAndName[0])
         plt.plot(time, avChi, color='black', label=r"$\chi$")
         plt.errorbar(time, avChi, yerr=avChiErr, color='blue', fmt= ' ', marker='', elinewidth=0.4, alpha=0.3, label='err')
@@ -1526,6 +1526,18 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     results['chiLinearFit'] = linearFitResults
     results['chiLinearFit_InBetween'] = linearFitResults2
 
+
+    
+    plt.figure('Chi_logLog')
+    yLargerThanZero = avChi > 0
+    plt.plot(time[yLargerThanZero], avChi[yLargerThanZero], color='black', label=r"$\chi$")
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.title(f'$\chi$ vs time\n'+titleSpecification)
+    plt.xlabel(r't')
+    plt.ylabel(r'$\chi$')
+    addInfoLines()
+    
     xForDerivative, yDerivative= aDiscreteDerivative(time, avChi)
     plt.figure('ChiDeriv')
     plt.plot(xForDerivative, yDerivative)
@@ -1597,6 +1609,140 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     plt.xlabel(r'$M$')
     plt.ylabel(r'$\chi$')
     addInfoLines()
+    
+    
+    if threeFitS is not None:
+        from scipy.optimize import least_squares
+
+        # -------------------- 0) Scaling dei dati --------------------
+        avChi    = avChi    * threeFitS
+        avChiErr = avChiErr * threeFitS
+
+        # -------------------- 1) Maschera di base --------------------
+        core_mask = (np.isfinite(time) & np.isfinite(avChi) &
+                    np.isfinite(avChiErr) & (avChiErr > 0)& (time > 3))
+        mask = core_mask  # usa tutti i punti; metti "& (time > 5)" se vuoi tagliare
+        time_fit     = time[mask]
+        avChi_fit    = avChi[mask]
+        avChiErr_fit = avChiErr[mask]
+
+        if time_fit.size < 5:
+            raise ValueError("Troppi pochi punti utili per effettuare il fit.")
+
+        # -------------------- 2) Stime iniziali ----------------------
+        y_tail = np.mean(avChi_fit[-min(20, len(avChi_fit)):])
+        r0  = max(y_tail/(1 - 2*y_tail), 2.0)                # r > 1
+        k0  = 1.0 / (time_fit[-1] - time_fit[0])             # stima grezza
+        tau0 = time_fit.min()                                # shift iniziale
+
+        # -------------------- 3) Modello ------------------------------
+        def base_shifted(t, r, k, tau):
+            tt = t - tau
+            return (r/(2*r+1)
+                    - 0.5*np.exp(-k*tt)
+                    + 0.5/(2*r+1)*np.exp(-k*(2*r+1)*tt))
+
+        # -------------------- 4) Bounds e p0 --------------------------
+        log_r_min, log_r_max = 0.0, 50.0
+        log_k_min, log_k_max = np.log(1e-12), np.log(1e-3)
+        tau_min = time_fit.min() - (time_fit.max() - time_fit.min())
+        tau_max = time_fit.max()
+
+        log_r0 = np.clip(np.log(r0),             log_r_min+1e-12, log_r_max-1e-12)
+        log_k0 = np.clip(np.log(max(k0, 1e-12)), log_k_min+1e-12, log_k_max-1e-12)
+        tau0   = np.clip(tau0,                   tau_min+1e-12,   tau_max-1e-12)
+
+        p0    = np.array([log_r0, log_k0, tau0])
+        lower = np.array([log_r_min, log_k_min, tau_min])
+        upper = np.array([log_r_max, log_k_max, tau_max])
+
+        w_all = 1.0 / avChiErr_fit**2
+
+        # -------------------- 5) Residui (lunghezza fissa) -------------
+        def residuals(p):
+            log_r, log_k, tau = p
+            r = np.exp(log_r)
+            k = np.exp(log_k)
+
+            tt = time_fit - tau
+            m = tt > 0  # punti validi per il modello
+
+            if m.sum() < 3:
+                return np.full(time_fit.size, 1e6)
+
+            base_all = base_shifted(time_fit, r, k, tau)
+            C = np.sum(w_all[m] * (avChi_fit[m] - base_all[m])) / np.sum(w_all[m])
+
+            res = (base_all + C - avChi_fit) / avChiErr_fit
+            res[~m] = 0.0
+            return res
+
+        # -------------------- 6) Fit -----------------------------------
+        res = least_squares(residuals, p0, bounds=(lower, upper), max_nfev=300000)
+
+        log_r_fit, log_k_fit, tau_fit = res.x
+        r_fit  = np.exp(log_r_fit)
+        k_fit  = np.exp(log_k_fit)
+
+        tt_best = time_fit - tau_fit
+        m_best  = tt_best > 0
+        base_best_all = base_shifted(time_fit, r_fit, k_fit, tau_fit)
+        C_fit = np.sum(w_all[m_best] * (avChi_fit[m_best] - base_best_all[m_best])) / np.sum(w_all[m_best])
+
+        # -------------------- 7) Errori -------------------------------
+        J = res.jac
+        dof = m_best.sum() - 3
+        sigma2 = 2 * res.cost / dof
+        cov = np.linalg.pinv(J.T @ J) * sigma2
+        perr = np.sqrt(np.diag(cov))
+        r_err   = r_fit * perr[0]
+        k_err   = k_fit * perr[1]
+        tau_err = perr[2]
+
+        chi2 = np.sum(((base_best_all[m_best] + C_fit - avChi_fit[m_best]) / avChiErr_fit[m_best])**2)
+        chi2_red = chi2 / dof
+
+        print(f"r   = {r_fit:.6g} ± {r_err:.2g}")
+        print(f"k   = {k_fit:.6g} ± {k_err:.2g}")
+        print(f"tau = {tau_fit:.6g} ± {tau_err:.2g}")
+        print(f"C*  = {C_fit:.6g}")
+        print(f"chi2_red = {chi2_red:.3f}")
+
+        # -------------------- 8) Plot ---------------------------------
+        fig, ax = plt.subplots()
+
+        # Dati originali (una sola volta)
+        ax.errorbar(time, avChi, yerr=avChiErr, fmt='.', ms=3, elinewidth=0.8,
+                    alpha=0.35, label='data', zorder=1)
+
+        # Curva di fit
+        t_plot = np.linspace(time_fit[m_best].min(), time_fit[m_best].max(), 600)
+        ax.plot(t_plot, base_shifted(t_plot, r_fit, k_fit, tau_fit) + C_fit,
+                'r-', lw=1.6, label='fit (t>τ)', zorder=3)
+
+        # Linea verticale su tau
+        ax.axvline(tau_fit, ls='--', color='k', alpha=0.4, lw=1.0, label=r'$\tau$')
+
+        ax.set_xlabel('t')
+        ax.set_ylabel(r'$\chi$')
+
+        # Parametri in legenda fuori dal grafico
+        param_label = (fr"r={r_fit:.3g}±{r_err:.1g}, "
+                    fr"k={k_fit:.3g}±{k_err:.1g}, "
+                    fr"$\tau$={tau_fit:.3g}±{tau_err:.1g}, "
+                    fr"C*={C_fit:.3g}, "
+                    fr"$\chi^2_{{red}}$={chi2_red:.3f}")
+        # handle invisibile
+        ax.plot([], [], ' ', label=param_label)
+
+        leg = ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
+                        fontsize='small', frameon=True, handlelength=0)
+        plt.tight_layout(rect=[0, 0, 0.8, 1])  # lascia spazio a destra
+
+        try:
+            addInfoLines()
+        except NameError:
+            pass
 
     plt.figure('Qs')
     plt.plot(time, avQin, label=r'$q_{in}$')
@@ -1609,7 +1755,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     addInfoLines()
 
     plt.figure('M')
-    plt.plot(time, avM)
+    plt.errorbar(times[0], np.mean(M, axis=0), yerr=np.std(M, axis=0), label='mean',fmt='none' , alpha=0.2)
+    plt.plot(time, avM, linewidth=2., color='orange')
     plt.title(f'Magnetization conf. vs time\n'+titleSpecification)
     plt.xlabel('t')
     plt.ylabel('M')
@@ -1798,7 +1945,7 @@ def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
     simData['results']=results
     writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
 
-def singleRunAnalysis(run_Path,redoIfDone=False):
+def singleRunAnalysis(run_Path,redoIfDone=False,threeFitS=None):
 
     standardMCSimIDs = [15]
     pathMCSimIDs = [10,100,11,110]
@@ -1824,6 +1971,6 @@ def singleRunAnalysis(run_Path,redoIfDone=False):
     configurationInfo= txtToInfo(file_path, mappa)
     simTypeID = configurationInfo['simulationTypeId']
     if simTypeID in pathMCSimIDs:
-        singlePathMCAnalysis(run_Path=run_Path, configurationsInfo=configurationInfo, redoIfDone=redoIfDone)
+        singlePathMCAnalysis(run_Path=run_Path, configurationsInfo=configurationInfo, redoIfDone=redoIfDone, threeFitS=threeFitS)
     elif simTypeID in standardMCSimIDs:
         singleStandardMCAnalysis(run_Path=run_Path, configurationInfo=configurationInfo)

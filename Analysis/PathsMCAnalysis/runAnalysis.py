@@ -49,9 +49,22 @@ if len(sys.argv) > 1:
     redo=False
     analysisType = sys.argv[1]
     additional_strings= sys.argv[2:]
+    threeFitS = None  # il valore finale; il nome non può iniziare con un numero
+
+    for s in additional_strings[:]:      # copia per poter rimuovere
+        if s.startswith("threeFitS="):
+            val_str = s.split("=", 1)[1] # parte dopo '='
+            threeFitS = val_str
+            try:
+                threeFitS = float(val_str)
+            except ValueError:
+                pass                     # resta stringa se non è convertibile
+            additional_strings.remove(s) # lo tolgo dalla lista
+            break
     if "redo" in additional_strings:
         additional_strings.remove("redo")
         redo=True
+
     if analysisType in analysisVsSimTypesDict:
         simType = analysisVsSimTypesDict[analysisType]
         if simType!="any":
@@ -76,7 +89,7 @@ if len(sys.argv) > 1:
 
     for i, run in enumerate(sorted(selected_runs, reverse=True)):
         print(f"Analyzing simulation #{i+1} out of {len(selected_runs)}\n")
-        singleRunAnalysis(run,redoIfDone=redo)
+        singleRunAnalysis(run,redoIfDone=redo, threeFitS=threeFitS)
     # Get the stories names in the folder
     print("Analysis completed.\n")
     

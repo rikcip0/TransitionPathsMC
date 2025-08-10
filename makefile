@@ -54,7 +54,7 @@ compileAllSims:
 	g++ -O2 transitionPaths.cpp -o tp_Anneal.exe -DINITANNEALING && \
 	g++ -O2 transitionPaths.cpp -o tp_FixExt.exe -DFIXEDEXT && \
 	g++ -O2 transitionPaths.cpp -o tp_TrajRan_FixExt.exe -DINITRANDOM -DFIXEDEXT && \
-	g++ transitionPaths.cpp -O3 -march=native -ffast-math  -o tp_Anneal_FixExt_partLong.exe -DINITANNEALING -DFIXEDEXT && \
+	g++ transitionPaths.cpp -O3 -march=native -o tp_Anneal_FixExt_partLong.exe -DINITANNEALING -DFIXEDEXT && \
 	g++ -O2 transitionPaths.cpp -o tp_QuenC_TrajRan.exe -DQUENCHCONFS -DINITRANDOM && \
 	g++ -O2 transitionPaths.cpp -o tp_QuenC_Anneal.exe -DQUENCHCONFS -DINITANNEALING && \
 	g++ -O2 transitionPaths.cpp -o tp_QuenC_FixExt.exe -DQUENCHCONFS -DFIXEDEXT && \

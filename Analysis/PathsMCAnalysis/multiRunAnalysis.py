@@ -100,6 +100,7 @@ if len(sys.argv) != 1:
                         with open(run+ "/Results/runData.json", 'r') as file:
                             #print("analyzing"+run)
                             runData = json.load(file)
+                            runData["Path"] = os.path.abspath(run)
                             id_run = runData['configuration']['ID']
                             presente = any(item['configuration']['ID'] == id_run for item in presentRunsData)
                             if not presente:
