@@ -114,9 +114,9 @@ if len(sys.argv) != 1:
 
         if not presentRunsData:
             raise FileNotFoundError(f"No files of type  found in the specified path.")
-        print(f"Analyzing all run groups of type {simType}. {len(simTypes)} groups found.")
+        print(f"Analyzing all run groups of type {simType}. {len(simTypes)} group(s) found.")
 
-        print(f"Analyzing run group #{i} ({simTypes[i]}) out of {len(simTypes)}\n")
+        print(f"Analyzing run group #{i+1} ({simTypes[i]}) out of {len(simTypes)}\n")
         singleMultiRunAnalysis(presentRunsData, parentFolderForResults, simType)
         # Get the stories names in the folder
         print("Analysis completed.\n")
