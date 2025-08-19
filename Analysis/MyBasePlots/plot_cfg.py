@@ -1,200 +1,156 @@
 """
-plot_cfg.py
-Parametri geometrici e di scaling per figure "paper-ready".
+plot_cfg_v6.py
+==============
+Configurazione *gold* (sola geometria) per figure paper‑ready.
 
-Tutto è espresso in pollici (Matplotlib usa inches).
-Usiamo una SCALA UNIVERSALE (SCALE): variando SCALE, ridimensioni
-tutte le lunghezze mantenendo i rapporti.
+Obiettivo: separare **completamente** la logica di dimensionamento dal resto.
+Qui non si fa nessun "tight layout" o correzione runtime: forniamo solo
+le **formule chiuse** per ricavare dimensioni figura e margini coerenti.
+I template useranno questi numeri senza introdurre effetti collaterali.
 
-Struttura:
-- BASE: scala e utility
-- PANEL: dimensioni pannello principale
-- GAPS: spaziature tra pannelli
-- MARGINS: margini esterni (in frac o inches)
-- LEGEND: spazio e limiti legenda
-- HIST: pannelli istogramma marginali
-- COLORBAR: dimensioni CB verticale/orizzontale
-- LINES: fattori di spessore coerenti per elementi "sottili/medi/forti"
-- TICKS: regole standard per bins/pruning/minor
-- COLOR/CMAP: registri di palette e colormap (nomi simbolici)
-- HELPERS: funzioni per calcolare figsize totali in layout comuni
+Convenzioni:
+- `PANEL.W_MAIN`, `PANEL.H_MAIN` sono le dimensioni TARGET (in pollici) del
+  pannello *logico*. Nei template potrà significare "bbox Axes" (policy 'axes')
+  oppure "zona dati" (policy 'data'), ma **qui** restiamo agnostici.
+- Margini: `LEFT_FRAC` e `BOTTOM_FRAC` sono frazioni della figura;
+  `RIGHT_PAD` e `TOP_PAD_*` sono *in pollici*.
+- `legend_strip_width()` restituisce la larghezza (in pollici) da riservare
+  a destra quando la legenda è "outside".
+
+API minimale esposta da questo file (da usare nei template):
+- `figsize_single_panel(title_lines=1) -> (fig_w, fig_h)`
+- `figsize_two_panels(legend="outside", title_lines=1) -> (fig_w, fig_h, right_extra_in)`
+- `axes_rect(fig_w, fig_h, right_extra_in=0.0, title_lines=1) -> (left,bottom,right,top)`
 """
 
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import Tuple
 
-# =========================
-# BASE
-# =========================
+# ------------------------------------------------------------
+# Scala globale (se vuoi scalare tutte le misure insieme)
+# ------------------------------------------------------------
 SCALE: float = 1.00
-# Modifica SCALE per fare "zoom" globale dell'intera geometria:
-# ad es. 1.10 = +10% su TUTTE le lunghezze fisiche.
+def sc(x: float) -> float: return x * SCALE
 
-def sc(x: float) -> float:
-    """Applica la scala universale alle lunghezze in inches."""
-    return x * SCALE
-
-# =========================
-# PANEL (main panel size)
-# =========================
+# ------------------------------------------------------------
+# Pannello target (dimensioni logiche del pannello)
+# ------------------------------------------------------------
 @dataclass(frozen=True)
 class Panel:
-    W_MAIN: float = sc(4.2)   # larghezza pannello principale
-    H_MAIN: float = sc(3.2)   # altezza pannello principale
-
+    W_MAIN: float = sc(4.2)   # [in]
+    H_MAIN: float = sc(3.2)   # [in]
 PANEL = Panel()
 
-# =========================
-# GAPS (spazi tra pannelli)
-# =========================
+# ------------------------------------------------------------
+# Spaziature & margini
+# ------------------------------------------------------------
 @dataclass(frozen=True)
 class Gaps:
-    GAP_W: float = sc(0.10)   # gap orizzontale tra main e colonna ausiliaria
-    GAP_H: float = sc(0.10)   # gap verticale tra main e riga ausiliaria
-
+    GAP_W: float = sc(0.90)   # gap orizzontale tra due pannelli [in]
+    GAP_H: float = sc(0.10)   # (non usato qui, utile per griglie più complesse)
 GAPS = Gaps()
 
-# =========================
-# MARGINS (margini esterni)
-# =========================
 @dataclass(frozen=True)
 class Margins:
-    LEFT_FRAC: float      = 0.16  # frazione della larghezza figura (per y-label + ticks)
-    BOTTOM_FRAC: float    = 0.18  # frazione dell'altezza figura (per x-label + ticks)
-    RIGHT_PAD: float      = sc(0.16)  # bordo destro fisso in inches
-    TOP_PAD_BASE: float   = sc(0.52)  # bordo alto base in inches
-    TOP_PAD_PER_LINE: float = sc(0.30) # incremento per linea extra di titolo
-
+    LEFT_FRAC: float        = 0.16   # frazione della figura
+    BOTTOM_FRAC: float      = 0.18   # frazione della figura
+    RIGHT_PAD: float        = sc(0.16)  # [in]
+    TOP_PAD_BASE: float     = sc(0.52)  # [in]
+    TOP_PAD_PER_LINE: float = sc(0.30)  # [in] aggiunta per ogni riga di titolo oltre la prima
 MARGINS = Margins()
 
-# =========================
-# LEGEND (spazio legenda)
-# =========================
+# ------------------------------------------------------------
+# Legenda
+# ------------------------------------------------------------
 @dataclass(frozen=True)
 class LegendCfg:
-    PAD_W: float       = sc(0.12)  # spazio tra main e legenda (caso base)
-    PAD_W_CDF: float   = sc(0.16)  # spazio se presenti CDF/bande, un po' più largo
-    W_MIN: float       = sc(1.00)  # min width legenda
-    W_MAX: float       = sc(2.20)  # max width legenda
-    # Posizionamento standard (per "plot sciolti" senza asse legenda dedicato):
-    # anchor rispetto alla FIGURA (non all'axes), upper-right
-    ANCHOR_FIG: Tuple[float, float] = (0.965, 0.98)
-
+    PAD_W: float = sc(0.14)           # [in] distanza pannello -> legend
+    W_MIN: float = sc(1.00)           # [in] stima larghezza legenda
+    W_MAX: float = sc(2.20)           # [in]
 LEGEND = LegendCfg()
 
-# =========================
-# HIST (istogrammi marginali)
-# =========================
-@dataclass(frozen=True)
-class HistCfg:
-    W_COL: float         = sc(0.90)   # larghezza colonna istogramma a destra
-    H_ROW: float         = sc(0.90)   # altezza riga istogramma in alto
-    TICK_SCALE: float    = 0.88       # scala font tick per pannelli istogramma
+def legend_strip_width() -> float:
+    """Larghezza in pollici da riservare a destra quando la legenda è outside."""
+    return LEGEND.PAD_W + 0.5*(LEGEND.W_MIN + LEGEND.W_MAX)
 
-HIST = HistCfg()
-
-# =========================
-# COLORBAR
-# =========================
-@dataclass(frozen=True)
-class ColorbarCfg:
-    W_VERT: float       = sc(0.30)  # larghezza CB verticale
-    H_HORZ: float       = sc(0.20)  # altezza CB orizzontale
-    GAP: float          = sc(0.16)  # gap tra main e CB
-
-COLORBAR = ColorbarCfg()
-
-# =========================
-# LINES (rapporti coerenti)
-# Questi sono fattori *relativi* a lines.linewidth del .mplstyle
-# =========================
-@dataclass(frozen=True)
-class LineScales:
-    THIN: float        = 0.60   # linee sottili (guide/reference) = 60% dello spessore base
-    MEDIUM: float      = 1.00   # linee standard = 100%
-    STRONG: float      = 1.15   # p.es. curve CDF o media un po' più marcate
-    STRONG_MIN_PT: float = 1.20 # minimo assoluto in pt per le "strong" (applicalo in codice se necessario)
-
-LINES = LineScales()
-
-# =========================
-# TICKS (regole standard)
-# =========================
+# ------------------------------------------------------------
+# Ticks / label / linee (placeholders utili per altri moduli)
+# ------------------------------------------------------------
 @dataclass(frozen=True)
 class TickCfg:
-    X_MAJ: int      = 5     # numero target di tick major su X
-    Y_MAJ: int      = 5     # idem Y
-    PRUNE: str      = "both" # rimuovi tick di bordo se affollati
-    MINOR: bool     = False  # minor tick off by default
-
+    X_MAJ: int = 5
+    Y_MAJ: int = 5
+    PRUNE: str = "both"   # {'lower','upper','both',None}
+    MINOR: bool = False
 TICKS = TickCfg()
 
-# =========================
-# COLOR / CMAP registri simbolici
-# (il ciclo colori principale è nel .mplstyle; qui alias/nomi)
-# =========================
 @dataclass(frozen=True)
-class PaletteRegistry:
-    DEFAULT: str = "cb_safe"   # Okabe–Ito
-    ALT: str     = "tab10"     # alternativa compatibile matplotlib
+class LineScales:
+    THIN: float = 0.60
+    MEDIUM: float = 1.00
+    STRONG: float = 1.15
+    STRONG_MIN_PT: float = 1.20
+LINES = LineScales()
 
-PALETTES = PaletteRegistry()
-
+# ------------------------------------------------------------
+# DEFAULTS (usati dai template; qui solo per completezza)
+# ------------------------------------------------------------
 @dataclass(frozen=True)
-class CmapRegistry:
-    DEFAULT: str   = "viridis"   # percettivamente uniforme
-    SEQUENTIAL: str = "viridis"
-    DIVERGING: str  = "coolwarm" # o 'RdBu_r' se preferisci
-    CYCLIC: str     = "twilight"
+class Defaults:
+    AREA_POLICY: str = "data"     # 'data' (gold) o 'axes'
+    LEGEND: str      = "outside"  # 'outside' o 'inside'
+    TITLE_LINES: int = 1
+DEFAULTS = Defaults()
 
-CMAPS = CmapRegistry()
+# ------------------------------------------------------------
+# Helpers interni
+# ------------------------------------------------------------
+def _top_pad(title_lines:int) -> float:
+    """Padding superiore in pollici, in funzione del numero di righe di titolo."""
+    return MARGINS.TOP_PAD_BASE + max(0, title_lines - 1)*MARGINS.TOP_PAD_PER_LINE
 
-# =========================
-# HELPERS (calcolo figsize)
-# =========================
-def figsize_single_panel(title_lines: int = 1) -> Tuple[float, float]:
+# ------------------------------------------------------------
+# Figure sizes (FORMULE CHIUSE, nessuna approssimazione)
+# ------------------------------------------------------------
+def figsize_single_panel(title_lines:int=DEFAULTS.TITLE_LINES) -> Tuple[float,float]:
     """
-    Figure con solo pannello principale.
-    Restituisce (fig_w, fig_h) in inches.
+    Formule esatte (margini misti):
+      axes_w = fig_w*(1-LEFT_FRAC)  - RIGHT_PAD
+      axes_h = fig_h*(1-BOTTOM_FRAC)- TOP_PAD
+      -> fig_w = (W_MAIN + RIGHT_PAD)/(1-LEFT_FRAC)
+      -> fig_h = (H_MAIN + TOP_PAD)/(1-BOTTOM_FRAC)
     """
-    Wm, Hm = PANEL.W_MAIN, PANEL.H_MAIN
-    # larghezza figura: main / (1 - LEFT_FRAC) + RIGHT_PAD
-    fig_w = Wm / (1.0 - MARGINS.LEFT_FRAC) + MARGINS.RIGHT_PAD
-    # altezza figura: main / (1 - BOTTOM_FRAC) + top pads
-    top_pad = MARGINS.TOP_PAD_BASE + max(0, title_lines - 1) * MARGINS.TOP_PAD_PER_LINE
-    fig_h = Hm / (1.0 - MARGINS.BOTTOM_FRAC) + top_pad
-    return (fig_w, fig_h)
-
-def figsize_with_side_hist(n_cols_hist: int = 1, title_lines: int = 1, use_cdf_padding: bool = False) -> Tuple[float, float]:
-    """
-    Figure con istogrammo/i laterale/i (colonne a destra del main).
-    Calcola width aggiungendo n_cols_hist*(W_COL + GAP_W) e spazio legenda (min..max).
-    L'altezza è come single panel (istogrammi laterali non cambiano l'altezza).
-    """
-    base_w, base_h = figsize_single_panel(title_lines=title_lines)
-    # Rimuovi RIGHT_PAD aggiunto dalla single_panel (verrà riaggiunto dopo)
-    base_w_no_right = base_w - MARGINS.RIGHT_PAD
-    # spazio per istogrammi e gap
-    extra_w = 0.0
-    if n_cols_hist > 0:
-        extra_w += n_cols_hist * (HIST.W_COL + GAPS.GAP_W)
-    # spazio per legenda (stimato in mezzo tra min e max)
-    leg_pad = LEGEND.PAD_W_CDF if use_cdf_padding else LEGEND.PAD_W
-    leg_w   = 0.5 * (LEGEND.W_MIN + LEGEND.W_MAX)
-    total_w = base_w_no_right + extra_w + leg_pad + leg_w + MARGINS.RIGHT_PAD
-    return (total_w, base_h)
-
-def figsize_with_colorbar(vertical: bool = True, title_lines: int = 1) -> Tuple[float, float]:
-    """
-    Figure con colorbar a lato (vertical=True) oppure sotto (vertical=False).
-    """
-    base_w, base_h = figsize_single_panel(title_lines=title_lines)
-    if vertical:
-        # aggiungi CB verticale (larghezza + gap); altezza invariata
-        w = base_w - MARGINS.RIGHT_PAD + COLORBAR.GAP + COLORBAR.W_VERT + MARGINS.RIGHT_PAD
-        h = base_h
-    else:
-        # aggiungi CB orizzontale sotto (altezza + gap); larghezza invariata
-        w = base_w
-        h = base_h + COLORBAR.GAP + COLORBAR.H_HORZ
+    top = _top_pad(title_lines)
+    w = (PANEL.W_MAIN + MARGINS.RIGHT_PAD) / (1.0 - MARGINS.LEFT_FRAC)
+    h = (PANEL.H_MAIN + top) / (1.0 - MARGINS.BOTTOM_FRAC)
     return (w, h)
+
+def figsize_two_panels(legend:str=DEFAULTS.LEGEND, title_lines:int=DEFAULTS.TITLE_LINES) -> Tuple[float,float,float]:
+    """
+    DUE pannelli affiancati (formule esatte).
+      total_axes_w = 2*W_MAIN + GAP_W
+      fig_w = (total_axes_w + RIGHT_PAD + right_extra) / (1-LEFT_FRAC)
+      fig_h = come single
+    Ritorna (fig_w, fig_h, right_extra_in).
+    """
+    right_extra = legend_strip_width() if legend == "outside" else 0.0
+    total_axes_w = 2.0*PANEL.W_MAIN + GAPS.GAP_W
+    w = (total_axes_w + MARGINS.RIGHT_PAD + right_extra) / (1.0 - MARGINS.LEFT_FRAC)
+    top = _top_pad(title_lines)
+    h = (PANEL.H_MAIN + top) / (1.0 - MARGINS.BOTTOM_FRAC)
+    return (w, h, right_extra)
+
+# ------------------------------------------------------------
+# Rettangolo degli Axes in FRAZIONI figura
+# ------------------------------------------------------------
+def axes_rect(fig_w: float, fig_h: float, *, right_extra_in: float = 0.0, title_lines:int=DEFAULTS.TITLE_LINES) -> Tuple[float,float,float,float]:
+    """
+    Converte i margini misti in rettangolo (left,bottom,right,top) in FRAZIONI figura.
+    Usare direttamente in `fig.subplots_adjust(*axes_rect(...))`.
+    """
+    left   = MARGINS.LEFT_FRAC
+    bottom = MARGINS.BOTTOM_FRAC
+    right  = 1.0 - (MARGINS.RIGHT_PAD + right_extra_in) / fig_w
+    top    = 1.0 - (_top_pad(title_lines) / fig_h)
+    return (left, bottom, right, top)

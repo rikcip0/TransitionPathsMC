@@ -1,0 +1,10 @@
+# =========================
+# paper_latex_overlay_v1.4.mplstyle (OVERLAY)
+# Da sommare al base: abilita LaTeX per testo/formule.
+# =========================
+
+text.usetex         : True
+# Preambolo TUTTO su una riga (niente virgole, niente a capo):
+text.latex.preamble : \usepackage{lmodern}\usepackage[T1]{fontenc}
+# Alternativa Times (sostituisci la riga sopra con questa):
+# text.latex.preamble : \usepackage{newtxtext}\usepackage{newtxmath}

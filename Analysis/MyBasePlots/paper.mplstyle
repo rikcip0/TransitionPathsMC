@@ -1,0 +1,46 @@
+# =========================
+# paper_v1.2.mplstyle (BASE)
+# Figure size NON definita qui (la gestiscono i template).
+# =========================
+
+# ---------- Tipografia ----------
+font.family         : serif
+font.size           : 13
+axes.titlesize      : 13
+axes.labelsize      : 13
+xtick.labelsize     : 12
+ytick.labelsize     : 12
+axes.unicode_minus  : True
+
+# ---------- Linee / Assi / Tick ----------
+lines.linewidth     : 2.4
+axes.linewidth      : 1.6
+xtick.direction     : out
+ytick.direction     : out
+xtick.major.size    : 6
+ytick.major.size    : 6
+xtick.minor.size    : 3.2
+ytick.minor.size    : 3.2
+xtick.major.width   : 1.2
+ytick.major.width   : 1.2
+xtick.minor.width   : 0.8
+ytick.minor.width   : 0.8
+
+# ---------- Griglia (discreta) ----------
+axes.grid           : True
+grid.linestyle      : --
+grid.linewidth      : 0.6
+grid.alpha          : 0.25
+
+# ---------- Colori (Okabe-Ito, no yellow) ----------
+# NOTA: usare ASCII " semplici e parentesi tonde.
+axes.prop_cycle     : cycler("color", ("#0072B2", "#D55E00", "#CC79A7", "#E69F00", "#56B4E9", "#009E73", "#000000"))
+
+# ---------- Formattazione numeri ----------
+axes.formatter.use_mathtext : True
+
+# ---------- Salvataggio / PDF ----------
+savefig.bbox        : standard
+savefig.dpi         : 300
+pdf.fonttype        : 42
+ps.fonttype         : 42

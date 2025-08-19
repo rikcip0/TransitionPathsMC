@@ -1,210 +1,173 @@
-# templates.py
+"""
+myTemplates.py
+===================
+Template due pannelli *deterministico* con supporto:
+- inner_labels: 'outer' (default) oppure 'both'
+- gap_w: 'cfg' (default) | 'auto' | float (pollici)
+  * 'cfg'  -> usa cfg.GAPS.GAP_W
+  * float  -> usa quel valore
+  * 'auto' -> misura i ticklabels interni dopo il draw e **se serve** espande la figura
+             aumentando SOLO il gap centrale; la larghezza dei pannelli (W_MAIN) resta invariata.
+
+Niente tight_layout, niente correzioni runtime sulla zona-dati (si possono reintrodurre dopo).
+"""
+from __future__ import annotations
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-from typing import Tuple, Optional
+from typing import Tuple
 
-from MyBasePlots.plot_cfg import PANEL, GAPS, MARGINS, HIST, COLORBAR, LEGEND
-from MyBasePlots.plot_cfg import figsize_single_panel, figsize_with_side_hist, figsize_with_colorbar
-from MyBasePlots.myColors import apply_cycle
+import plot_cfg as cfg
+from utils_plot import outerize_two_columns, recommend_gap_between
 
-from contextlib import contextmanager
-from MyBasePlots.utils_plot import exportFigure, standardize_ticks
-from MyBasePlots.plot_cfg import TICKS
-# import già esistenti dei tuoi create_* ...
+# --- stile opzionale ---
+try:
+    from utils_style import auto_style
+except Exception:
+    from contextlib import contextmanager
+    @contextmanager
+    def auto_style(): yield
 
-@contextmanager
-def standard_plot_session(name, outdir, to_pdf=False,
-                          title=None, title_lines=1,
-                          palette="okabe_ito_noy",
-                          xbins=TICKS.X_MAJ, ybins=TICKS.Y_MAJ, minor=TICKS.MINOR):
-    fig, ax = create_standard_figure(name=name, title_lines=title_lines, palette=None)
-    if palette: apply_cycle(ax, palette)
+# ------------------ SINGLE (come v6_2) ------------------
+def single_panel(title: str | None = None, legend: str | None = None, title_lines: int | None = None):
+    if title_lines is None: title_lines = cfg.DEFAULTS.TITLE_LINES
+    if legend is None: legend = cfg.DEFAULTS.LEGEND
+    fig_w, fig_h = cfg.figsize_single_panel(title_lines=title_lines)
+    right_extra = cfg.legend_strip_width() if legend == "outside" else 0.0
+    if right_extra > 0:
+        fig_w = (cfg.PANEL.W_MAIN + cfg.MARGINS.RIGHT_PAD + right_extra) / (1.0 - cfg.MARGINS.LEFT_FRAC)
+    fig = plt.figure(figsize=(fig_w, fig_h))
+    left = cfg.MARGINS.LEFT_FRAC
+    bottom = cfg.MARGINS.BOTTOM_FRAC
+    right  = 1.0 - (cfg.MARGINS.RIGHT_PAD + right_extra) / fig_w
+    top    = 1.0 - (cfg.MARGINS.TOP_PAD_BASE + max(0, title_lines-1)*cfg.MARGINS.TOP_PAD_PER_LINE) / fig_h
+    fig.subplots_adjust(left=left, bottom=bottom, right=right, top=top)
+    ax = fig.add_subplot(1,1,1)
     if title: ax.set_title(title)
-    standardize_ticks(ax, xbins=xbins, ybins=ybins, minor=minor)
-    try:
-        yield fig, ax
-    finally:
-        exportFigure(fig, name, outdir, to_pdf=to_pdf)
-        plt.close(fig)
-
-@contextmanager
-def sidehist_plot_session(name, outdir, to_pdf=False,
-                          n_cols_hist=1, title=None, title_lines=1,
-                          use_cdf_padding=False,
-                          palette="okabe_ito_noy",
-                          xbins=TICKS.X_MAJ, ybins=TICKS.Y_MAJ, minor=TICKS.MINOR):
-    fig, ax_main, hist_axes, ax_leg = create_figure_with_side_hist(
-        name=name, n_cols_hist=n_cols_hist, title_lines=title_lines,
-        use_cdf_padding=use_cdf_padding, palette=None, xbins=xbins, ybins=ybins, minor=minor
-    )
-    if palette: apply_cycle(ax_main, palette)
-    if title: ax_main.set_title(title)
-    try:
-        yield fig, (ax_main, hist_axes, ax_leg)
-    finally:
-        exportFigure(fig, name, outdir, to_pdf=to_pdf)
-        plt.close(fig)
-
-@contextmanager
-def colorbar_plot_session(name, outdir, to_pdf=False,
-                          vertical=True, title=None, title_lines=1,
-                          palette="okabe_ito_noy",
-                          xbins=TICKS.X_MAJ, ybins=TICKS.Y_MAJ, minor=TICKS.MINOR):
-    fig, ax, cax = create_figure_with_colorbar(
-        name=name, vertical=vertical, title_lines=title_lines,
-        palette=None, xbins=xbins, ybins=ybins, minor=minor
-    )
-    if palette: apply_cycle(ax, palette)
-    if title: ax.set_title(title)
-    try:
-        yield fig, (ax, cax)
-    finally:
-        exportFigure(fig, name, outdir, to_pdf=to_pdf)
-        plt.close(fig)
-
-
-# ---- helper per convertire inches -> frazioni figura ----
-def _frac(total: float, inches: float) -> float:
-    return inches / total
-
-# ---- SINGLE PANEL ----
-def create_standard_figure(
-    name: Optional[str] = None,
-    title_lines: int = 1,
-    palette: Optional[str] = None,
-    xbins: int = 5, ybins: int = 5, minor: bool = False,
-):
-    fig_w, fig_h = figsize_single_panel(title_lines=title_lines)
-    fig = plt.figure(name, figsize=(fig_w, fig_h))
-
-    # costruiamo righe/colonne in inches e convertiamo in frazioni
-    left_frac = MARGINS.LEFT_FRAC
-    right_frac = 1.0 - _frac(fig_w, MARGINS.RIGHT_PAD)
-    bottom_frac = MARGINS.BOTTOM_FRAC
-    top_pad = MARGINS.TOP_PAD_BASE + max(0, title_lines - 1) * MARGINS.TOP_PAD_PER_LINE
-    top_frac = 1.0 - _frac(fig_h, top_pad)
-
-    fig.subplots_adjust(left=left_frac, right=right_frac, bottom=bottom_frac, top=top_frac)
-    ax = fig.add_subplot(1, 1, 1)
-
-    if palette:
-        apply_cycle(ax, palette)
-
-    standardize_ticks(ax, xbins=xbins, ybins=ybins, minor=minor)
+    fig._tpl = {"legend": legend}
     return fig, ax
 
-# ---- SIDE HISTOGRAM ----
-def create_figure_with_side_hist(
-    name: Optional[str] = None,
-    n_cols_hist: int = 1,
-    title_lines: int = 1,
-    use_cdf_padding: bool = False,
-    palette: Optional[str] = None,
-    xbins: int = 5, ybins: int = 5, minor: bool = False,
-):
-    """
-    Layout: [LEFT_MARGIN][MAIN][GAP][HIST...][LEG_PAD][LEGEND][RIGHT_PAD]
-            con due righe: [TOP_PAD][MAIN_ROW][BOTTOM_MARGIN]
-    """
-    fig_w, fig_h = figsize_with_side_hist(n_cols_hist=n_cols_hist, title_lines=title_lines, use_cdf_padding=use_cdf_padding)
-    fig = plt.figure(name, figsize=(fig_w, fig_h))
-
-    # Blocchi in inches
-    w_left   = fig_w * MARGINS.LEFT_FRAC
-    w_main   = PANEL.W_MAIN
-    parts = [w_left, w_main, GAPS.GAP_W]
-    for _ in range(n_cols_hist):
-        parts += [HIST.W_COL, GAPS.GAP_W]
-    leg_pad = LEGEND.PAD_W_CDF if use_cdf_padding else LEGEND.PAD_W
-    leg_w   = 0.5 * (LEGEND.W_MIN + LEGEND.W_MAX)
-    parts += [leg_pad, leg_w, MARGINS.RIGHT_PAD]
-    width_ratios = [p / fig_w for p in parts]
-
-    top_pad = MARGINS.TOP_PAD_BASE + max(0, title_lines - 1) * MARGINS.TOP_PAD_PER_LINE
-    h_top   = top_pad
-    h_main  = PANEL.H_MAIN
-    h_bot   = fig_h * MARGINS.BOTTOM_FRAC
-    height_ratios = [h_top/fig_h, h_main/fig_h, h_bot/fig_h]
-
-    gs = GridSpec(nrows=3, ncols=len(width_ratios), width_ratios=width_ratios, height_ratios=height_ratios, figure=fig)
-
-    # asse principale: riga 1 (centrale), colonna 1 (dopo il margine sinistro)
-    ax_main = fig.add_subplot(gs[1, 1])
-
-    # assi istogramma nelle colonne dedicate (saltando i gap)
-    hist_axes = []
-    col = 3  # 0: left, 1: main, 2: gap, 3: primo hist
-    for i in range(n_cols_hist):
-        axh = fig.add_subplot(gs[1, col])
-        hist_axes.append(axh)
-        col += 2  # dopo ogni hist c'è un gap
-
-    # asse legenda (ultima colonna prima di RIGHT_PAD)
-    ax_leg = fig.add_subplot(gs[1, -2])
-    ax_leg.axis("off")  # ci disegnerai la legend con fig.legend(...) o ax_leg.legend(...)
-
-    if palette:
-        apply_cycle(ax_main, palette)
-
-    standardize_ticks(ax_main, xbins=xbins, ybins=ybins, minor=minor)
-    for axh in hist_axes:
-        # ticks meno invasivi sugli istogrammi
-        standardize_ticks(axh, xbins=xbins, ybins=xbins, minor=False)
-        # riduci font tick (gestito da mplstyle + scaling nei label se vuoi fine-tuning)
-        for lbl in axh.get_xticklabels()+axh.get_yticklabels():
-            lbl.set_fontsize(lbl.get_fontsize()*HIST.TICK_SCALE)
-
-    return fig, ax_main, hist_axes, ax_leg
-
-# ---- COLORBAR ----
-def create_figure_with_colorbar(
-    name: Optional[str] = None,
-    vertical: bool = True,
-    title_lines: int = 1,
-    palette: Optional[str] = None,
-    xbins: int = 5, ybins: int = 5, minor: bool = False,
-):
-    """
-    Se vertical=True: colorbar a destra del main (pannello main costante, figura più larga).
-    Se vertical=False: colorbar sotto (figura più alta).
-    """
-    fig_w, fig_h = figsize_with_colorbar(vertical=vertical, title_lines=title_lines)
-    fig = plt.figure(name, figsize=(fig_w, fig_h))
-
-    if vertical:
-        w_left = fig_w * MARGINS.LEFT_FRAC
-        w_main = PANEL.W_MAIN
-        parts = [w_left, w_main, COLORBAR.GAP, COLORBAR.W_VERT, MARGINS.RIGHT_PAD]
-        width_ratios = [p/fig_w for p in parts]
-
-        top_pad = MARGINS.TOP_PAD_BASE + max(0, title_lines - 1) * MARGINS.TOP_PAD_PER_LINE
-        h_top   = top_pad
-        h_main  = PANEL.H_MAIN
-        h_bot   = fig_h * MARGINS.BOTTOM_FRAC
-        height_ratios = [h_top/fig_h, h_main/fig_h, h_bot/fig_h]
-
-        gs = GridSpec(nrows=3, ncols=len(width_ratios), width_ratios=width_ratios, height_ratios=height_ratios, figure=fig)
-        ax  = fig.add_subplot(gs[1, 1])
-        cax = fig.add_subplot(gs[1, 3])
+def finalize_single(fig, ax, legend: str | None = None, loc_inside: str = "upper right"):
+    if legend is None: legend = fig._tpl.get("legend", cfg.DEFAULTS.LEGEND)
+    if legend == "outside":
+        right_frac = ax.get_position().x1
+        fw = fig.get_size_inches()[0]
+        x = right_frac + cfg.LEGEND.PAD_W/fw + 1e-3
+        h, l = ax.get_legend_handles_labels()
+        if h:
+            fig.legend(h, l, loc="upper left", bbox_to_anchor=(x,1.0), frameon=False)
     else:
-        # larghezza come single panel, altezza con CB orizzontale
-        w_left = fig_w * MARGINS.LEFT_FRAC
-        w_main = PANEL.W_MAIN
-        w_right_pad = MARGINS.RIGHT_PAD
-        width_ratios = [w_left/fig_w, w_main/fig_w, w_right_pad/fig_w]
+        ax.legend(loc=loc_inside, frameon=False)
+    return fig, ax
 
-        top_pad = MARGINS.TOP_PAD_BASE + max(0, title_lines - 1) * MARGINS.TOP_PAD_PER_LINE
-        h_top   = top_pad
-        h_main  = PANEL.H_MAIN
-        parts_h = [h_top, h_main, COLORBAR.GAP, COLORBAR.H_HORZ, fig_h * MARGINS.BOTTOM_FRAC]
-        height_ratios = [p/fig_h for p in parts_h]
+# ------------------ TWO PANELS (auto-gap) ------------------
+def _parts_inches(fig_w: float, fig_h: float, gap_w_in: float, title_lines:int, legend:str) -> Tuple[list, list, float]:
+    right_extra = cfg.legend_strip_width() if legend == "outside" else 0.0
+    parts_w = [fig_w*cfg.MARGINS.LEFT_FRAC, cfg.PANEL.W_MAIN, gap_w_in, cfg.PANEL.W_MAIN]
+    if right_extra > 0:
+        parts_w += [right_extra, cfg.MARGINS.RIGHT_PAD]
+    else:
+        parts_w += [cfg.MARGINS.RIGHT_PAD]
+    parts_h = [cfg.MARGINS.TOP_PAD_BASE + max(0, title_lines-1)*cfg.MARGINS.TOP_PAD_PER_LINE,
+               cfg.PANEL.H_MAIN, fig_h*cfg.MARGINS.BOTTOM_FRAC]
+    return parts_w, parts_h, right_extra
 
-        gs = GridSpec(nrows=len(height_ratios), ncols=3, width_ratios=width_ratios, height_ratios=height_ratios, figure=fig)
-        ax  = fig.add_subplot(gs[1, 1])
-        cax = fig.add_subplot(gs[3, 1])  # sotto il main
+def two_panels(title: str | None = None, *, legend: str | None = None, labels: bool = True,
+               title_lines: int | None = None, inner_labels: str = "outer", gap_w='cfg'):
+    if title_lines is None: title_lines = cfg.DEFAULTS.TITLE_LINES
+    if legend is None: legend = cfg.DEFAULTS.LEGEND
+    # gap iniziale
+    if gap_w == 'cfg':
+        gap_in = cfg.GAPS.GAP_W
+    elif gap_w == 'auto':
+        gap_in = cfg.GAPS.GAP_W  # provvisorio, poi auto-espandiamo se serve
+    elif isinstance(gap_w, (int, float)):
+        gap_in = float(gap_w)
+    else:
+        raise ValueError("gap_w must be 'cfg'|'auto'|float")
 
-    if palette:
-        apply_cycle(ax, palette)
+    # dimensioni figura da cfg (con gap_in iniziale)
+    fig_w, fig_h, _re = cfg.figsize_two_panels(legend=legend, title_lines=title_lines)
+    # NOTA: la formula di cfg usa GAPS.GAP_W; se gap_w è float diverso, adeguiamo fig_w
+    base_gap = cfg.GAPS.GAP_W
+    if abs(gap_in - base_gap) > 1e-6:
+        fig_w += (gap_in - base_gap)
 
-    standardize_ticks(ax, xbins=xbins, ybins=ybins, minor=minor)
-    return fig, ax, cax
+    fig = plt.figure(figsize=(fig_w, fig_h))
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)  # niente doppio margine
+    parts_w, parts_h, right_extra = _parts_inches(fig_w, fig_h, gap_in, title_lines, legend)
+    gs = GridSpec(nrows=3, ncols=len(parts_w),
+                  width_ratios=parts_w, height_ratios=parts_h, figure=fig,
+                  wspace=0.0, hspace=0.0)
+    a1 = fig.add_subplot(gs[1,1])
+    a2 = fig.add_subplot(gs[1,3])
+    if title: a1.set_title(title)
+    if labels:
+        try:
+            from utils_style import apply_panel_labels
+            apply_panel_labels(fig, [a1, a2], labels=["a","b"])
+        except Exception:
+            pass
+    # policy label
+    if inner_labels == "outer":
+        outerize_two_columns(a1, a2, right_ticks_out=True)
+    elif inner_labels != "both":
+        raise ValueError("inner_labels must be 'outer' or 'both'")
+
+    fig._tpl = {"legend": legend, "gap_in": gap_in, "title_lines": title_lines}
+    return fig, (a1, a2)
+
+def finalize_multi(fig, axes, legend: str | None = None, auto_gap_action: str = "expand"):
+    """
+    Se fig._tpl['gap_in'] == 'auto' (gestito a monte come valore cfg), misura i ticklabels interni e,
+    se servono più pollici, **espande** solo la larghezza figura di delta_gap mantenendo W_MAIN invariato.
+    auto_gap_action: 'expand'|'suppress'|'warn'
+    - 'expand'   -> aumenta fig_w e riposiziona gli assi con nuove frazioni
+    - 'suppress' -> spegne i label interni (equivalente a inner_labels='outer')
+    - 'warn'     -> non tocca la figura, stampa solo un avviso
+    """
+    if legend is None: legend = fig._tpl.get("legend", cfg.DEFAULTS.LEGEND)
+    a1, a2 = axes
+    used_gap = fig._tpl.get("gap_in", cfg.GAPS.GAP_W)
+    title_lines = fig._tpl.get("title_lines", cfg.DEFAULTS.TITLE_LINES)
+
+    # --- misurazione gap necessario (solo se i label interni sono attivi) ---
+    need_gap = recommend_gap_between(a1, a2, min_gap_in=used_gap)
+
+    if need_gap > used_gap + 1e-3 and auto_gap_action in ("expand", "suppress"):
+        if auto_gap_action == "suppress":
+            outerize_two_columns(a1, a2, right_ticks_out=True)
+        else:
+            # EXPAND: aumenta fig_w e riposiziona assi mantenendo W_MAIN invariato
+            fig_w, fig_h = fig.get_size_inches()
+            delta = need_gap - used_gap
+            fig_w_new = fig_w + delta
+            fig.set_size_inches(fig_w_new, fig_h, forward=True)
+
+            # ricalcola posizioni in frazioni figura con il nuovo fig_w
+            L_in = fig_w_new * cfg.MARGINS.LEFT_FRAC
+            H_in = cfg.PANEL.H_MAIN
+            W_in = cfg.PANEL.W_MAIN
+            top_pad = cfg.MARGINS.TOP_PAD_BASE + max(0, title_lines-1)*cfg.MARGINS.TOP_PAD_PER_LINE
+            y0 = (fig_h * cfg.MARGINS.BOTTOM_FRAC) / fig_h
+            height_frac = H_in / fig_h
+
+            # colonne in inches: [L, W, need_gap, W, (strip?), RIGHT_PAD]
+            # calcola x frazionari
+            x0_left  = L_in / fig_w_new
+            x0_right = (L_in + W_in + need_gap) / fig_w_new
+            width_frac = W_in / fig_w_new
+
+            a1.set_position([x0_left, y0, width_frac, height_frac])
+            a2.set_position([x0_right, y0, width_frac, height_frac])
+
+    # --- legenda ---
+    if legend == "outside":
+        right_frac = a2.get_position().x1
+        fw = fig.get_size_inches()[0]
+        x = right_frac + cfg.LEGEND.PAD_W/fw + 1e-3
+        h, l = a2.get_legend_handles_labels()
+        if h:
+            fig.legend(h, l, loc="upper left", bbox_to_anchor=(x,1.0), frameon=False)
+    else:
+        axes[0].legend(loc="upper right", frameon=False)
+    return fig, axes
