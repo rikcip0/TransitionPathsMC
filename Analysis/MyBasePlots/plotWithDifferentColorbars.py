@@ -51,7 +51,7 @@ def plotWithDifferentColorbars(
     H_MAIN = 3.2     # inch
     H_CB   = 0.14    # inch
     H_SP_BIG   = 0.55
-    H_SP_SMALL = 0.40
+    H_SP_SMALL = 0.55
     TOP_PAD_BASE = 0.52
 
     # ------------------ Helper varie ------------------
@@ -368,8 +368,8 @@ def plotWithDifferentColorbars(
             for fm in fits_meta_pre:
                 eq_line = fm["eq"]
                 ign = fm.get("ignoring", [])
-                if ign: eq_line += f" (ignoring {DELIM.join(ign)})"
-                legend_lines.append(('item', eq_line))
+                #if ign: eq_line += f" (ignoring {DELIM.join(ign)})"
+                #legend_lines.append(('item', eq_line))
                 ps, se = fm["params"], fm["stderr"]
                 for k in ORDER.get(fm["fit"], ps.keys()):
                     v = ps.get(k, np.nan); e = se.get(k, np.nan)
@@ -899,8 +899,8 @@ def plotWithDifferentColorbars(
             for fm in fits_meta:
                 eq_line = fm["eq"]
                 ign = fm.get("ignoring", [])
-                if ign: eq_line += f" (ignoring {DELIM.join(ign)})"
-                handles.append(Line2D([0,1],[0,0], linestyle='--', color='0.25')); labels.append(eq_line)
+                #if ign: eq_line += f"(ignoring {DELIM.join(ign)})"
+                #handles.append(Line2D([0,1],[0,0], linestyle='--', color='0.25')); labels.append(eq_line)
                 ps, se = fm["params"], fm["stderr"]
                 for k in ORDER.get(fm["fit"], ps.keys()):
                     v = ps.get(k, np.nan); e = se.get(k, np.nan)

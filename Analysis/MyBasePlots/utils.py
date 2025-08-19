@@ -118,3 +118,98 @@ def add_footer(fig, left_text: str = "", right_text: str = "",
                        ha="right", va="bottom", fontsize=fs)
 
     return ax_footer
+
+# --- Tick standardization helpers (non-invasive) -----------------------------
+from matplotlib.ticker import MaxNLocator, FixedLocator
+
+def standardize_ticks(ax, xbins=5, ybins=5, xfixed=None, yfixed=None, prune='both', minor=False, steps=(1,2,2.5,5,10)):
+    """Set a reasonable number of major ticks on an Axes.
+    - xbins/ybins: target max number of major ticks (integers >= 2)
+    - xfixed/yfixed: optional explicit tick positions (list/tuple) to force
+    - prune: 'both'|'lower'|'upper'|None to drop end ticks if crowded
+    - minor: if True, clear minor ticks to avoid clutter
+    """
+    if ax is None:
+        return None
+    try:
+        if xfixed is not None:
+            ax.xaxis.set_major_locator(FixedLocator(list(xfixed)))
+        else:
+            ax.xaxis.set_major_locator(MaxNLocator(nbins=max(int(xbins), 2), prune=prune, steps=list(steps)))
+        if yfixed is not None:
+            ax.yaxis.set_major_locator(FixedLocator(list(yfixed)))
+        else:
+            ax.yaxis.set_major_locator(MaxNLocator(nbins=max(int(ybins), 2), prune=prune, steps=list(steps)))
+        if minor:
+            ax.minorticks_off()
+        ax.figure.canvas.draw_idle()
+    except Exception:
+        pass
+    return ax
+
+def standardize_all_axes(xbins=5, ybins=5, prune='both', minor=False):
+    """Apply standardize_ticks() to all regular axes in all open figures.
+    Skips axes without standard x/yaxis (e.g., colorbars).
+    """
+    import matplotlib.pyplot as plt
+    count = 0
+    for num in plt.get_fignums():
+        fig = plt.figure(num)
+        for ax in fig.get_axes():
+            # Skip axes that don't have both xaxis and yaxis (e.g., legends, colorbars)
+            if not hasattr(ax, "xaxis") or not hasattr(ax, "yaxis"):
+                continue
+            # Heuristic: skip colorbar-like axes
+            label = (getattr(ax, 'get_label', lambda: '')() or '').lower()
+            if 'colorbar' in label:
+                continue
+            standardize_ticks(ax, xbins=xbins, ybins=ybins, prune=prune, minor=minor)
+            count += 1
+    return count
+
+from contextlib import contextmanager
+from pathlib import Path
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+@contextmanager
+def ad_hoc_style(style_filename: str = "style_ad_hoc_boost.mplstyle"):
+    """Local style context for ad-hoc plots (stronger baseline, no global side effects)."""
+    # Resolve style path relative to this utils.py file first, then fallback to CWD
+    here = Path(__file__).resolve().parent
+    style_path = here / style_filename
+    style_ref = str(style_path) if style_path.exists() else style_filename
+    with mpl.rc_context(), plt.style.context(style_ref):
+        yield
+
+def use_ad_hoc_style(func):
+    """Decorator: run the function inside ad_hoc_style() and then standardize ticks."""
+    from functools import wraps
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        with ad_hoc_style():
+            out = func(*args, **kwargs)
+            try:
+                # 5-6 major ticks per axis, prune ends, remove minors
+                standardize_all_axes(xbins=5, ybins=5, prune='both', minor=True)
+            except Exception:
+                pass
+            return out
+    return wrapper
+
+
+def tidy_figures_for_export(pad_right=0.04, pad_top=0.02):
+    """Lightweight margin increase to avoid legend/labels clipping on ad-hoc plots.
+    pad_* are fractions of figure width/height added as outer margins.
+    """
+    import matplotlib.pyplot as plt
+    for num in plt.get_fignums():
+        fig = plt.figure(num)
+        try:
+            left, right = fig.subplotpars.left, fig.subplotpars.right
+            bottom, top = fig.subplotpars.bottom, fig.subplotpars.top
+            new_right = max(0.0, min(1.0, right - pad_right))
+            new_top = max(0.0, min(1.0, top - pad_top))
+            fig.subplots_adjust(right=new_right, top=new_top)
+        except Exception:
+            pass

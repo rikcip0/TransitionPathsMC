@@ -216,7 +216,7 @@ def findFoldersWithString(parent_dir, target_strings):
     return result
 
 
-def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
+def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType, toPdf=False):
 
     plt.rcParams["axes.grid"]= True
     plt.rcParams['lines.marker'] = 'o'
@@ -885,6 +885,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 vLines = []
                                 if not np.isnan(betaG):
                                     vLines.append([betaG, r"$\beta_{G}$", "blue"])
+                                """
                                 if not np.isnan(betaG2):
                                     vLines.append([betaG2, r"$\beta_{G,2}$", "green"])
                                 if not np.isnan(betaG3):
@@ -893,6 +894,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                     vLines.append([betaG2b, r"$\beta_{G,2b}$", "hotpink"])
                                 if not np.isnan(betaG2c):
                                     vLines.append([betaG2c, r"$\beta_{G,2c}$", "darkslategray"])
+                                """
                                     
                                 if not np.isnan(betaMax):
                                     vLines.append([betaMax, r"$\beta_{M}$", "red"])
@@ -992,9 +994,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                                 figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
                                 for fig_name in figs:
                                     fig = plt.figure(fig_name)
-                                    filename = os.path.join(TIPlotsFolder, f'{fig_name}.png')
-                                    #print(filename)
-                                    fig.savefig(filename)
+                                    if toPdf:
+                                        filename = os.path.join(TIPlotsFolder, f"{fig_name}.pdf")
+                                        fig.savefig(filename, format="pdf", bbox_inches=None)
+                                    else:
+                                        filename = os.path.join(TIPlotsFolder, f"{fig_name}.png")
+                                        fig.savefig(filename)
                                 plt.close('all')    
                                 
                                 if Zfunction is None:
@@ -1470,9 +1475,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
             for fig_name in figs:
                 fig = plt.figure(fig_name)
-                filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-                print(filename)
-                fig.savefig(filename)
+                if toPdf:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.pdf")
+                    fig.savefig(filename, format="pdf", bbox_inches=None)
+                else:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.png")
+                    fig.savefig(filename)
             plt.close('all')
             
             theseFiguresFolder = os.path.join(
@@ -1499,9 +1507,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
             for fig_name in figs:
                 fig = plt.figure(fig_name)
-                filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
+                if toPdf:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.pdf")
+                    fig.savefig(filename, format="pdf", bbox_inches=None)
+                else:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.png")
+                    fig.savefig(filename)
                 print(filename)
-                fig.savefig(filename)
             plt.close('all')
                                                        
     def myMultiRunStudy(filtering, studyName, x, xName, subfolderingVariable, subfolderingVariableNames,
@@ -1620,9 +1632,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
                 for fig_name in figs:
                     fig = plt.figure(fig_name)
-                    filename = os.path.join(folderToPlot, f'{fig_name}.png')
-                    print(filename)
-                    fig.savefig(filename)
+                    if toPdf:
+                        filename = os.path.join(folderToPlot, f"{fig_name}.pdf")
+                        fig.savefig(filename, format="pdf", bbox_inches=None)
+                    else:
+                        filename = os.path.join(folderToPlot, f"{fig_name}.png")
+                        fig.savefig(filename)
                 plt.close('all')
 
             def considerToPlotT(theseFiguresFolder):    
@@ -1636,9 +1651,12 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
                 for fig_name in figs:
                     fig = plt.figure(fig_name)
-                    filename = os.path.join(folderToPlot, f'{fig_name}.png')
-                    print(filename)
-                    fig.savefig(filename)
+                    if toPdf:
+                        filename = os.path.join(folderToPlot, f"{fig_name}.pdf")
+                        fig.savefig(filename, format="pdf", bbox_inches=None)
+                    else:
+                        filename = os.path.join(folderToPlot, f"{fig_name}.png")
+                        fig.savefig(filename)
                 plt.close('all')
 
             
@@ -1812,9 +1830,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         plt.axvline(val, 0, 1, color='red', linewidth=3,  linestyle='--')
                     fig.canvas.draw() 
                 
-                filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
+                if toPdf:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.pdf")
+                    fig.savefig(filename, format="pdf", bbox_inches=None)
+                else:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.png")
+                    fig.savefig(filename)
                 print(filename)
-                fig.savefig(filename)
             toFit = []
                 
             fig, mainPlot, _ =  plotWithDifferentColorbars(f"deltaNOverAvJumpsOvT", x[filt], xName, deltaN2JumpsOverNJumps[filt]/T[filt], "ratio", r"($\delta$"+"#jumps)^2/(#jumps)/T" +" vs "+ xName +"\n"+specificationLine,
@@ -1866,11 +1888,13 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                         plt.axvline(val, 0, 1, color='red', linewidth=3,  linestyle='--')
                     fig.canvas.draw() 
                 
-                filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-                #print(filename)
-                fig.savefig(filename)
-
-            plt.close('all')
+                if toPdf:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.pdf")
+                    fig.savefig(filename, format="pdf", bbox_inches=None)
+                else:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.png")
+                    fig.savefig(filename)
+                print(filename)
             
             toFit = [None]
             if xName=="N":
@@ -1979,6 +2003,22 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
                 barrierBetBarrErr2.append(mErr)
                 
                 
+            fig, ax, meta = plotWithDifferentColorbars(
+                "k2_scaled_log_clean",
+                x[filt], xName,
+                minusLnKFromChi_2_scaled[filt], "-ln k",
+                "Transition rate (3) computed from single TI and " + xName + "\n" + specificationLine,
+                trajsExtremesInitID[filt], trajInitShortDescription_Dict, edgeColorPerInitType_Dic,
+                beta[filt], markerShapeVariablesNames,
+                arrayForColorCoordinate[filt],
+                colorMapSpecifier=colorMapSpecifier[filt],
+                colorCoordinateVariableName=r"$\beta '$",
+                nGraphs=len(np.unique(graphID[filt])),
+                fitTypes=toFit,
+                colorMapSpecifierName=colorMapSpecifierName,
+                fitGroupBy=('spec')
+            )
+            
             fig, ax, meta = plotWithDifferentColorbars(
                 "k2_scaled_log",
                 x[filt], xName,
@@ -2543,18 +2583,15 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
             for fig_name in figs:
                 fig = plt.figure(fig_name)
-                if studyName == "StudyInBetaOverBetaMax":
-                    for val in np.unique(averageBetaMax[filt][~np.isnan(averageBetaMax[filt])]):
-                        plt.axvline(val, 0, 1, color='black', linestyle='--', linewidth=3)
-                    for val in np.unique(betaMax[filt][~np.isnan(betaMax[filt])]):
-                        plt.axvline(val, 0, 1, color='red', linewidth=3,  linestyle='--')
-                    fig.canvas.draw() 
                 
-                filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-                #print(filename)
-                fig.savefig(filename)
-
-            plt.close('all')       
+                if toPdf:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.pdf")
+                    fig.savefig(filename, format="pdf", bbox_inches=None)
+                else:
+                    filename = os.path.join(theseFiguresFolder, f"{fig_name}.png")
+                    fig.savefig(filename)
+                print(filename)  
+            plt.close('all')   
             
             if (xName=="N") and (i in (nLastSubfVal-1)):
                 considerToPlotN(theseFiguresFolder)

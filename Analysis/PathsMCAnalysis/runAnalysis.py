@@ -47,6 +47,7 @@ if len(sys.argv) > 1:
     archive_path = f"../../Data/Graphs"
     analysisVsSimTypesDict = {"all": "any"}
     redo=False
+    toPdf=False
     analysisType = sys.argv[1]
     additional_strings= sys.argv[2:]
     threeFitS = None  # il valore finale; il nome non può iniziare con un numero
@@ -64,6 +65,9 @@ if len(sys.argv) > 1:
     if "redo" in additional_strings:
         additional_strings.remove("redo")
         redo=True
+    if "toPdf" in additional_strings:
+        additional_strings.remove("toPdf")
+        toPdf=True
 
     if analysisType in analysisVsSimTypesDict:
         simType = analysisVsSimTypesDict[analysisType]
@@ -89,7 +93,7 @@ if len(sys.argv) > 1:
 
     for i, run in enumerate(sorted(selected_runs, reverse=True)):
         print(f"Analyzing simulation #{i+1} out of {len(selected_runs)}\n")
-        singleRunAnalysis(run,redoIfDone=redo, threeFitS=threeFitS)
+        singleRunAnalysis(run,redoIfDone=redo, threeFitS=threeFitS,toPdf=toPdf)
     # Get the stories names in the folder
     print("Analysis completed.\n")
     

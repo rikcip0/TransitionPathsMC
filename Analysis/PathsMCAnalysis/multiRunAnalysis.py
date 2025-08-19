@@ -51,8 +51,11 @@ if len(sys.argv) != 1:
     additional_strings= sys.argv[2:]
 
     noUpdate = ("noUpdate" in additional_strings)
+    toPdf = ("toPdf" in additional_strings)
     if noUpdate:
         additional_strings.remove("noUpdate")
+    if toPdf:
+        additional_strings.remove("toPdf")
 
     if requestedAnalysis in analysisVsSimTypesDict:
         if requestedAnalysis!="all":
@@ -117,7 +120,7 @@ if len(sys.argv) != 1:
         print(f"Analyzing all run groups of type {simType}. {len(simTypes)} group(s) found.")
 
         print(f"Analyzing run group #{i+1} ({simTypes[i]}) out of {len(simTypes)}\n")
-        singleMultiRunAnalysis(presentRunsData, parentFolderForResults, simType)
+        singleMultiRunAnalysis(presentRunsData, parentFolderForResults, simType, toPdf=toPdf)
         # Get the stories names in the folder
         print("Analysis completed.\n")
 else:

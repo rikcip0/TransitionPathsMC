@@ -1,0 +1,21 @@
+# --- Ad-hoc plotting boost (local) ---
+# Text sizes (relative to your global baseline)
+font.size: 13
+axes.labelsize: 14
+axes.titlesize: 14
+xtick.labelsize: 13
+ytick.labelsize: 13
+
+# Line and spine thickness
+lines.linewidth: 2.6
+axes.linewidth: 1.9
+
+# Tick thickness and size
+xtick.major.width: 1.4
+ytick.major.width: 1.4
+xtick.major.size: 6.5
+ytick.major.size: 6.5
+xtick.direction: out
+ytick.direction: out
+
+# Keep grid behavior from the global style (do not force here)

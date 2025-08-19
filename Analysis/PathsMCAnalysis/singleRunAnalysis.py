@@ -11,6 +11,7 @@ import scipy.stats as stats
 from scipy.stats import linregress
 matplotlib.use('Agg') 
 sys.path.append('../')
+
 from MyBasePlots.multipleCurvesAndHist import multipleCurvesAndHist, report_layout
 from MyBasePlots.hist import myHist
 from MyBasePlots.autocorrelation import autocorrelationWithExpDecayAndMu
@@ -18,12 +19,27 @@ from moviepy.editor import VideoClip
 from moviepy.video.io.bindings import mplfig_to_npimage
 import networkx as nx
 
+from MyBasePlots.utils_style import use_paper_style           # applica myStyle/myLatexStyle con decorator
+from MyBasePlots.myTemplates import (
+    create_standard_figure,
+    create_figure_with_colorbar,
+    create_figure_with_side_hist,   # se serve in futuro
+)
+from MyBasePlots.utils_plot import (
+    exportFigure,
+    standardize_ticks,
+    place_legend_outside,
+    exportAllOpenFigures,
+)
+from MyBasePlots.myColors import apply_cycle, get_cmap
+
 doAdditional2dHist=False
 simulationCode_version = None
 currentAnalysisVersion = 'singleRunAnalysisV0003'
 fieldTypesDict = {'1': "Bernoulli", '2': "Gaussian"}
 nMaxTrajsToPlot = 5
 nMeasuresToDoBootstrap=5
+
 
 def meanAndSigmaForParametricPlot(toBecomeX, toBecomeY):
     x_unique_values = np.unique(toBecomeX)
@@ -454,7 +470,7 @@ def txtToInfo(file_path, mappa):
     simulationCode_version = (int) (simulationCode_version)
     return data
 
-def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=False, threeFitS=None):
+def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=False, threeFitS=None, toPdf=False):
 
     simData = {}
     simData['configuration']= configurationsInfo
@@ -726,12 +742,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         results['realTime']['mean']='nan'
         results['realTime']['sigma']='nan'
 
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
+    exportAllOpenFigures(theseFiguresFolder, to_pdf=toPdf)
     #ANALYSIS OF LOG: END
     
     
@@ -1050,12 +1061,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         mcEvolutionAndAutocorrelation(measuresCounter, singleUs, 0,
                                         'TI_beta_U', r'Quantity for thermodynamic integration in $\beta$', 'U', nMusToConsider,
                                         plotBoth=False)
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
+    exportAllOpenFigures(theseFiguresFolder, to_pdf=toPdf)
     #ANALYSIS OF THERMALIZATION DATA: END
 
 
@@ -1107,13 +1113,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         plt.ylabel('q_out')
         # Add a colorbar for reference
         plt.colorbar()
-        figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-        for fig_name in figs:
-            fig = plt.figure(fig_name)
-            filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-            fig.savefig(filename, bbox_inches='tight')
-        plt.close('all')
-
+        exportAllOpenFigures(theseFiguresFolder, to_pdf=toPdf)
     theseFiguresFolder= os.path.join(plotsFolder, 'sampledTrajs')
     if not os.path.exists(theseFiguresFolder):
         os.makedirs(theseFiguresFolder)
@@ -1129,85 +1129,50 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     else:
         delete_files_in_folder(theseFiguresSubFolder)
 
-    histScale = ''
+    mHistScaleIsLog = False
     if areConfigurationsFM:
-        histScale='log'
+        mHistScaleIsLog= True
         
-    nRandomTrajs= np.min([nMaxTrajsToPlot, nTrajs-1])-1
-    someTrajs= np.array([0]) #non è quella dell'inizializzazione, ma quella subito dopo
-    if nRandomTrajs>0:
-        someTrajs = np.append(someTrajs, np.asarray([nTrajs-4]))
-        someTrajs = np.sort(np.append(someTrajs, np.random.choice(np.arange(1, nTrajs-4), nRandomTrajs-1, replace=False)))
-    
-    someTrajs_MC=[tj*mcPrint for tj in someTrajs]
-    
-    figure, mainPlot, _ = multipleCurvesAndHist(
-    name='H',
-    title='Energy',
-    x_list=times,      x_label='t',
-    y_list=energy,     y_label=r'H',
-    curvesIndeces=someTrajs,         # (nota: parametro corretto è 'curvesIndeces')
-    show_xhist=False, show_yhist=True,
-    y_log_density=(histScale == 'log') if isinstance(histScale, str) else bool(histScale)
-    )
-    
-    figure, mainPlot, _ = multipleCurvesAndHist(
-    name='m',
-    title='Magnetization',
-    x_list=times,      x_label='t',
-    y_list=M,     y_label=r'm',
-    curvesIndeces=someTrajs,         # (nota: parametro corretto è 'curvesIndeces')
-    show_xhist=False, show_yhist=True,
-    yGuides=[(Qstar, r"m*",'red')],
-    y_cdf=True,
-    y_log_density=(histScale == 'log') if isinstance(histScale, str) else bool(histScale)
-    )
 
+    fig, ax, meta = multipleCurvesAndHist(
+    name="Energy",
+    title="H vs t",
+    x_list=times[0], x_label='t',
+    y_list=energy[0], y_label='H',
+    show_yhist=True, show_xhist=False,
+    yhist_overlay=True, y_cdf=True,
+    use_max_bins=True,                 # “massimo” numero di bin
+    legend=True
+    )
+    
     fig, ax, meta = multipleCurvesAndHist(
     name="EnergyVsM",
     title="energy vs m",
-    x_list=M, x_label='m',
-    y_list=energy, y_label='H',
+    x_list=M[0], x_label='m',
+    y_list=energy[0], y_label='H',
     show_yhist=True, show_xhist=False,
     yhist_overlay=True,
-    y_log_density=True, y_cdf=True,
+    x_log_density=mHistScaleIsLog, x_cdf=True,
     use_max_bins=True,                 # “massimo” numero di bin
     xGuides=[(Qstar, r"m*",'red')],
     legend=True
     )
     
-        
-        
-    addInfoLines(figure)
-
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(theseFiguresSubFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
-    figure, mainPlot, _ = multipleCurvesAndHist(
-        name='M',
-        title=r'm vs time' + '\n' + titleSpecification,
-        x_list=times[0], x_label='t',
-        y_list=M[0],    y_label='m',
-        yGuides=[M_RedLine],
-        show_yhist=True, show_xhist=False,
-        y_log_density=(histScale == 'log'),
-        x_log_density=(histScale == 'log')
+    fig, ax, meta = multipleCurvesAndHist(
+    name="m",
+    title="m",
+    x_list=times[0], x_label='t',
+    y_list=M[0], y_label='m',
+    show_yhist=True, show_xhist=False,
+    yhist_overlay=True,
+    y_log_density=mHistScaleIsLog, y_cdf=True,
+    use_max_bins=True,                 # “massimo” numero di bin
+    yGuides=[(Qstar, r"m*",'red')],
+    legend=True
     )
-    addInfoLines(figure)
+    addInfoLines(fig)
 
-    figure, mainPlot, _ = multipleCurvesAndHist(
-        'EnergyVsM',
-        M[0], energy[0],
-        title=r'Energy vs m' + '\n' + titleSpecification,
-        x_label='m', y_label='H',
-        yGuides=[(M_RedLine)],
-        xHistLogDensity=histScale, yHistLogDensity=histScale
-    )
-    addInfoLines(figure)
-
+    exportAllOpenFigures(theseFiguresSubFolder, to_pdf=toPdf)
     if not areConfigurationsFM:
         figure, mainPlot, _ = multipleCurvesAndHist(
             'Qin',
@@ -1285,12 +1250,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
             xHistLogDensity=histScale, yHistLogDensity=histScale
         )
         addInfoLines(figure)
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(theseFiguresSubFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
+    exportAllOpenFigures(theseFiguresSubFolder, to_pdf=toPdf)
     #Plots of initialization trajectory: END
 
     #Plots considering over all trajs: START
@@ -1322,16 +1282,16 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     addInfoLines()
 
     plt.figure('energyVsM')
-    #plt.title(f'Mean of energy vs M\n'+ titleSpecification)
+    plt.title(f'Mean of energy vs M\n'+ titleSpecification+"\n")
     plt.xlabel(r'm')
-    plt.ylabel(r'$energy$')
+    plt.ylabel(r'e')
     a = meanAndSigmaForParametricPlot(M, energy)
     plt.errorbar(a[0],a[1],a[2], label='mean')
     plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
     if M_RedLine is not None:
         plt.axvline(M_RedLine[0], color='red', linestyle='dashed', linewidth=1, label=M_RedLine[1])
-    plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
-    #addInfoLines()
+    #plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
+    addInfoLines()
     
     if not areConfigurationsFM:
         plt.figure('energyVsQin')
@@ -1409,12 +1369,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     results['q_outOfBarrier']= QoutOfBarrier.mean()
     results['deltaQ_outOfBarrier']= QoutOfBarrier.var()**0.5
 
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(theseFiguresSubFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
+    exportAllOpenFigures(theseFiguresSubFolder, to_pdf=toPdf)
     #Plots considering over all trajs: END
 
     
@@ -1435,54 +1390,61 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     someTrajs_MC=[tj*mcPrint for tj in someTrajs]
     titleSpecification = 'considering some sampled trajectories'
     
+    
     figure, mainPlot, _ = multipleCurvesAndHist(
-        'H',
-        times, energy,
-        title='',  # (lasciato vuoto come nel tuo originale)
-        x_label='t', y_label=r'H',
-        curvesIndices=someTrajs,
-        showXHist=False, showYHist=True,
-        yHistLogDensity=(histScale == 'log') if isinstance(histScale, str) else bool(histScale)
+    name='H',
+    title='Energy',
+    x_list=times,      x_label='t',
+    y_list=energy,     y_label=r'H',
+    curvesIndeces=someTrajs,         # (nota: parametro corretto è 'curvesIndeces')
+    show_xhist=False, show_yhist=True,
     )
-    # addInfoLines(figure)
+    
+    figure, mainPlot, _ = multipleCurvesAndHist(
+    name='m',
+    #title='Magnetization',
+    title='',
+    legend=False,
+    x_list=times,      x_label='t',
+    y_list=M,     y_label=r'm',
+    curvesIndeces=someTrajs,         # (nota: parametro corretto è 'curvesIndeces')
+    show_xhist=False, show_yhist=True,
+    yGuides=[(Qstar, r"m*",'red')],
+    y_cdf=True,
+    y_log_density=False,
+    cdf_ref_probs_y=[1/3., 2./3.],
+    )
+    
+    figure, mainPlot, _ = multipleCurvesAndHist(
+    name='m_bw',
+    #title='Magnetization',
+    title='',
+    legend=False,
+    x_list=times,      x_label='t',
+    y_list=M,     y_label=r'm',
+    curvesIndeces=someTrajs,         # (nota: parametro corretto è 'curvesIndeces')
+    show_xhist=False, show_yhist=True,
+    yGuides=[(Qstar, r"m*",'red')],
+    y_cdf=True,
+    y_log_density=False,
+    cdf_ref_probs_y=[1/3., 2./3.],
+    palette='bw'
+    )
+    
+    figure, mainPlot, _ = multipleCurvesAndHist(
+    name='eVsM',
+    title='Energy vs Magnetization',
+    x_list=M,      x_label='m',
+    y_list=energy,     y_label=r'e',
+    curvesIndeces=someTrajs,         # (nota: parametro corretto è 'curvesIndeces')
+    show_xhist=True, show_yhist=True,
+    xGuides=[(Qstar, r"m*",'red')],
+    x_cdf=True, y_cdf=True,
+    x_log_density=mHistScaleIsLog
+    )
+    
 
-    figure, mainPlot, _ = multipleCurvesAndHist(
-        'M',
-        times, M,
-        title='',
-        x_label='t', y_label='m',
-        curvesIndices=someTrajs,
-        showXHist=False, showYHist=True,
-        yGuides=[tuple(M_RedLine)],  # accetta (val), (val,label) o (val,label,color)
-        yHistLogDensity=False,       # 'linear' nel tuo originale
-        yHistCDF=True                # cumulativeFor=('data',) → CDF sui dati principali
-    )
-    # addInfoLines(figure)
-    report_layout(fig, meta)
 
-    figure, mainPlot, _ = multipleCurvesAndHist(
-        'EnergyVsM',
-        M, energy,
-        title='energy vs m\nconsidering some sampled trajectories',
-        x_label=r'm', y_label='energy',
-        curvesIndices=someTrajs,
-        # istogramma Y a destra
-        showXHist=False, showYHist=True,
-        yHistLogDensity=True,           # histScale='log' nel tuo originale
-        yHistBins='auto',               # o 'max' se vuoi il “massimo” numero di bin
-        yhistOverlay=True,              # True: un solo asse per extras (overlay)
-        yHistCDF=True,                  # cumulativa sui dati principali
-        cdf_style={'linestyle': '--', 'alpha': 0.55},
-        # righe guida (es. m*)
-        xGuides=[(M_RedLine[0], M_RedLine[1], 'r')],
-        # palette
-        cb_safe=True, mono=False,
-        # legenda esterna
-        show_legend=True,
-        legend_loc='center left',
-        legend_bbox_to_anchor=(1.02, 0.5, 0.0, 0.0)
-    )
-    addInfoLines(figure)
 
     if not areConfigurationsFM:
         figure, mainPlot, _ = multipleCurvesAndHist(
@@ -1581,12 +1543,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         )
         addInfoLines(figure)
 
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(theseFiguresSubFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
+    exportAllOpenFigures(theseFiguresSubFolder, to_pdf=toPdf)
     #Plots considering only some trajs: END
     #ANALYSIS OF SAMPLED TRAJS: END 
     
@@ -1963,13 +1920,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     addInfoLines()
 
 
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
-
+    exportAllOpenFigures(theseFiguresFolder, to_pdf=toPdf)
     simData['results']=results
     writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
     
@@ -2114,17 +2065,12 @@ def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
     mcEvolutionAndAutocorrelation(therm_mcMeasures, therm_HB, firstIndexOfMeasuresAtEq,
                                       'HB', 'trajectory max energy', 'H', nMusToConsider)
 
-    figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
-    for fig_name in figs:
-        fig = plt.figure(fig_name)
-        filename = os.path.join(theseFiguresFolder, f'{fig_name}.png')
-        fig.savefig(filename, bbox_inches='tight')
-    plt.close('all')
-
+    exportAllOpenFigures(theseFiguresFolder, to_pdf=toPdf)
     simData['results']=results
     writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
 
-def singleRunAnalysis(run_Path,redoIfDone=False,threeFitS=None):
+@use_paper_style
+def singleRunAnalysis(run_Path,redoIfDone=False,threeFitS=None, toPdf=False):
 
     standardMCSimIDs = [15]
     pathMCSimIDs = [10,100,11,110]
@@ -2150,6 +2096,6 @@ def singleRunAnalysis(run_Path,redoIfDone=False,threeFitS=None):
     configurationInfo= txtToInfo(file_path, mappa)
     simTypeID = configurationInfo['simulationTypeId']
     if simTypeID in pathMCSimIDs:
-        singlePathMCAnalysis(run_Path=run_Path, configurationsInfo=configurationInfo, redoIfDone=redoIfDone, threeFitS=threeFitS)
+        singlePathMCAnalysis(run_Path=run_Path, configurationsInfo=configurationInfo, redoIfDone=redoIfDone, threeFitS=threeFitS, toPdf=toPdf)
     elif simTypeID in standardMCSimIDs:
         singleStandardMCAnalysis(run_Path=run_Path, configurationInfo=configurationInfo)
