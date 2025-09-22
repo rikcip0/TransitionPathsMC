@@ -35,14 +35,15 @@ from MyBasePlots.plotWithDifferentColorbars import plotWithDifferentColorbars
 
 fieldTypeDictionary ={"2":"gauss", "1":"bernoulli", "nan":"noField"}
 fieldTypePathDictionary ={"gauss":"stdGaussian", "bernoulli":"stdBernoulli"}
-trajInitShortDescription_Dict= {0: "stdMC", 70: "Random", 71: "Ref 12", "nan": "Ref 12", 72: "Ref 21", 73: "Annealing", 74: "Annealing", 740: "AnnealingF", -2:"Fit"}
-edgeColorPerInitType_Dic={0: "None", 70: "lightGreen", 71: "black", 72: "purple", 73: "orange", 74: "orange", 740: "red", -2:"black", "nan":"black", "0":"black"}
+trajInitShortDescription_Dict= {0: "stdMC", 70: "Random", '71': "Ref 12", 72: "Ref 21", 73: "Annealing", 74: "Annealing", '740': "AnnealingF", -2:"Fit"}
+edgeColorPerInitType_Dic={'0': "None", 70: "lightGreen", '71': "black", 72: "purple", 73: "orange", 74: "orange", '740': "red", -2:"black"}
 preferred_trajInit = [740, 74, 73, 72, 71, 70]
 nameOfFoldersContainingGraphs = ["fPosJ","realGraphs"
                                ]
 # ---------- Helper functions (dal tuo originale) ----------
 
 def getUniqueXAndYZAccordingToZ(x, y, criterion, preliminaryFilter=None):
+    print("xprima",x)
     if preliminaryFilter is None:
         preliminaryFilter =  ~np.isnan(y)
     else:
@@ -51,10 +52,13 @@ def getUniqueXAndYZAccordingToZ(x, y, criterion, preliminaryFilter=None):
     filterToReturn = np.full(len(x), False)
     # Iteriamo su ogni valore unico in filteredStdMCsBetas
     for value in np.sort(np.unique(x[preliminaryFilter])):
+        print("value",value)
         # Trova gli indici corrispondenti a questo valore unico
         indices = np.where(np.logical_and(x == value, preliminaryFilter))[0]
 
         if len(indices) > 1:
+            print(len(indices))
+            print(criterion[indices])
             # Se ci sono più di un indice, scegli quello con il valore massimo in lastMeasureMC
             best_index = indices[np.nanargmax(criterion[indices])]
         else:
@@ -91,19 +95,6 @@ def getLevelFromNestedStructureAndKeyName(structure, param_tuples, keyName):
         return current_level
     else:
         return None
-
-def P_t(n, q, p_up):
-    """
-    print(n,q, p_up)
-    # Calcolo del logaritmo della funzione per maggiore precisione
-    log_comb = np.log(comb(n, (n+q)/2))
-    log_term1 = (n + q) / 2 * np.log(p_up)
-    log_term2 = (n - q) / 2 * np.log(1. - p_up)
-    # Somma dei logaritmi e poi esponenziale per ottenere il risultato finale
-    log_result = log_comb + log_term1 + log_term2
-    return np.exp(log_result)
-    """
-    return comb(n, (n+q)/2)*((p_up)**((n+q)/2))*((1-p_up)**((n-q)/2))
 
 def P_t(n, q, p_up):
     """
@@ -329,8 +320,28 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     meanBarrier   = _series_or_default(df, 'meanBarrier')
     stdDevBarrier = _series_or_default(df, 'stdDevBarrier')
 
+    # ---- derived 'scale' and 'scale2' as in original TI ----
+    try:
+        _T = np.asarray(T, dtype=float)
+    except Exception:
+        _T = T
+    try:
+        _chi_m2 = np.asarray(chi_m2, dtype=float)
+        _chi_c2 = np.asarray(chi_c2, dtype=float)
+        _chi_chi2 = np.asarray(chi_chi2, dtype=float)
+    except Exception:
+        _chi_m2, _chi_c2, _chi_chi2 = chi_m2, chi_c2, chi_chi2
+    scale = _chi_m2 * _T + _chi_c2
+    scale2 = scale.copy()
+    # Mask like your historical logic: scale2 < 0.33 or chi_chi2 > 0.43 -> NaN
+    with np.errstate(invalid='ignore'):
+        bad = (scale2 < 0.33) | (_chi_chi2 > 0.43)
+    scale2[bad] = np.nan
+    globals().update(dict(scale=scale, scale2=scale2))
+
     # params
     N    = _series_or_default(df,"N")
+    N = N.astype(int)
     T    = _series_or_default(df,"T")
     beta = _series_or_default(df,"beta")
     h_out= _series_or_default(df,"h_out")
@@ -441,6 +452,7 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     except Exception:
         qf = np.full(L, np.nan)
     Nf = np.asarray(N, dtype=float) if N is not None else np.full(L, np.nan)
+    N = N.astype(int)
     qf = np.where(np.isnan(qf), -Nf, qf)
     try:
         refConfMutualQ = np.nan_to_num(qf, nan=0.0).astype(int)
@@ -620,7 +632,8 @@ def thermodynamicIntegration(filt, analysis_path):
                         sim_Qstar=(int)(sim_N*sim_nQstar)
                         TIFilt4 = np.logical_and(TIFilt3, np.logical_and.reduce([N==sim_N, graphID==sim_graphID, fieldRealization==sim_fieldRealization]))
                         st_TIFilt4 = np.logical_and(st_TIFilt3, np.logical_and.reduce([stMC_N==sim_N , stMC_graphID==sim_graphID, stMC_fieldRealization==sim_fieldRealization]))
-
+                        print(sim_N, sim_graphID, sim_fieldRealization, sim_Hin, sim_Hout, sim_nQstar)
+                        print(stMC_MC)
                         stdMCsBetas_forThisTDSetting, stdMCsTIBetas_forThisTDSetting, stdMCsMC_forThisTDSetting, filterForStdMCs_forThisTDSetting = getUniqueXAndYZAccordingToZ(stMC_beta, stMC_TIbeta, stMC_MC, preliminaryFilter=st_TIFilt4)
 
                         #specifico il tempo
@@ -665,14 +678,20 @@ def thermodynamicIntegration(filt, analysis_path):
                             smallestPathsMcBetaToConsider_i = np.nanargmin(pathMCBetas_forThisTAndInit)
                             smallestPathsMcBetaToConsider= pathMCBetas_forThisTAndInit[smallestPathsMcBetaToConsider_i]
                             smallestPathsMcTIToConsider = pathMCTIs_forThisTAndInit[smallestPathsMcBetaToConsider_i]
-                            if len(stdMCsBetas_forThisTDSetting*(stdMCsBetas_forThisTDSetting<smallestPathsMcBetaToConsider))==0:
-                                continue
-                            largestStdMcBetaToConsider_i = np.nanargmax(stdMCsBetas_forThisTDSetting*(stdMCsBetas_forThisTDSetting<smallestPathsMcBetaToConsider))
-                            largestStdMcBetaToConsider = stdMCsBetas_forThisTDSetting[largestStdMcBetaToConsider_i]
-                            largestStdMcTIToConsider = stdMCsTIBetas_forThisTDSetting[largestStdMcBetaToConsider_i]
+
+                            if smallestPathsMcBetaToConsider<=np.nanmin(stdMCsBetas_forThisTDSetting):
+                                print("EECCCCOOCCC,", sim_T, smallestPathsMcBetaToConsider,stdMCsBetas_forThisTDSetting)
+                                largestStdMcBetaToConsider_i=np.nanargmin(stdMCsBetas_forThisTDSetting)
+                                largestStdMcBetaToConsider=stdMCsBetas_forThisTDSetting[largestStdMcBetaToConsider_i]
+                                largestStdMcTIToConsider = stdMCsTIBetas_forThisTDSetting[largestStdMcBetaToConsider_i]
+                            else:  
+                                largestStdMcBetaToConsider_i = np.nanargmax(stdMCsBetas_forThisTDSetting*(stdMCsBetas_forThisTDSetting<smallestPathsMcBetaToConsider))
+                                largestStdMcBetaToConsider = stdMCsBetas_forThisTDSetting[largestStdMcBetaToConsider_i]
+                                largestStdMcTIToConsider = stdMCsTIBetas_forThisTDSetting[largestStdMcBetaToConsider_i]
                             #print("Z", smallestPathsMcBetaToConsider)
                             #print("A", largestStdMcBetaToConsider)
                             TIDifferenceMax=np.nanmax(stMC_TIbeta[stdMC_filtForThisTAndInit])-np.nanmin(pathMCTIs_forThisTAndInit)
+                            """
                             for i, stdMcBeta in enumerate(stMC_beta[stdMC_filtForThisTAndInit]):
                                 stdMcTIbeta = stMC_TIbeta[stdMC_filtForThisTAndInit][i]
                                 if stdMcBeta< largestStdMcBetaToConsider:
@@ -683,12 +702,13 @@ def thermodynamicIntegration(filt, analysis_path):
                                     continue
                                 smallestLEqPathMCBeta_index=np.nanargmin(pathMCBetas_forThisTAndInit[pathsMcsToConsider])
                                 PathsMcTIToCompare=pathMCTIs_forThisTAndInit[pathsMcsToConsider][smallestLEqPathMCBeta_index]
-                                if abs((stdMcTIbeta-PathsMcTIToCompare)/TIDifferenceMax)<0:#0.003:
+                                if abs((stdMcTIbeta-PathsMcTIToCompare)/TIDifferenceMax)<0.:#0.003:
                                     largestStdMcBetaToConsider = stdMcBeta
                                     largestStdMcTIToConsider = stdMcTIbeta
                                     smallestLargerPathMCBeta_index=np.nanargmin(pathMCBetas_forThisTAndInit[pathMCBetas_forThisTAndInit>stdMcBeta])
                                     smallestPathsMcBetaToConsider = pathMCBetas_forThisTAndInit[pathMCBetas_forThisTAndInit>stdMcBeta][smallestLargerPathMCBeta_index]
                                     smallestPathsMcTIToConsider = pathMCTIs_forThisTAndInit[pathMCBetas_forThisTAndInit>stdMcBeta][smallestLargerPathMCBeta_index]
+                            """
 
                             #print("B", largestStdMcBetaToConsider)
                             #print("C", smallestPathsMcBetaToConsider)
@@ -716,7 +736,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                 continue
                             stdMCBetas_forThisTAndInit_used_sort = np.argsort(stdMCBetas_forThisTAndInit_used)
                             pathMCBetas_forThisTAndInit_used_sort = np.argsort(pathMCBetas_forThisTAndInit_used)
-
+                            print(stdMCBetas_forThisTAndInit_used[stdMCBetas_forThisTAndInit_used_sort])
                             TIx=np.concatenate([stdMCBetas_forThisTAndInit_used[stdMCBetas_forThisTAndInit_used_sort],
                                                 pathMCBetas_forThisTAndInit_used[pathMCBetas_forThisTAndInit_used_sort]])
 
@@ -731,20 +751,19 @@ def thermodynamicIntegration(filt, analysis_path):
                                 print("doing g ", sim_graphID)
                                 #print(TIx)
                                 #print("BU",TIy)
+                                print(TIx, TIy)
                                 f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=3)
 
                                 p_up_0 = (sim_N*(1.+sim_Qif))/(2.*sim_N)
                                 p_up_t = 0.5*(1.+(2.*p_up_0-1.)*np.exp(-2.*sim_T))
 
                                 ZAtBet0 =0.
-                                print(sim_Qstar, sim_N, p_up_t)
-                                sim_Qstar = (int)(sim_nQstar)
+                                sim_Qstar = (int)(sim_Qstar)
                                 sim_N = (int)(sim_N)
                                 for this_q_star in range(int(sim_Qstar), int(sim_N)+1, 2):
                                     if (this_q_star%2)!=(sim_N%2):
                                         this_q_star=this_q_star+1
                                     ZAtBet0+=P_t(sim_N, this_q_star, p_up_t)
-
                                 def integral_to_x(x_point, aoF=f_interp, maxValue = maxBetaNotTooSpaced):
                                     if np.isscalar(x_point):  # Check if it's a scalar
                                         if x_point < 0 or x_point > maxValue:
@@ -848,55 +867,18 @@ def thermodynamicIntegration(filt, analysis_path):
 
                             if Zfunction is None:
                                 continue
-
-                            indices = np.where(pathsMC_filtForThisTAndInit_used)[0]
-                            for index in indices:
-                                ZFromTIBeta[index] = Zfunction(beta[index])
-                                kFromChi[index] = ZFromTIBeta[index] * chi_m[index]
-                                kFromChi_InBetween[index] = ZFromTIBeta[index] * chi_m2[index]
-                                kFromChi_InBetween_Scaled[index] = kFromChi_InBetween[index]/scale2[index]
-                                minusLnKFromChi[index]=-np.log(kFromChi[index] )
-                                minusLnKFromChi_2[index]=-np.log(kFromChi_InBetween[index] )
-                                minusLnKFromChi_2_scaled[index]=-np.log(kFromChi_InBetween_Scaled[index] )
-                                tentativeBarrier[index] = -np.log(kFromChi[index])/(N[index])
-                                tentativeBarrier_2[index] = -np.log(kFromChi_InBetween[index])/(N[index])
-                                tentativeBarrier_3[index] = -np.log(kFromChi_InBetween_Scaled[index])/(N[index])
-
-                            levelToAdd = {}
-                            levelToAdd['TIfunction'] = TIfunction
-                            levelToAdd['Zfunction'] = Zfunction
-                            levelToAdd['betaMax'] = betaMax
-
-
-                            levelToAdd['beta_l'] = betaL
-                            levelToAdd['beta_g'] = betaG
-                            levelToAdd['beta_g2'] = betaG2
-                            levelToAdd['beta_g3'] = betaG3
-                            levelToAdd['beta_g2b'] = betaG2b
-                            levelToAdd['beta_g2c'] = betaG2c
-
-                            TIdata={}
-                            TIdata['usedStMCsFilter'] = stdMC_filtForThisTAndInit_used
-                            TIdata['usedPathsMCsFilter'] = pathsMC_filtForThisTAndInit_used
-                            TIdata['unusedStMCsFilter'] = stdMC_filtForThisTAndInit_unused
-                            TIdata['unusedPathsMCsFilter'] = pathsMC_filtForThisTAndInit_unused
-                            levelToAdd['TIdata'] = TIdata
-                            addedLevel = addLevelOnNestedDictionary(Zdict, [(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldRealization, sim_fieldSigma), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_nQstar), (sim_T, sim_trajInit)],
-                                            levelToAdd)
-
-                            betaGForThisRealization = betaG    
-                            betaG2ForThisRealization = betaG2
-                            betaG3ForThisRealization = betaG3    
-                            betaG2bForThisRealization = betaG2b    
-                            betaG2cForThisRealization = betaG2c    
-                            betaLForThisRealization = betaL
-                            betaMaxForThisRealizationCounter+=1
-                            betaMaxForThisRealization+=betaMax
-
-                            TDN.append(sim_N)
-                            TDTrajInit.append(sim_trajInit)
-                            TDT.append(sim_T)
-                            TDBetOfEx.append(sim_betOfEx)
+                            mask = pathsMC_filtForThisTAndInit_used
+                            with np.errstate(divide='ignore', invalid='ignore'):
+                                ZFromTIBeta[mask] = Zfunction(beta[mask])
+                                kFromChi[mask] = ZFromTIBeta[mask] * chi_m[mask]
+                                kFromChi_InBetween[mask] = ZFromTIBeta[mask] * chi_m2[mask]
+                                kFromChi_InBetween_Scaled[mask] = kFromChi_InBetween[mask] / scale2[mask]
+                                minusLnKFromChi[mask] = -np.log(kFromChi[mask])
+                                minusLnKFromChi_2[mask] = -np.log(kFromChi_InBetween[mask])
+                                minusLnKFromChi_2_scaled[mask] = -np.log(kFromChi_InBetween_Scaled[mask])
+                                tentativeBarrier[mask] = -np.log(kFromChi[mask]) / N[mask]
+                                tentativeBarrier_2[mask] = -np.log(kFromChi_InBetween[mask]) / N[mask]
+                                tentativeBarrier_3[mask] = -np.log(kFromChi_InBetween_Scaled[mask]) / N[mask]
                             TDFirstConfIndex.append(sim_firstConfIndex)
                             TDSecondConfIndex.append(sim_secondConfIndex)
                             TDGraphId.append(sim_graphID)

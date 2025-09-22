@@ -210,6 +210,7 @@ def scan_model_root(model_root: Path, includes: List[str], verbose: bool=False) 
 
 def extract_runs_params_row(data: Dict, run_dir: Path, model_type: str) -> Dict:
     cfg = data.get("configuration", {}) or {}
+    MCpars = cfg.get("mcParameters", {}) or {}
     par = cfg.get("parameters", {}) or {}
     ref = cfg.get("referenceConfigurationsInfo", {}) or {}
     mcp = cfg.get("mcParameters", {}) or {}
@@ -253,9 +254,8 @@ def extract_runs_params_row(data: Dict, run_dir: Path, model_type: str) -> Dict:
                                       ("ref","mutualOverlap"), ("cfg","refConfMutualQ")),
         refConfInitID  = _pick_any_in({"cfg":cfg,"ref":ref},
                                       ("ref","ID"), ("cfg","refConfInitID")),
-        trajsExtremesInitID = _pick_any_in({"cfg":cfg,"ref":ref},
-                                           ("cfg","trajsExtremesInitID")),
-        trajsJumpsInitID    = _pick_any_in({"cfg":cfg}, ("cfg","trajsJumpsInitID")),
+        trajsExtremesInitID = _pick_any_in({"cfg":cfg}, ("cfg","trajs_Initialization","ID"), ("cfg","trajsExtremesInitID")),
+        trajsJumpsInitID    = _pick_any_in({"cfg":cfg}, ("cfg","trajs_jumpsInitialization","ID"), ("cfg","trajsJumpsInitID")),
         MCprint      = _pick_any_in({"cfg":cfg,"mcp":mcp}, ("mcp","MCprint"), ("cfg","MCprint")),
         lastMeasureMC= _pick_any_in(data, ("lastMeasureMC",)),
     )
@@ -264,6 +264,7 @@ def extract_runs_params_row(data: Dict, run_dir: Path, model_type: str) -> Dict:
 def extract_runs_results_row(data: Dict, model_type: str, analysis_rev: str) -> Dict:
     res = data.get("results", {}) or {}
     cfg = data.get("configuration", {}) or {}
+    MCpars = cfg.get("mcParameters", {}) or {}
     par = cfg.get("parameters", {}) or {}
 
     chi1 = res.get("chiLinearFit") or {}
@@ -327,6 +328,7 @@ def extract_runs_results_row(data: Dict, model_type: str, analysis_rev: str) -> 
 
 def extract_stdmcs_row(data: Dict, run_dir: Path) -> Optional[Dict]:
     cfg = data.get("configuration", {}) or {}
+    MCpars = cfg.get("mcParameters", {}) or {}
     par = cfg.get("parameters", {}) or {}
     ref = cfg.get("referenceConfigurationsInfo", {}) or {}
     TI  = (data.get("results", {}) or {}).get("TI", {}) or {}
@@ -344,6 +346,7 @@ def extract_stdmcs_row(data: Dict, run_dir: Path) -> Optional[Dict]:
         runPath = str(run_dir),
         stMC_N      = par.get("N"),
         stMC_beta   = par.get("beta"),
+        stMC_MC   = MCpars.get("MC"),
         stMC_Hext   = par.get("hext") if par.get("hext") is not None else par.get("Hext"),
         stMC_Hout   = par.get("h_out") if par.get("h_out") is not None else par.get("Hout"),
         stMC_Qstar  = par.get("Qstar"),
@@ -442,6 +445,7 @@ STDMCS_DTYPES = {
     "stMC_fieldMean": "float64",
     "stMC_fieldSigma": "float64",
     "stMC_fieldRealization": "string",
+    "stMC_MC": "Int64",
     "stMC_TIbeta": "float64",
 }
 
@@ -468,15 +472,10 @@ def enforce_dtypes(df: pd.DataFrame, dtypes_map: Dict[str, str]) -> pd.DataFrame
 
 def upsert_parquet(df_new: pd.DataFrame, out_path: Path, key_col: str = "run_uid") -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    if out_path.exists():
-        df_old = pd.read_parquet(out_path)
-        if key_col in df_old.columns:
-            df_old = df_old.drop_duplicates(subset=[key_col], keep="last")
-        df_all = pd.concat([df_old, df_new], ignore_index=True)
-        df_all = df_all.drop_duplicates(subset=[key_col], keep="last")
-        df_all.to_parquet(out_path, index=False)
-    else:
-        df_new.drop_duplicates(subset=[key_col], keep="last").to_parquet(out_path, index=False)
+    # Overwrite entirely: no merge with existing parquet
+    if key_col in df_new.columns:
+        df_new = df_new.drop_duplicates(subset=[key_col], keep="last")
+    df_new.to_parquet(out_path, index=False)
 
 
 # -------------------------- Build per model --------------------------
