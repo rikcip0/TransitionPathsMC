@@ -1165,7 +1165,8 @@ def thermodynamicIntegration(filt, analysis_path):
 
                 for sim_Hin, sim_Hout, sim_nQstar in set(zip(h_in[TIFilt2], h_out[TIFilt2], normalizedQstar[TIFilt2])):
                     TIFilt3 = np.logical_and(TIFilt2, np.logical_and.reduce([h_in==sim_Hin, h_out==sim_Hout, normalizedQstar==sim_nQstar]))
-                    max_value=np.nanmax(rescaledBetas_M[TIFilt3])
+                    finite_vals = rescaledBetas_M[TIFilt3][np.isfinite(rescaledBetas_M[TIFilt3])]
+                    max_value = np.nanmax(finite_vals) if finite_vals.size>0 else np.nan
                     if np.isnan(max_value):
                         continue
                     for discRescBeta in np.round(np.arange(0., max_value+discBetaStep, discBetaStep, dtype=float),decimals=4):
@@ -1183,9 +1184,12 @@ def thermodynamicIntegration(filt, analysis_path):
 
                 for sim_Hin, sim_Hout, sim_nQstar in set(zip(h_in[TIFilt2], h_out[TIFilt2], normalizedQstar[TIFilt2])):
                     TIFilt3 = np.logical_and(TIFilt2, np.logical_and.reduce([h_in==sim_Hin, h_out==sim_Hout, normalizedQstar==sim_nQstar]))
-                    max_value=np.nanmax(rescaledBetas_G[TIFilt3])
-                    max_value2=np.nanmax(rescaledBetas_G2[TIFilt3])
-                    max_value3=np.nanmax(rescaledBetas_G3[TIFilt3])
+                    finite_vals = rescaledBetas_G[TIFilt3][np.isfinite(rescaledBetas_G[TIFilt3])]
+                    max_value = np.nanmax(finite_vals) if finite_vals.size>0 else np.nan
+                    finite_vals2 = rescaledBetas_G2[TIFilt3][np.isfinite(rescaledBetas_G2[TIFilt3])]
+                    max_value2 = np.nanmax(finite_vals2) if finite_vals2.size>0 else np.nan
+                    finite_vals3 = rescaledBetas_G3[TIFilt3][np.isfinite(rescaledBetas_G3[TIFilt3])]
+                    max_value3 = np.nanmax(finite_vals3) if finite_vals3.size>0 else np.nan
                     if np.isnan(max_value):
                         continue
                     for discRescBeta in np.round(np.arange(0., max_value+discBetaStep, discBetaStep, dtype=float),decimals=4):
@@ -1275,7 +1279,7 @@ def thermodynamicIntegration(filt, analysis_path):
             TDHout, TDHin, TDnQstar, TDBetaM, TDBetaG, TDBetaG2,TDBetaG3, TDbetaG2b,TDbetaG2c, TDBetaL, TDZmax, cleanFilt)   
 
 # ---------- Writer & diagnostica ----------
-def write_ti_curves_points(outdir: Path, model: str, data: dict, verbose: bool=False) -> Path:
+def write_ti_core(outdir: Path, model: str, data: dict, verbose: bool=False) -> Path:
     base = outdir / model / "v1" / "ti"
     base.mkdir(parents=True, exist_ok=True)
     cols = [
@@ -1317,7 +1321,7 @@ def _unique_combos_report():
     top = cnt.most_common(10)
     return {"rows": n, "groups": len(cnt), "top": top}
 
-def _write_manifest(manifest_path: Path, stats: dict, ti_rows: int, elapsed_s: float, out_parquet: Path):
+def _write_manifest(manifest_path: Path, stats: dict, ti_rows: int, elapsed_s: float, out_parquet):
     lines = []
     lines.append("# thermodynamicIntegration run manifest\n")
     lines.append("- rows loaded: {}\n".format(stats.get("rows", 0)))
@@ -1327,7 +1331,10 @@ def _write_manifest(manifest_path: Path, stats: dict, ti_rows: int, elapsed_s: f
         lines.append("  - C={} Hext={} fieldType='{}' fieldSigma={} -> {}\n".format(Cval, HextVal, ftype, fsig, c))
     lines.append("- TI produced rows: {}\n".format(ti_rows))
     lines.append("- elapsed seconds: {:.3f}\n".format(elapsed_s))
-    lines.append("- output parquet: {}\n".format(out_parquet))
+    lines.append("- output parquet: {}\n".format(out_parquet)) if not isinstance(out_parquet, (list, tuple)) else (
+        lines.append(f"- output parquet (curves): {out_parquet[0]}\n"),
+        lines.append(f"- output parquet (points): {out_parquet[1]}\n")
+    )
     manifest_path.write_text("".join(lines), encoding="utf-8")
 
 # ---------- CLI ----------
@@ -1383,14 +1390,14 @@ def main():
         betaM=TDBetaM, betaG=TDBetaG, betaG2=TDBetaG2, betaG3=TDBetaG3,
         betaG2b=TDbetaG2b, betaG2c=TDbetaG2c, betaL=TDBetaL, Zmax=TDZmax
     )
-    out = write_ti_curves_points(outdir, ns.model, payload, verbose=ns.verbose)
+    out_curves, out_points = write_ti_curves_points(outdir, ns.model, curves_rows, points_rows, verbose=ns.verbose)
 
     stats = _unique_combos_report()
     manifest_dir = (outdir / ns.model / "v1" / "ti"); manifest_dir.mkdir(parents=True, exist_ok=True)
     manifest = manifest_dir / "ti_manifest.md"
-    _write_manifest(manifest, stats, len(payload.get("N", [])), elapsed, out)
+    _write_manifest(manifest, stats, len(curves_rows), elapsed, (out_curves, out_points))
 
-    print("[done] ti_core: {}".format(out))
+    print(f"[done] ti: curves={out_curves} points={out_points}")
     if ns.verbose:
         print("[diag] groups={} rows={} elapsed_s={}".format(stats.get("groups"), stats.get("rows"), round(elapsed,3)))
         print("[diag] manifest: {}".format(manifest))
