@@ -276,7 +276,7 @@ def _ensure_tables(outdir: Path, model: str):
 
 # ---------- Loader ----------
 def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes: list[str]|None=None, verbose: bool=False) -> int:
-    global N,T,beta,h_out,h_in,h_ext,Qstar,graphID,C,fPosJ
+    global N,T,beta,h_out,h_in,h_ext,Qstar,graphID,C,fPosJ,model_type
     global fieldType,fieldSigma,fieldRealization
     global betaOfExtraction,firstConfigurationIndex,secondConfigurationIndex,refConfInitID,refConfMutualQ
     global lastMeasureMC,MCprint,trajsJumpsInitID,trajsExtremesInitID,runPath,simulationType,ID
@@ -293,6 +293,9 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     par = pd.read_parquet(p_path)
     res = pd.read_parquet(r_path)
     df = res.merge(par, on="run_uid", how="left", suffixes=("", "_p"))
+
+    globals()['run_uid'] = df['run_uid'].to_numpy()
+    globals()['model_type'] = df.get('model_type', pd.Series(['unknown']*len(df))).to_numpy()
 
     if includes:
         mask = np.zeros(len(df), dtype=bool)
@@ -353,6 +356,7 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     fPosJ= _series_or_default(df,"fPosJ")
 
     fieldType  = _to_str_with_nan(df.get("fieldType", pd.Series(["nan"]*len(df))).to_numpy(), len(df))
+    fieldType =  np.asarray([fieldTypeDictionary[value] for value in fieldType])
     fieldSigma = _series_or_default(df,"fieldSigma")
     fieldRealization = _to_str_with_nan(df.get("fieldRealization", pd.Series(["nan"]*len(df))).to_numpy(), len(df))
 
@@ -375,6 +379,7 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
         std = pd.read_parquet(s_path)
         stMC_Hext           = _col_any(std, ["Hext","stMC_Hext"])   
         stMC_fieldType      = _col_any(std, ["fieldType","stMC_fieldType"], as_str=True)
+        stMC_fieldType =  np.asarray([fieldTypeDictionary[value] for value in stMC_fieldType])
         stMC_fieldSigma     = _col_any(std, ["fieldSigma","stMC_fieldSigma"]) 
         stMC_fieldRealization = _col_any(std, ["fieldRealization","stMC_fieldRealization"], as_str=True)
         stMC_N              = _col_any(std, ["N","stMC_N"])        
@@ -568,7 +573,48 @@ def sanitize_globals(verbose: bool=False):
                 pass
 
 # ---------- La tua thermodynamicIntegration (copiata) ----------
+
+# ---- TIcurve helpers ----
+import hashlib as _hashlib
+from datetime import datetime as _dt
+
+def _canon_token(x):
+    import numpy as _np, pandas as _pd
+    if x is None or (isinstance(x, float) and _np.isnan(x)) or (isinstance(x, str) and x.strip()=="") or (x is _pd.NA):
+        return "nan"
+    if isinstance(x, float):
+        return f"{x:.6g}"
+    return str(x).strip()
+
+def make_TIcurve_id(model_type, N, graphID, fieldType, fieldSigma, fieldRealization,
+                    Hext, Hout, Hin, Qstar, T, trajInit, betaOfExtraction, firstConfigurationIndex, secondConfigurationIndex):
+    parts = [
+        _canon_token(model_type), _canon_token(N), _canon_token(graphID), _canon_token(fieldType),
+        _canon_token(fieldSigma), _canon_token(fieldRealization), _canon_token(Hext),
+        _canon_token(Hout), _canon_token(Hin), _canon_token(Qstar),
+        _canon_token(T), _canon_token(trajInit), _canon_token(betaOfExtraction),
+        _canon_token(firstConfigurationIndex), _canon_token(secondConfigurationIndex)
+    ]
+    key = "|".join(parts).encode("utf-8")
+    return _hashlib.blake2b(key, digest_size=8).hexdigest()
+
+def write_ti_curves_points(outdir: Path, model: str, curves_rows: list, points_rows: list, verbose: bool=False):
+    base = outdir / model / "v1" / "ti"
+    base.mkdir(parents=True, exist_ok=True)
+    import pandas as _pd
+    dfc = _pd.DataFrame(curves_rows)
+    dfp = _pd.DataFrame(points_rows)
+    (base / "ti_curves.parquet").unlink(missing_ok=True)
+    (base / "ti_points.parquet").unlink(missing_ok=True)
+    dfc.to_parquet(base / "ti_curves.parquet", index=False)
+    dfp.to_parquet(base / "ti_points.parquet", index=False)
+    if verbose:
+        print(f"[write] {base/'ti_curves.parquet'} rows={len(dfc)}")
+        print(f"[write] {base/'ti_points.parquet'} rows={len(dfp)}")
+    return base/'ti_curves.parquet', base/'ti_points.parquet'
 def thermodynamicIntegration(filt, analysis_path):
+    curves_rows = []
+    points_rows = []
 
     # Accumulatore per Z (persistente lungo la scansione)
     Zdict = {}
@@ -865,6 +911,76 @@ def thermodynamicIntegration(filt, analysis_path):
                                 fig.savefig(filename, dpi=300, bbox_inches='tight')
                             plt.close('all')    
 
+                            
+                            # ---- Collect TI curve and points ----
+                            try:
+                                _model_type = "unknown"
+                                try:
+                                    _model_type = str(model_type[pathsMC_filtForThisTAndInit_used][np.where(pathsMC_filtForThisTAndInit_used)[0][0]])
+                                except Exception:
+                                    _model_type = "unknown"
+                                TIcurve_id = make_TIcurve_id(_model_type, sim_N, sim_graphID, sim_fieldType, sim_fieldSigma,
+                                                             sim_fieldRealization, sim_Hext, sim_Hout, sim_Hin, sim_Qstar,
+                                                             sim_T, sim_trajInit, sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex)
+                                # knots
+                                Z_knots_beta = np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used]).tolist()
+                                Z_knots = (Zfunction(np.concatenate([stdMCBetas_forThisTAndInit_used, pathMCBetas_forThisTAndInit_used]))).tolist()
+                                TI_U_knots_beta = TIx.tolist()
+                                TI_U_knots = TIy.tolist()
+                                n_paths_used = int(np.sum(pathsMC_filtForThisTAndInit_used))
+                                n_stdmc_used = int(np.sum(stdMC_filtForThisTAndInit_used))
+                                curves_rows.append(dict(
+                                    TIcurve_id=TIcurve_id, model_type=_model_type,
+                                    N=int(sim_N), graphID=str(sim_graphID), fieldType=str(sim_fieldType),
+                                    fieldSigma=float(sim_fieldSigma) if not pd.isna(sim_fieldSigma) else np.nan,
+                                    fieldRealization=str(sim_fieldRealization),
+                                    Hext=float(sim_Hext), Hout=float(sim_Hout), Hin=float(sim_Hin), Qstar=float(sim_Qstar),
+                                    T=float(sim_T), trajInit=str(sim_trajInit),
+                                    betaOfExtraction=str(sim_betOfEx), firstConfigurationIndex=str(sim_firstConfIndex),
+                                    secondConfigurationIndex=str(sim_secondConfIndex),
+                                    betaM=float(betaMax) if isinstance(betaMax,(int,float)) else np.nan,
+                                    betaG=float(betaG) if isinstance(betaG,(int,float)) else np.nan,
+                                    betaG2=float(betaG2) if isinstance(betaG2,(int,float)) else np.nan,
+                                    betaG3=float(betaG3) if isinstance(betaG3,(int,float)) else np.nan,
+                                    betaG2b=float(betaG2b) if isinstance(betaG2b,(int,float)) else np.nan,
+                                    betaG2c=float(betaG2c) if isinstance(betaG2c,(int,float)) else np.nan,
+                                    betaL=float(betaL) if isinstance(betaL,(int,float)) else np.nan,
+                                    Zmax=float(Zfunction(betaMax)) if isinstance(betaMax,(int,float)) else np.nan,
+                                    Z_knots_beta=Z_knots_beta, Z_knots=Z_knots,
+                                    TI_U_knots_beta=TI_U_knots_beta, TI_U_knots=TI_U_knots,
+                                    n_paths_used=n_paths_used, n_stdmc_used=n_stdmc_used,
+                                    computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                    analysis_rev="unversioned"
+                                ))
+                                used_idx = np.where(pathsMC_filtForThisTAndInit_used)[0]
+                                for i_idx in used_idx:
+                                    points_rows.append(dict(
+                                        TIcurve_id=TIcurve_id,
+                                        run_uid=str(run_uid[i_idx]) if i_idx < len(run_uid) else None,
+                                        beta=float(beta[i_idx]),
+                                        ZFromTIBeta=float(ZFromTIBeta[i_idx]) if not np.isnan(ZFromTIBeta[i_idx]) else np.nan,
+                                        kFromChi=float(kFromChi[i_idx]) if not np.isnan(kFromChi[i_idx]) else np.nan,
+                                        kFromChi_InBetween=float(kFromChi_InBetween[i_idx]) if not np.isnan(kFromChi_InBetween[i_idx]) else np.nan,
+                                        kFromChi_InBetween_Scaled=float(kFromChi_InBetween_Scaled[i_idx]) if not np.isnan(kFromChi_InBetween_Scaled[i_idx]) else np.nan,
+                                        minusLnKFromChi=float(minusLnKFromChi[i_idx]) if not np.isnan(minusLnKFromChi[i_idx]) else np.nan,
+                                        minusLnKFromChi_2=float(minusLnKFromChi_2[i_idx]) if not np.isnan(minusLnKFromChi_2[i_idx]) else np.nan,
+                                        minusLnKFromChi_2_scaled=float(minusLnKFromChi_2_scaled[i_idx]) if not np.isnan(minusLnKFromChi_2_scaled[i_idx]) else np.nan,
+                                        tentativeBarrier=float(tentativeBarrier[i_idx]) if not np.isnan(tentativeBarrier[i_idx]) else np.nan,
+                                        tentativeBarrier_2=float(tentativeBarrier_2[i_idx]) if not np.isnan(tentativeBarrier_2[i_idx]) else np.nan,
+                                        tentativeBarrier_3=float(tentativeBarrier_3[i_idx]) if not np.isnan(tentativeBarrier_3[i_idx]) else np.nan,
+                                        rescaledBetas_M=float(rescaledBetas_M[i_idx]) if not np.isnan(rescaledBetas_M[i_idx]) else np.nan,
+                                        rescaledBetas_G=float(rescaledBetas_G[i_idx]) if not np.isnan(rescaledBetas_G[i_idx]) else np.nan,
+                                        rescaledBetas_G2=float(rescaledBetas_G2[i_idx]) if not np.isnan(rescaledBetas_G2[i_idx]) else np.nan,
+                                        rescaledBetas_G3=float(rescaledBetas_G3[i_idx]) if not np.isnan(rescaledBetas_G3[i_idx]) else np.nan,
+                                        rescaledBetas_G2b=float(rescaledBetas_G2b[i_idx]) if not np.isnan(rescaledBetas_G2b[i_idx]) else np.nan,
+                                        rescaledBetas_G2c=float(rescaledBetas_G2c[i_idx]) if not np.isnan(rescaledBetas_G2c[i_idx]) else np.nan,
+                                        T=float(T[i_idx]) if not np.isnan(T[i_idx]) else np.nan,
+                                        trajInit=str(trajsExtremesInitID[i_idx]),
+                                        computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                        analysis_rev="unversioned"
+                                    ))
+                            except Exception as _e:
+                                print("[warn] failed collecting TIcurve rows:", _e)
                             if Zfunction is None:
                                 continue
                             mask = pathsMC_filtForThisTAndInit_used
@@ -1150,13 +1266,16 @@ def thermodynamicIntegration(filt, analysis_path):
     TDbetaG2c=np.array(TDbetaG2c,dtype=np.float64)
     TDBetaL=np.array(TDBetaL,dtype=np.float64)
     TDZmax=np.array(TDZmax,dtype=np.float64)
+    globals()['curves_rows'] = curves_rows
+    globals()['points_rows'] = points_rows
+
 
     return (TDN, TDTrajInit, TDT, TDBetOfEx, TDFirstConfIndex, TDSecondConfIndex, TDGraphId,
             TDFieldType, TDFieldReali, TDFieldSigma, TDHext,
             TDHout, TDHin, TDnQstar, TDBetaM, TDBetaG, TDBetaG2,TDBetaG3, TDbetaG2b,TDbetaG2c, TDBetaL, TDZmax, cleanFilt)   
 
 # ---------- Writer & diagnostica ----------
-def write_ti_core_parquet(outdir: Path, model: str, data: dict, verbose: bool=False) -> Path:
+def write_ti_curves_points(outdir: Path, model: str, data: dict, verbose: bool=False) -> Path:
     base = outdir / model / "v1" / "ti"
     base.mkdir(parents=True, exist_ok=True)
     cols = [
@@ -1264,7 +1383,7 @@ def main():
         betaM=TDBetaM, betaG=TDBetaG, betaG2=TDBetaG2, betaG3=TDBetaG3,
         betaG2b=TDbetaG2b, betaG2c=TDbetaG2c, betaL=TDBetaL, Zmax=TDZmax
     )
-    out = write_ti_core_parquet(outdir, ns.model, payload, verbose=ns.verbose)
+    out = write_ti_curves_points(outdir, ns.model, payload, verbose=ns.verbose)
 
     stats = _unique_combos_report()
     manifest_dir = (outdir / ns.model / "v1" / "ti"); manifest_dir.mkdir(parents=True, exist_ok=True)
