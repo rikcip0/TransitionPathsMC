@@ -139,6 +139,27 @@ def delete_files_in_folder(folder_path):
             os.rmdir(item_path)
 
 # ---------- Helpers di canonizzazione ----------
+def _json_num(x):
+    """Return a JSON-safe value: finite float->float; +inf/-inf->"inf"/"-inf"; NaN/None->None; else passthrough."""
+    try:
+        import numpy as _np
+        xv = float(x)
+        if _np.isfinite(xv):
+            return xv
+        if xv == float('inf'):
+            return "inf"
+        if xv == float('-inf'):
+            return "-inf"
+        return None
+    except Exception:
+        try:
+            import numpy as _np
+            if x is None or (isinstance(x, float) and _np.isnan(x)):
+                return None
+        except Exception:
+            pass
+        return x
+    
 def _to_str_with_nan(a, length):
     import numpy as _np, pandas as _pd
     if a is None:
@@ -811,12 +832,14 @@ def thermodynamicIntegration(filt, analysis_path):
                                                        np.concatenate([np.full(len(stdMCBetas_forThisTAndInit_used), "inf"), T[pathsMC_filtForThisTAndInit_used]]), ["T"], np.concatenate([np.full(len(stdMCTIBetas_forThisTAndInit_used), -1), refConfMutualQ[pathsMC_filtForThisTAndInit_used]]),
                                                        functionsToPlotContinuously=f, yscale='log', linesAtXValueAndName=vLines)
 
+                            saved_figs = []
                             figs = plt.get_figlabels()  # Ottieni i nomi di tutte le figure create
                             for fig_name in figs:
                                 fig = plt.figure(fig_name)
                                 filename = os.path.join(TIPlotsFolder, f'{fig_name}.png')
                                 print(filename)
                                 fig.savefig(filename, dpi=300, bbox_inches='tight')
+                                saved_figs.append(os.path.basename(filename))
                             plt.close('all')    
 
                             
@@ -862,6 +885,32 @@ def thermodynamicIntegration(filt, analysis_path):
                                 ))
                             except Exception as _e:
                                 print("[warn] failed collecting TIcurve rows:", _e)
+
+                            # --- sidecar metadata next to figures (same prefix as figures) ---
+                            try:
+                                _prefix = f"T{sim_T}_{trajInitShortDescription_Dict[sim_trajInit]}"
+                                meta = dict(
+                                    TIcurve_id=TIcurve_id,
+                                    model_type=_model_type,
+                                    N=int(sim_N), graphID=str(sim_graphID), fieldType=str(sim_fieldType),
+                                    fieldSigma=_json_num(sim_fieldSigma),
+                                    fieldRealization=str(sim_fieldRealization),
+                                    Hext=_json_num(sim_Hext), Hout=_json_num(sim_Hout), Hin=_json_num(sim_Hin), Qstar=_json_num(sim_Qstar),
+                                    T=_json_num(sim_T), trajInit=str(sim_trajInit),
+                                    betaOfExtraction=str(sim_betOfEx), firstConfigurationIndex=str(sim_firstConfIndex),
+                                    secondConfigurationIndex=str(sim_secondConfIndex),
+                                    betaM=_json_num(betaMax), betaG=_json_num(betaG), betaG2=_json_num(betaG2), betaG3=_json_num(betaG3),
+                                    betaG2b=_json_num(betaG2b), betaG2c=_json_num(betaG2c), betaL=_json_num(betaL),
+                                    Zmax=_json_num(Zfunction(betaMax) if isinstance(betaMax,(int,float)) else float('nan')),
+                                    figures=[fn for fn in saved_figs],
+                                    computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                    analysis_rev="unversioned"
+                                )
+                                meta_path = os.path.join(TIPlotsFolder, f"{_prefix}_meta.json")
+                                with open(meta_path, "w", encoding="utf-8") as fmeta:
+                                    json.dump(meta, fmeta, ensure_ascii=False, indent=2, allow_nan=False)
+                            except Exception as _e:
+                                pass
                             if Zfunction is None:
                                 continue
                             mask = pathsMC_filtForThisTAndInit_used
