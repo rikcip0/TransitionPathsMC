@@ -43,7 +43,6 @@ nameOfFoldersContainingGraphs = ["fPosJ","realGraphs"
 # ---------- Helper functions (dal tuo originale) ----------
 
 def getUniqueXAndYZAccordingToZ(x, y, criterion, preliminaryFilter=None):
-    print("xprima",x)
     if preliminaryFilter is None:
         preliminaryFilter =  ~np.isnan(y)
     else:
@@ -52,13 +51,10 @@ def getUniqueXAndYZAccordingToZ(x, y, criterion, preliminaryFilter=None):
     filterToReturn = np.full(len(x), False)
     # Iteriamo su ogni valore unico in filteredStdMCsBetas
     for value in np.sort(np.unique(x[preliminaryFilter])):
-        print("value",value)
         # Trova gli indici corrispondenti a questo valore unico
         indices = np.where(np.logical_and(x == value, preliminaryFilter))[0]
 
         if len(indices) > 1:
-            print(len(indices))
-            print(criterion[indices])
             # Se ci sono più di un indice, scegli quello con il valore massimo in lastMeasureMC
             best_index = indices[np.nanargmax(criterion[indices])]
         else:
@@ -97,16 +93,6 @@ def getLevelFromNestedStructureAndKeyName(structure, param_tuples, keyName):
         return None
 
 def P_t(n, q, p_up):
-    """
-    print(n,q, p_up)
-    # Calcolo del logaritmo della funzione per maggiore precisione
-    log_comb = np.log(comb(n, (n+q)/2))
-    log_term1 = (n + q) / 2 * np.log(p_up)
-    log_term2 = (n - q) / 2 * np.log(1. - p_up)
-    # Somma dei logaritmi e poi esponenziale per ottenere il risultato finale
-    log_result = log_comb + log_term1 + log_term2
-    return np.exp(log_result)
-    """
     return comb(n, (n+q)/2)*((p_up)**((n+q)/2))*((1-p_up)**((n-q)/2))
 
 
@@ -225,11 +211,8 @@ trajsJumpsInitID=trajsExtremesInitID=None
 runPath=simulationType=ID=None
 
 # results
-TIbeta=TIhout=TIQstar=None
-realTime=realTimeErr=None
-chi_tau=chi_m=chi_c=None
-chi_tau2=chi_m2=chi_c2=chi_chi2=None
-meanBarrier=stdDevBarrier=None
+TIbeta=TIQstar=None
+chi_m=chi_m2=scale2=chi_chi2=None
 
 # stdMC
 stMC_Hext=stMC_fieldType=stMC_fieldSigma=stMC_fieldRealization=None
@@ -280,7 +263,7 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     global fieldType,fieldSigma,fieldRealization
     global betaOfExtraction,firstConfigurationIndex,secondConfigurationIndex,refConfInitID,refConfMutualQ
     global lastMeasureMC,MCprint,trajsJumpsInitID,trajsExtremesInitID,runPath,simulationType,ID
-    global TIbeta,TIhout,TIQstar,realTime,realTimeErr,chi_tau,chi_m,chi_c,chi_tau2,chi_m2,chi_c2,chi_chi2,meanBarrier,stdDevBarrier
+    global TIbeta,TIQstar, chi_m, chi_m2, scale2, chi_chi2
     global stMC_Hext,stMC_fieldType,stMC_fieldSigma,stMC_fieldRealization,stMC_N,stMC_beta
     global stMC_Hout,stMC_Qstar,stMC_nQstar,stMC_graphID,stMC_betaOfExtraction,stMC_configurationIndex,stMC_fieldMean,stMC_MC,stMC_TIbeta
     global normalizedQstar
@@ -309,38 +292,13 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
 
     # results
     TIbeta = _series_or_default(df, 'TIbeta')
-    TIhout = _series_or_default(df, 'TIhout')
     TIQstar= _series_or_default(df, 'TIQstar')
-    realTime    = _series_or_default(df, 'realTime')
-    realTimeErr = _series_or_default(df, 'realTimeErr')
-    chi_tau = _series_or_default(df, 'chi_tau')
-    chi_m   = _series_or_default(df, 'chi_m')
-    chi_c   = _series_or_default(df, 'chi_c')
-    chi_tau2= _series_or_default(df, 'chi_tau2')
-    chi_m2  = _series_or_default(df, 'chi_m2')
-    chi_c2  = _series_or_default(df, 'chi_c2')
+    chi_m= _series_or_default(df, 'chi_m')
+    chi_m2= _series_or_default(df, 'chi_m2')
     chi_chi2= _series_or_default(df, 'chi_chi2')
-    meanBarrier   = _series_or_default(df, 'meanBarrier')
-    stdDevBarrier = _series_or_default(df, 'stdDevBarrier')
-
-    # ---- derived 'scale' and 'scale2' as in original TI ----
-    try:
-        _T = np.asarray(T, dtype=float)
-    except Exception:
-        _T = T
-    try:
-        _chi_m2 = np.asarray(chi_m2, dtype=float)
-        _chi_c2 = np.asarray(chi_c2, dtype=float)
-        _chi_chi2 = np.asarray(chi_chi2, dtype=float)
-    except Exception:
-        _chi_m2, _chi_c2, _chi_chi2 = chi_m2, chi_c2, chi_chi2
-    scale = _chi_m2 * _T + _chi_c2
-    scale2 = scale.copy()
-    # Mask like your historical logic: scale2 < 0.33 or chi_chi2 > 0.43 -> NaN
-    with np.errstate(invalid='ignore'):
-        bad = (scale2 < 0.33) | (_chi_chi2 > 0.43)
-    scale2[bad] = np.nan
-    globals().update(dict(scale=scale, scale2=scale2))
+    scale2 = np.asarray(_series_or_default(df, "scale2"), dtype=float)
+    mask_invalid = (~np.isfinite(scale2)) | (scale2 <= 0.0)
+    scale2[mask_invalid] = np.nan
 
     # params
     N    = _series_or_default(df,"N")
@@ -468,55 +426,20 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     # working arrays richiesti dalla TI
     _n = len(df)
     ZFromTIBeta = np.full(_n, np.nan, dtype=np.float64)
-    rescaledBetas_M  = np.full(_n, np.nan, dtype=np.float64)
-    rescaledBetas_L  = np.full(_n, np.nan, dtype=np.float64)
-    rescaledBetas_G  = np.full(_n, np.nan, dtype=np.float64)
-    rescaledBetas_G2 = np.full(_n, np.nan, dtype=np.float64)
-    rescaledBetas_G3 = np.full(_n, np.nan, dtype=np.float64)
-    rescaledBetas_G2b= np.full(_n, np.nan, dtype=np.float64)
-    rescaledBetas_G2c= np.full(_n, np.nan, dtype=np.float64)
 
-    minusLnKFromChi         = np.full(_n, np.nan, dtype=np.float64)
-    minusLnKFromChi_2       = np.full(_n, np.nan, dtype=np.float64)
-    minusLnKFromChi_2_scaled= np.full(_n, np.nan, dtype=np.float64)
-
-    discretizedRescaledBetas_M  = np.full(_n, np.nan, dtype=np.float64)
-    discretizedRescaledBetas_G  = np.full(_n, np.nan, dtype=np.float64)
-    discretizedRescaledBetas_G2 = np.full(_n, np.nan, dtype=np.float64)
-    discretizedRescaledBetas_G3 = np.full(_n, np.nan, dtype=np.float64)
-    discretizedRescaledBetas_G2b= np.full(_n, np.nan, dtype=np.float64)
-    discretizedRescaledBetas_G2c= np.full(_n, np.nan, dtype=np.float64)
 
     betaMax         = np.full(_n, np.nan, dtype=np.float64)
-    averageBetaMax  = np.full(_n, np.nan, dtype=np.float64)
 
     kFromChi                   = np.full(_n, np.nan, dtype=np.float64)
     kFromChi_InBetween         = np.full(_n, np.nan, dtype=np.float64)
     kFromChi_InBetween_Scaled  = np.full(_n, np.nan, dtype=np.float64)
 
-    tentativeBarrier   = np.full(_n, np.nan, dtype=np.float64)
-    tentativeBarrier_2 = np.full(_n, np.nan, dtype=np.float64)
-    tentativeBarrier_3 = np.full(_n, np.nan, dtype=np.float64)
 
     globals().update(dict(
         ZFromTIBeta=ZFromTIBeta,
-        rescaledBetas_M=rescaledBetas_M, rescaledBetas_L=rescaledBetas_L,
-        rescaledBetas_G=rescaledBetas_G, rescaledBetas_G2=rescaledBetas_G2,
-        rescaledBetas_G3=rescaledBetas_G3, rescaledBetas_G2b=rescaledBetas_G2b,
-        rescaledBetas_G2c=rescaledBetas_G2c,
-        minusLnKFromChi=minusLnKFromChi, minusLnKFromChi_2=minusLnKFromChi_2,
-        minusLnKFromChi_2_scaled=minusLnKFromChi_2_scaled,
-        discretizedRescaledBetas_M=discretizedRescaledBetas_M,
-        discretizedRescaledBetas_G=discretizedRescaledBetas_G,
-        discretizedRescaledBetas_G2=discretizedRescaledBetas_G2,
-        discretizedRescaledBetas_G3=discretizedRescaledBetas_G3,
-        discretizedRescaledBetas_G2b=discretizedRescaledBetas_G2b,
-        discretizedRescaledBetas_G2c=discretizedRescaledBetas_G2c,
-        betaMax=betaMax, averageBetaMax=averageBetaMax,
+        betaMax=betaMax,
         kFromChi=kFromChi, kFromChi_InBetween=kFromChi_InBetween,
-        kFromChi_InBetween_Scaled=kFromChi_InBetween_Scaled,
-        tentativeBarrier=tentativeBarrier, tentativeBarrier_2=tentativeBarrier_2,
-        tentativeBarrier_3=tentativeBarrier_3
+        kFromChi_InBetween_Scaled=kFromChi_InBetween_Scaled
     ))
 
     return len(N)
@@ -622,31 +545,6 @@ def thermodynamicIntegration(filt, analysis_path):
     points_rows = []
 
     # Accumulatore per Z (persistente lungo la scansione)
-    Zdict = {}
-    cleanFilt = np.zeros_like(filt, dtype=bool)
-    TDN=[]
-    TDTrajInit=[]
-    TDT=[]
-    TDBetOfEx=[]
-    TDFirstConfIndex=[]
-    TDSecondConfIndex=[]
-    TDGraphId=[]
-    TDFieldType=[]
-    TDFieldReali=[]
-    TDFieldSigma=[]
-    TDHext=[]
-    TDHout=[]
-    TDHin=[]
-    TDnQstar=[]
-    TDBetaM=[]
-    TDBetaG=[]
-    TDBetaG2=[]
-    TDBetaG3=[]
-    TDbetaG2b=[]
-    TDbetaG2c=[]
-    TDBetaL=[]
-    TDZmax=[]
-
     TIFolder= os.path.join(analysis_path, 'TI')
 
     if not os.path.exists(TIFolder):
@@ -671,33 +569,13 @@ def thermodynamicIntegration(filt, analysis_path):
                     TIFilt3 = np.logical_and(TIFilt2, np.logical_and.reduce([h_in==sim_Hin, h_out==sim_Hout, normalizedQstar==sim_nQstar]))
                     st_TIFilt3 = np.logical_and(st_TIFilt2, np.logical_and.reduce([stMC_Hout==sim_Hout, stMC_nQstar==sim_nQstar]))
 
-                    realizationsId=[]
-                    betaMaxOverRealizations=[]
-                    betaLOverRealizations=[]
-                    betaGOverRealizations=[]
-                    betaG2OverRealizations=[]
-                    betaG3OverRealizations=[]
-                    betaG2bOverRealizations=[]
-                    betaG2cOverRealizations=[]
                     for sim_N, sim_graphID, sim_fieldRealization in set(zip(N[TIFilt3],graphID[TIFilt3], fieldRealization[TIFilt3])):
                         sim_Qstar=(int)(sim_N*sim_nQstar)
                         TIFilt4 = np.logical_and(TIFilt3, np.logical_and.reduce([N==sim_N, graphID==sim_graphID, fieldRealization==sim_fieldRealization]))
                         st_TIFilt4 = np.logical_and(st_TIFilt3, np.logical_and.reduce([stMC_N==sim_N , stMC_graphID==sim_graphID, stMC_fieldRealization==sim_fieldRealization]))
-                        print(sim_N, sim_graphID, sim_fieldRealization, sim_Hin, sim_Hout, sim_nQstar)
-                        print(stMC_MC)
+
                         stdMCsBetas_forThisTDSetting, stdMCsTIBetas_forThisTDSetting, stdMCsMC_forThisTDSetting, filterForStdMCs_forThisTDSetting = getUniqueXAndYZAccordingToZ(stMC_beta, stMC_TIbeta, stMC_MC, preliminaryFilter=st_TIFilt4)
 
-                        #specifico il tempo
-                        betaLForThisRealization=0.
-                        betaGForThisRealization=0.
-                        betaG2ForThisRealization=0.
-                        betaG3ForThisRealization=0.
-                        betaG2bForThisRealization=0.
-                        betaG2cForThisRealization=0.
-                        betaMaxForThisRealization=0.
-                        betaMaxForThisRealizationCounter=0
-                        betaMax2ForThisRealization=0.
-                        betaMax2ForThisRealizationCounter=0
 
                         TIPlotsFolder = os.path.join(TIFolder, f'N{sim_N}', f'h{sim_Hext}_f{sim_fieldType}{sim_fieldSigma}' if sim_fieldSigma!=0. else f'h{sim_Hext}_noField', f'g{sim_graphID}_fr{sim_fieldRealization}' if sim_fieldSigma!=0. else f'g{sim_graphID}',
                                                      f'bExt{sim_betOfEx}_cs{sim_firstConfIndex}_{sim_secondConfIndex}_{sim_Qif}' if (sim_firstConfIndex!="nan" and sim_firstConfIndex is not None) else 'FM',
@@ -741,15 +619,6 @@ def thermodynamicIntegration(filt, analysis_path):
                         _rel = os.path.relpath(TIPlotsFolder, TIFolder)
                         TIPlotsFolder = os.path.join(TIFolder, head_segment, fposj_segment, _rel)
 
-                        thisTransitionData_T=[]
-                        thisTransitionData_trajInit=[]
-                        thisTransitionData_betaMax=[]
-                        thisTransitionData_betaL=[]
-                        thisTransitionData_betaG=[]
-                        thisTransitionData_betaG2=[]
-                        thisTransitionData_betaG2b=[]
-                        thisTransitionData_betaG2c=[]
-                        thisTransitionData_betaG3=[]
 
                         for sim_T, sim_trajInit in set(zip(T[TIFilt4], trajsExtremesInitID[TIFilt4])):
                             pathMCFilt_forThisTAndInit = np.logical_and.reduce([TIFilt4, T==sim_T, trajsExtremesInitID==sim_trajInit])
@@ -769,7 +638,6 @@ def thermodynamicIntegration(filt, analysis_path):
                             smallestPathsMcTIToConsider = pathMCTIs_forThisTAndInit[smallestPathsMcBetaToConsider_i]
 
                             if smallestPathsMcBetaToConsider<=np.nanmin(stdMCsBetas_forThisTDSetting):
-                                print("EECCCCOOCCC,", sim_T, smallestPathsMcBetaToConsider,stdMCsBetas_forThisTDSetting)
                                 largestStdMcBetaToConsider_i=np.nanargmin(stdMCsBetas_forThisTDSetting)
                                 largestStdMcBetaToConsider=stdMCsBetas_forThisTDSetting[largestStdMcBetaToConsider_i]
                                 largestStdMcTIToConsider = stdMCsTIBetas_forThisTDSetting[largestStdMcBetaToConsider_i]
@@ -825,7 +693,6 @@ def thermodynamicIntegration(filt, analysis_path):
                                 continue
                             stdMCBetas_forThisTAndInit_used_sort = np.argsort(stdMCBetas_forThisTAndInit_used)
                             pathMCBetas_forThisTAndInit_used_sort = np.argsort(pathMCBetas_forThisTAndInit_used)
-                            print(stdMCBetas_forThisTAndInit_used[stdMCBetas_forThisTAndInit_used_sort])
                             TIx=np.concatenate([stdMCBetas_forThisTAndInit_used[stdMCBetas_forThisTAndInit_used_sort],
                                                 pathMCBetas_forThisTAndInit_used[pathMCBetas_forThisTAndInit_used_sort]])
 
@@ -835,12 +702,9 @@ def thermodynamicIntegration(filt, analysis_path):
                             TIfunction= None
                             Zfunction= None
                             betaMax= np.nan
-                            #print(largestStdMcTIToConsider, smallestPathsMcTIToConsider, TIDifferenceMax)
                             if np.fabs(largestStdMcTIToConsider-smallestPathsMcTIToConsider)<TIDifferenceMax/15.:
                                 print("doing g ", sim_graphID)
-                                #print(TIx)
-                                #print("BU",TIy)
-                                print(TIx, TIy)
+
                                 f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=3)
 
                                 p_up_0 = (sim_N*(1.+sim_Qif))/(2.*sim_N)
@@ -1005,10 +869,6 @@ def thermodynamicIntegration(filt, analysis_path):
                                 kFromChi[mask] = ZFromTIBeta[mask] * chi_m[mask]
                                 kFromChi_InBetween[mask] = ZFromTIBeta[mask] * chi_m2[mask]
                                 kFromChi_InBetween_Scaled[mask] = kFromChi_InBetween[mask] / scale2[mask]
-                                minusLnKFromChi[mask] = -np.log(kFromChi[mask])
-                                minusLnKFromChi_2[mask] = -np.log(kFromChi_InBetween[mask])
-                                minusLnKFromChi_2_scaled[mask] = -np.log(kFromChi_InBetween_Scaled[mask])
-                                tentativeBarrier[mask] = -np.log(kFromChi[mask]) / N[mask]
                                 used_idx = np.where(pathsMC_filtForThisTAndInit_used)[0]
                                 for i_idx in used_idx:
                                     points_rows.append(dict(
@@ -1019,337 +879,19 @@ def thermodynamicIntegration(filt, analysis_path):
                                         kFromChi=float(kFromChi[i_idx]) if not np.isnan(kFromChi[i_idx]) else np.nan,
                                         kFromChi_InBetween=float(kFromChi_InBetween[i_idx]) if not np.isnan(kFromChi_InBetween[i_idx]) else np.nan,
                                         kFromChi_InBetween_Scaled=float(kFromChi_InBetween_Scaled[i_idx]) if not np.isnan(kFromChi_InBetween_Scaled[i_idx]) else np.nan,
-                                        minusLnKFromChi=float(minusLnKFromChi[i_idx]) if not np.isnan(minusLnKFromChi[i_idx]) else np.nan,
-                                        minusLnKFromChi_2=float(minusLnKFromChi_2[i_idx]) if not np.isnan(minusLnKFromChi_2[i_idx]) else np.nan,
-                                        minusLnKFromChi_2_scaled=float(minusLnKFromChi_2_scaled[i_idx]) if not np.isnan(minusLnKFromChi_2_scaled[i_idx]) else np.nan,
-                                        tentativeBarrier=float(tentativeBarrier[i_idx]) if not np.isnan(tentativeBarrier[i_idx]) else np.nan,
-                                        tentativeBarrier_2=float(tentativeBarrier_2[i_idx]) if not np.isnan(tentativeBarrier_2[i_idx]) else np.nan,
-                                        tentativeBarrier_3=float(tentativeBarrier_3[i_idx]) if not np.isnan(tentativeBarrier_3[i_idx]) else np.nan,
-                                        rescaledBetas_M=float(rescaledBetas_M[i_idx]) if not np.isnan(rescaledBetas_M[i_idx]) else np.nan,
-                                        rescaledBetas_G=float(rescaledBetas_G[i_idx]) if not np.isnan(rescaledBetas_G[i_idx]) else np.nan,
-                                        rescaledBetas_G2=float(rescaledBetas_G2[i_idx]) if not np.isnan(rescaledBetas_G2[i_idx]) else np.nan,
-                                        rescaledBetas_G3=float(rescaledBetas_G3[i_idx]) if not np.isnan(rescaledBetas_G3[i_idx]) else np.nan,
-                                        rescaledBetas_G2b=float(rescaledBetas_G2b[i_idx]) if not np.isnan(rescaledBetas_G2b[i_idx]) else np.nan,
-                                        rescaledBetas_G2c=float(rescaledBetas_G2c[i_idx]) if not np.isnan(rescaledBetas_G2c[i_idx]) else np.nan,
                                         T=float(T[i_idx]) if not np.isnan(T[i_idx]) else np.nan,
                                         trajInit=str(trajsExtremesInitID[i_idx]),
                                         computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                         analysis_rev="unversioned"
                                     ))
-                                tentativeBarrier_2[mask] = -np.log(kFromChi_InBetween[mask]) / N[mask]
-                                tentativeBarrier_3[mask] = -np.log(kFromChi_InBetween_Scaled[mask]) / N[mask]
-                            TDFirstConfIndex.append(sim_firstConfIndex)
-                            TDSecondConfIndex.append(sim_secondConfIndex)
-                            TDGraphId.append(sim_graphID)
-                            TDFieldType.append(sim_fieldType)
-                            TDFieldReali.append(sim_fieldRealization)
-                            TDFieldSigma.append(sim_fieldSigma)
-                            TDHext.append(sim_Hext)
-                            TDHout.append(sim_Hout)
-                            TDHin.append(sim_Hin)
-                            TDnQstar.append(sim_nQstar)
-                            TDBetaM.append(betaMax)
 
-                            TDBetaG.append(betaG)
-                            TDBetaG2.append(betaG2)
-                            TDBetaG3.append(betaG3)
-                            TDbetaG2b.append(betaG2b)
-                            TDbetaG2c.append(betaG2c)
-                            TDBetaL.append(betaL)
-                            TDZmax.append(Zfunction(betaMax))
-
-                            thisTransitionData_T.append(sim_T)
-                            thisTransitionData_trajInit.append(sim_trajInit)
-                            thisTransitionData_betaMax.append(betaMax)
-                            thisTransitionData_betaL.append(betaLForThisRealization)
-                            thisTransitionData_betaG.append(betaGForThisRealization)
-                            thisTransitionData_betaG2.append(betaG2ForThisRealization)
-                            thisTransitionData_betaG3.append(betaG3ForThisRealization)
-                            thisTransitionData_betaG2b.append(betaG2bForThisRealization)
-                            thisTransitionData_betaG2c.append(betaG2cForThisRealization)
-
-                        thisTransitionData_T=np.array(thisTransitionData_T)
-                        thisTransitionData_trajInit=np.array(thisTransitionData_trajInit)
-                        thisTransitionData_betaMax=np.array(thisTransitionData_betaMax)
-                        thisTransitionData_betaL=np.array(thisTransitionData_betaL)
-                        thisTransitionData_betaG=np.array(thisTransitionData_betaG)
-                        thisTransitionData_betaG2=np.array(thisTransitionData_betaG2)
-                        thisTransitionData_betaG3=np.array(thisTransitionData_betaG3)
-                        thisTransitionData_betaG2b=np.array(thisTransitionData_betaG2b)
-                        thisTransitionData_betaG2c=np.array(thisTransitionData_betaG2c)
-
-                        integratedData_Filt = np.logical_and(TIFilt4,~np.isnan(ZFromTIBeta))
-
-                        T_vals = T[integratedData_Filt]
-                        if T_vals.size == 0:
-                            continue
-
-                        best_T = np.nanmax(T_vals)
-                        mask_Tmax = np.logical_and(integratedData_Filt, T == best_T)
-                        best_trajInitId = None
-
-                        selected_mask = np.zeros_like(cleanFilt, dtype=bool)
-                        for tid in preferred_trajInit:
-                            candidate_mask = np.logical_and.reduce([mask_Tmax, trajsExtremesInitID == tid])
-                            if np.any(candidate_mask):
-                                best_trajInitId=tid
-                                selected_mask = candidate_mask
-                                break
-
-                        if not np.any(selected_mask):
-                            continue
-
-
-                        #Questo voglio spostarlo dentro l'analisi come filtro aggiuntivo dove levo dai fit dati scartati attrav. una funzione PreliminaryFilt
-                        if sim_N>30:
-                            indices = np.nonzero(selected_mask)[0]
-                            for idx in indices:
-                                cleanFilt[idx] = True
-
-                        bestIntegrationData_Filt = np.logical_and(thisTransitionData_T==best_T,thisTransitionData_trajInit==best_trajInitId)
-                        if np.sum(bestIntegrationData_Filt)!=1:
-                            print(f"Error, found {np.sum(bestIntegrationData_Filt)} when trying to extract best information.")
-
-
-                        realizationsId.append(thisTransitionData_betaMax[bestIntegrationData_Filt][0])
-                        betaMaxOverRealizations.append(thisTransitionData_betaMax[bestIntegrationData_Filt][0])
-                        betaLOverRealizations.append(thisTransitionData_betaL[bestIntegrationData_Filt][0])
-                        betaGOverRealizations.append(thisTransitionData_betaG[bestIntegrationData_Filt][0])
-                        betaG2OverRealizations.append(thisTransitionData_betaG2[bestIntegrationData_Filt][0])
-                        betaG2bOverRealizations.append(thisTransitionData_betaG2b[bestIntegrationData_Filt][0])
-                        betaG2cOverRealizations.append(thisTransitionData_betaG2c[bestIntegrationData_Filt][0])
-                        betaG3OverRealizations.append(thisTransitionData_betaG3[bestIntegrationData_Filt][0])
-
-
-                    realizationsId=np.array(realizationsId)
-                    betaMaxOverRealizations = np.array(betaMaxOverRealizations, dtype=float)
-                    betaLOverRealizations = np.array(betaLOverRealizations, dtype=float)
-                    betaGOverRealizations = np.array(betaGOverRealizations, dtype=float)
-                    betaG2OverRealizations = np.array(betaG2OverRealizations, dtype=float)
-                    betaG2bOverRealizations = np.array(betaG2bOverRealizations, dtype=float)
-                    betaG2cOverRealizations = np.array(betaG2cOverRealizations, dtype=float)
-                    betaG3OverRealizations = np.array(betaG3OverRealizations, dtype=float)
-
-                    uniqueValues, unique_indices = np.unique(realizationsId, axis=0, return_index=True)
-                    if len(realizationsId)>0:
-                        betaMaxOverRealizationsV = np.nanmean(betaMaxOverRealizations[unique_indices])
-                        betaLOverRealizationsV = np.nanmean(betaLOverRealizations[unique_indices])
-                        betaGOverRealizationsV = np.nanmean(betaGOverRealizations[unique_indices])
-                        betaG2OverRealizationsV = np.nanmean(betaG2OverRealizations[unique_indices])
-                        betaG3OverRealizationsV = np.nanmean(betaG3OverRealizations[unique_indices])
-                        betaG2bOverRealizationsV = np.nanmean(betaG2bOverRealizations[unique_indices])
-                        betaG2cOverRealizationsV = np.nanmean(betaG2cOverRealizations[unique_indices])
-
-                    for sim_N, sim_graphID, sim_fieldRealization in set(zip(N[TIFilt3], graphID[TIFilt3], fieldRealization[TIFilt3])):
-                        TIFilt4 = np.logical_and(TIFilt3, np.logical_and.reduce([N==sim_N, graphID==sim_graphID, fieldRealization==sim_fieldRealization]))
-                        for sim_T, sim_trajInit in set(zip(T[TIFilt4],trajsExtremesInitID[TIFilt4])):
-                            TIFilt_forThisTAndInit = np.logical_and.reduce([TIFilt4, T==sim_T, trajsExtremesInitID==sim_trajInit])
-                            level = getLevelFromNestedStructureAndKeyName(Zdict, [(sim_N, sim_graphID, sim_Hext),
-                                                                                  (sim_fieldType, sim_fieldRealization, sim_fieldSigma ),
-                                                                                  (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex),
-                                                                                  (sim_Hin, sim_Hout, sim_nQstar), (sim_T, sim_trajInit)],
-                                                                                    'Zfunction')
-                            if level is not None:
-                                originalZfunction = level['Zfunction']
-
-                                thisCurveBetaMax = level['betaMax']
-                                thisCurveBetaL = level['beta_l']
-                                thisCurveBetaG = level['beta_g']
-                                thisCurveBetaG2 = level['beta_g2']
-                                thisCurveBetaG3 = level['beta_g3']
-                                thisCurvebetaG2b = level['beta_g2b']
-                                thisCurvebetaG2c = level['beta_g2c']
-
-                                if isinstance(thisCurveBetaMax, (int, float)):
-                                    #print(betaGOverRealizations, betaMaxOverRealizations, thisCurveBetaMax, thisCurveBetaG)
-                                    rescaledBetas_M[TIFilt_forThisTAndInit] = (beta[TIFilt_forThisTAndInit])/(thisCurveBetaMax)*betaMaxOverRealizationsV
-                                    #minusLnKFromChi[TIFilt_forThisTAndInit] *= thisCurveBetaMax/betaMaxOverRealizations
-                                    #minusLnKFromChi_2[TIFilt_forThisTAndInit] *= thisCurveBetaMax/betaMaxOverRealizations
-                                    #minusLnKFromChi_2_scaled[TIFilt_forThisTAndInit] *= thisCurveBetaMax/betaMaxOverRealizations
-                                    def rescaledZfunction_M(bet, numBet=betaMaxOverRealizations, denBet=thisCurveBetaMax, function=originalZfunction):
-                                        return function(bet*denBet/numBet)
-                                    level['rescaledZfunction_Max']=rescaledZfunction_M
-
-                                if isinstance(thisCurveBetaL, (int, float)):
-                                    rescaledBetas_L[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaL*betaLOverRealizationsV
-                                    def rescaledZfunction_L(bet, numBet=1., denBet=thisCurveBetaL, function=originalZfunction):
-                                        return function(bet*denBet/numBet)
-                                    level['rescaledZfunction_l']=rescaledZfunction_L
-
-                                if isinstance(thisCurveBetaG, (int, float)):
-                                    rescaledBetas_G[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaG*betaGOverRealizationsV
-                                    def rescaledZfunction_G(bet, numBet=1., denBet=thisCurveBetaG, function=originalZfunction):
-                                        return function(bet*denBet/numBet)
-                                    level['rescaledZfunction_g']=rescaledZfunction_G
-                                if isinstance(thisCurveBetaG2, (int, float)):
-                                    rescaledBetas_G2[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaG2*betaG2OverRealizationsV
-                                    def rescaledZfunction_G2(bet, numBet=1., denBet=thisCurveBetaG2, function=originalZfunction):
-                                        return function(bet*denBet/numBet)
-                                    level['rescaledZfunction_g2']=rescaledZfunction_G2
-                                if isinstance(thisCurveBetaG3, (int, float)):
-                                    rescaledBetas_G3[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurveBetaG3*betaG3OverRealizationsV
-                                    def rescaledZfunction_G3(bet, numBet=1., denBet=thisCurveBetaG3, function=originalZfunction):
-                                        return function(bet*denBet/numBet)
-                                    level['rescaledZfunction_g3']=rescaledZfunction_G3
-
-                                if isinstance(thisCurvebetaG2b, (int, float)):
-                                    rescaledBetas_G2b[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurvebetaG2b*betaG2bOverRealizationsV
-                                    def rescaledZfunction_G(bet, numBet=1., denBet=thisCurvebetaG2b, function=originalZfunction):
-                                        return function(bet*denBet/numBet)
-                                    level['rescaledZfunction_g']=rescaledZfunction_G
-
-                                if isinstance(thisCurvebetaG2c, (int, float)):
-                                    rescaledBetas_G2c[TIFilt_forThisTAndInit] = beta[TIFilt_forThisTAndInit]/thisCurvebetaG2c*betaG2cOverRealizationsV
-                                    def rescaledZfunction_G(bet, numBet=1., denBet=thisCurvebetaG2c, function=originalZfunction):
-                                        return function(bet*denBet/numBet)
-                                    level['rescaledZfunction_g']=rescaledZfunction_G
-                            else:
-                                print("level non trovato per ",(sim_N, sim_graphID, sim_Hext), (sim_fieldType, sim_fieldSigma, sim_fieldRealization), (sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex), (sim_Hin, sim_Hout, sim_nQstar), (sim_T, sim_trajInit))
-
-                for sim_Hin, sim_Hout, sim_nQstar in set(zip(h_in[TIFilt2], h_out[TIFilt2], normalizedQstar[TIFilt2])):
-                    TIFilt3 = np.logical_and(TIFilt2, np.logical_and.reduce([h_in==sim_Hin, h_out==sim_Hout, normalizedQstar==sim_nQstar]))
-                    __vals = rescaledBetas_M[TIFilt3]
-                    __vals = __vals[np.isfinite(__vals)] if hasattr(__vals, 'shape') else np.array([])
-                    max_value = np.nanmax(__vals) if getattr(__vals, 'size', 0) > 0 else np.nan
-                    if np.isnan(max_value):
-                        continue
-                    for discRescBeta in np.round(np.arange(0., max_value+discBetaStep, discBetaStep, dtype=float),decimals=4):
-                        discretizableFilt=np.logical_and(TIFilt3, np.fabs(discRescBeta-rescaledBetas_M)<discBetaStep/2.+0.00001)
-                        if len(np.unique(N[discretizableFilt]))>=3:
-                            for g,ft,fr,fs, t in set(zip(graphID[discretizableFilt], fieldType[discretizableFilt],fieldRealization[discretizableFilt],fieldSigma[discretizableFilt], T[discretizableFilt])):
-                                discretizableFilt2=np.logical_and.reduce([
-                                    discretizableFilt, fieldType==ft,fieldRealization==fr, fieldSigma==fs, graphID==g, T==t])
-                                diff = np.fabs(rescaledBetas_M[discretizableFilt2]-discRescBeta)
-                                closestBet = np.nanmin(diff)
-                                diff = np.fabs(rescaledBetas_M-discRescBeta)
-                                discretizableFilt2=np.logical_and.reduce([discretizableFilt2, diff==closestBet])
-
-                                discretizedRescaledBetas_M[discretizableFilt2] =discRescBeta
-
-                for sim_Hin, sim_Hout, sim_nQstar in set(zip(h_in[TIFilt2], h_out[TIFilt2], normalizedQstar[TIFilt2])):
-                    TIFilt3 = np.logical_and(TIFilt2, np.logical_and.reduce([h_in==sim_Hin, h_out==sim_Hout, normalizedQstar==sim_nQstar]))
-                    __vals = rescaledBetas_G[TIFilt3]
-                    __vals = __vals[np.isfinite(__vals)] if hasattr(__vals, 'shape') else np.array([])
-                    max_value = np.nanmax(__vals) if getattr(__vals, 'size', 0) > 0 else np.nan
-                    __vals = rescaledBetas_G2[TIFilt3]
-                    __vals = __vals[np.isfinite(__vals)] if hasattr(__vals, 'shape') else np.array([])
-                    max_value2 = np.nanmax(__vals) if getattr(__vals, 'size', 0) > 0 else np.nan
-                    __vals = rescaledBetas_G3[TIFilt3]
-                    __vals = __vals[np.isfinite(__vals)] if hasattr(__vals, 'shape') else np.array([])
-                    max_value3 = np.nanmax(__vals) if getattr(__vals, 'size', 0) > 0 else np.nan
-                    if np.isnan(max_value):
-                        continue
-                    for discRescBeta in np.round(np.arange(0., max_value+discBetaStep, discBetaStep, dtype=float),decimals=4):
-                        discretizableFilt=np.logical_and(TIFilt3, np.fabs(discRescBeta-rescaledBetas_G)<discBetaStep/2.+0.000000000000001)
-                        if len(np.unique(N[discretizableFilt]))>=3:
-                            for g,ft,fr,fs in set(zip(graphID[discretizableFilt], fieldType[discretizableFilt],fieldRealization[discretizableFilt],fieldSigma[discretizableFilt])):
-                                discretizableFiltb=np.logical_and.reduce([
-                                    discretizableFilt, fieldType==ft,fieldRealization==fr, fieldSigma==fs, graphID==g])
-                                diff = np.fabs(rescaledBetas_G[discretizableFiltb]-discRescBeta)
-                                closestBet = np.nanmin(diff)
-                                diff = np.fabs(rescaledBetas_G-discRescBeta)
-                                discretizableFiltC=np.logical_and.reduce([discretizableFiltb, diff==closestBet])
-                                discretizedRescaledBetas_G[discretizableFiltC] =discRescBeta
-
-                        discretizableFilt2=np.logical_and(TIFilt3, np.fabs(discRescBeta-rescaledBetas_G2)<discBetaStep/2.+0.000000000000001)
-                        if len(np.unique(N[discretizableFilt2]))>=3:
-                            for g,ft,fr,fs in set(zip(graphID[discretizableFilt2], fieldType[discretizableFilt2],fieldRealization[discretizableFilt2],fieldSigma[discretizableFilt2])):
-                                discretizableFiltb2=np.logical_and.reduce([
-                                    discretizableFilt2, fieldType==ft,fieldRealization==fr, fieldSigma==fs, graphID==g])
-                                diff = np.fabs(rescaledBetas_G2[discretizableFiltb2]-discRescBeta)
-                                closestBet = np.nanmin(diff)
-                                diff = np.fabs(rescaledBetas_G2-discRescBeta)
-                                discretizableFiltC2=np.logical_and.reduce([discretizableFiltb2, diff==closestBet])
-                                discretizedRescaledBetas_G2[discretizableFiltC2] =discRescBeta
-
-                        discretizableFilt3=np.logical_and(TIFilt3, np.fabs(discRescBeta-rescaledBetas_G3)<discBetaStep/2.+0.000000000000001)
-                        if len(np.unique(N[discretizableFilt3]))>=3:
-                            for g,ft,fr,fs in set(zip(graphID[discretizableFilt3], fieldType[discretizableFilt3],fieldRealization[discretizableFilt3],fieldSigma[discretizableFilt3])):
-                                discretizableFiltb3=np.logical_and.reduce([
-                                    discretizableFilt3, fieldType==ft,fieldRealization==fr, fieldSigma==fs, graphID==g])
-                                diff = np.fabs(rescaledBetas_G3[discretizableFiltb3]-discRescBeta)
-                                closestBet = np.nanmin(diff)
-                                diff = np.fabs(rescaledBetas_G3-discRescBeta)
-                                discretizableFiltC3=np.logical_and.reduce([discretizableFiltb3, diff==closestBet])
-                                discretizedRescaledBetas_G3[discretizableFiltC3] =discRescBeta
-
-                        discretizableFilt3=np.logical_and(TIFilt3, np.fabs(discRescBeta-rescaledBetas_G2b)<discBetaStep/2.+0.000000000000001)
-                        if len(np.unique(N[discretizableFilt3]))>=3:
-                            for g,ft,fr,fs in set(zip(graphID[discretizableFilt3], fieldType[discretizableFilt3],fieldRealization[discretizableFilt3],fieldSigma[discretizableFilt3])):
-                                discretizableFiltb3=np.logical_and.reduce([
-                                    discretizableFilt3, fieldType==ft,fieldRealization==fr, fieldSigma==fs, graphID==g])
-                                diff = np.fabs(rescaledBetas_G2b[discretizableFiltb3]-discRescBeta)
-                                closestBet = np.nanmin(diff)
-                                diff = np.fabs(rescaledBetas_G2b-discRescBeta)
-                                discretizableFiltC3=np.logical_and.reduce([discretizableFiltb3, diff==closestBet])
-                                discretizedRescaledBetas_G2b[discretizableFiltC3] =discRescBeta
-
-                        discretizableFilt3=np.logical_and(TIFilt3, np.fabs(discRescBeta-rescaledBetas_G2c)<discBetaStep/2.+0.000000000000001)
-                        if len(np.unique(N[discretizableFilt3]))>=3:
-                            for g,ft,fr,fs in set(zip(graphID[discretizableFilt3], fieldType[discretizableFilt3],fieldRealization[discretizableFilt3],fieldSigma[discretizableFilt3])):
-                                discretizableFiltb3=np.logical_and.reduce([
-                                    discretizableFilt3, fieldType==ft,fieldRealization==fr, fieldSigma==fs, graphID==g])
-                                diff = np.fabs(rescaledBetas_G2c[discretizableFiltb3]-discRescBeta)
-                                closestBet = np.nanmin(diff)
-                                diff = np.fabs(rescaledBetas_G2c-discRescBeta)
-                                discretizableFiltC3=np.logical_and.reduce([discretizableFiltb3, diff==closestBet])
-                                discretizedRescaledBetas_G2c[discretizableFiltC3] =discRescBeta
-
-    TDN=np.array(TDN)
-    TDTrajInit=np.array(TDTrajInit)
-    TDT=np.array(TDT)
-    TDBetOfEx=np.array(TDBetOfEx)
-    TDFirstConfIndex=np.array(TDFirstConfIndex)
-    TDSecondConfIndex=np.array(TDSecondConfIndex)
-    TDGraphId=np.array(TDGraphId)
-    TDFieldType=np.array(TDFieldType)
-    TDFieldReali=np.array(TDFieldReali)
-    TDFieldSigma=np.array(TDFieldSigma)
-    TDHext=np.array(TDHext)
-    TDHout=np.array(TDHout)
-    TDHin=np.array(TDHin)
-    TDnQstar=np.array(TDnQstar,dtype=np.float64)
-    TDBetaM=np.array(TDBetaM,dtype=np.float64)
-    TDBetaG=np.array(TDBetaG,dtype=np.float64)
-    TDBetaG2=np.array(TDBetaG2,dtype=np.float64)
-    TDBetaG3=np.array(TDBetaG3,dtype=np.float64)
-    TDbetaG2b=np.array(TDbetaG2b,dtype=np.float64)
-    TDbetaG2c=np.array(TDbetaG2c,dtype=np.float64)
-    TDBetaL=np.array(TDBetaL,dtype=np.float64)
-    TDZmax=np.array(TDZmax,dtype=np.float64)
     globals()['curves_rows'] = curves_rows
     globals()['points_rows'] = points_rows
 
 
-    return (TDN, TDTrajInit, TDT, TDBetOfEx, TDFirstConfIndex, TDSecondConfIndex, TDGraphId,
-            TDFieldType, TDFieldReali, TDFieldSigma, TDHext,
-            TDHout, TDHin, TDnQstar, TDBetaM, TDBetaG, TDBetaG2,TDBetaG3, TDbetaG2b,TDbetaG2c, TDBetaL, TDZmax, cleanFilt)   
+    return True 
 
 # ---------- Writer & diagnostica ----------
-def write_ti(outdir: Path, model: str, data: dict, verbose: bool=False) -> Path:
-    base = outdir / model / "v1" / "ti"
-    base.mkdir(parents=True, exist_ok=True)
-    cols = [
-        "N","TrajInit","T","betaOfExtraction","firstConfIndex","secondConfIndex","graphID",
-        "fieldType","fieldRealization","fieldSigma","Hext","Hout","Hin","Qstar",
-        "betaM","betaG","betaG2","betaG3","betaG2b","betaG2c","betaL","Zmax"
-    ]
-    lens = [len(v) for k,v in data.items() if hasattr(v, "__len__")]
-    n = max(lens) if lens else 0
-    payload = {}
-    for c in cols:
-        v = data.get(c, None)
-        if v is None:
-            payload[c] = [np.nan]*n
-        else:
-            arr = np.atleast_1d(v)
-            payload[c] = (arr if len(arr)==n else list(arr) + [np.nan]*(n-len(arr)))
-    df = pd.DataFrame(payload)
-    out = base / "ti_curves.parquet"
-    df.to_parquet(out, index=False)
-    if verbose:
-        print("[write] {} rows={}".format(out, len(df)))
-    return out
 
 def _unique_combos_report():
     if N is None:
@@ -1430,20 +972,10 @@ def main():
     filt = np.ones(nrows, dtype=bool)
 
     t0 = time.perf_counter()
-    (TDN, TDTrajInit, TDT, TDBetOfEx, TDFirstConfIndex, TDSecondConfIndex, TDGraphId,
-     TDFieldType, TDFieldReali, TDFieldSigma, TDHext,
-     TDHout, TDHin, TDnQstar, TDBetaM, TDBetaG, TDBetaG2, TDBetaG3, TDbetaG2b, TDbetaG2c, TDBetaL, TDZmax,
-     PathsMCsUsedForTI_cleanFilt) = thermodynamicIntegration(filt, str(analysis_path))
+    thermodynamicIntegration(filt, str(analysis_path))
     elapsed = time.perf_counter() - t0
 
-    payload = dict(
-        N=TDN, TrajInit=TDTrajInit, T=TDT, betaOfExtraction=TDBetOfEx,
-        firstConfIndex=TDFirstConfIndex, secondConfIndex=TDSecondConfIndex, graphID=TDGraphId,
-        fieldType=TDFieldType, fieldRealization=TDFieldReali, fieldSigma=TDFieldSigma,
-        Hext=TDHext, Hout=TDHout, Hin=TDHin, Qstar=TDnQstar,
-        betaM=TDBetaM, betaG=TDBetaG, betaG2=TDBetaG2, betaG3=TDBetaG3,
-        betaG2b=TDbetaG2b, betaG2c=TDbetaG2c, betaL=TDBetaL, Zmax=TDZmax
-    )
+
     out_curves, out_points = write_ti_curves_points(outdir, ns.model, curves_rows, points_rows, verbose=ns.verbose)
 
     stats = _unique_combos_report()
