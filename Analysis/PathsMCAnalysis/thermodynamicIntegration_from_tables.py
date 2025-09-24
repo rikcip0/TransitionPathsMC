@@ -263,7 +263,7 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     global fieldType,fieldSigma,fieldRealization
     global betaOfExtraction,firstConfigurationIndex,secondConfigurationIndex,refConfInitID,refConfMutualQ
     global lastMeasureMC,MCprint,trajsJumpsInitID,trajsExtremesInitID,runPath,simulationType,ID
-    global TIbeta,TIQstar, chi_m, chi_m2, scale2, chi_chi2
+    global TIbeta,TIQstar, chi_m, chi_m2, scale2, chi_chi2, chi_chi
     global stMC_Hext,stMC_fieldType,stMC_fieldSigma,stMC_fieldRealization,stMC_N,stMC_beta
     global stMC_Hout,stMC_Qstar,stMC_nQstar,stMC_graphID,stMC_betaOfExtraction,stMC_configurationIndex,stMC_fieldMean,stMC_MC,stMC_TIbeta
     global normalizedQstar
@@ -294,8 +294,9 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     TIbeta = _series_or_default(df, 'TIbeta')
     TIQstar= _series_or_default(df, 'TIQstar')
     chi_m= _series_or_default(df, 'chi_m')
-    chi_m2= _series_or_default(df, 'chi_m2')
-    chi_chi2= _series_or_default(df, 'chi_chi2')
+    chi_m2 = _series_or_default(df, 'chi_m2')
+    chi_chi = _series_or_default(df, 'chi_chi')
+    chi_chi2 = _series_or_default(df, 'chi_chi2')
     scale2 = np.asarray(_series_or_default(df, "scale2"), dtype=float)
     mask_invalid = (~np.isfinite(scale2)) | (scale2 <= 0.0)
     scale2[mask_invalid] = np.nan
@@ -868,7 +869,11 @@ def thermodynamicIntegration(filt, analysis_path):
                                 ZFromTIBeta[mask] = Zfunction(beta[mask])
                                 kFromChi[mask] = ZFromTIBeta[mask] * chi_m[mask]
                                 kFromChi_InBetween[mask] = ZFromTIBeta[mask] * chi_m2[mask]
-                                kFromChi_InBetween_Scaled[mask] = kFromChi_InBetween[mask] / scale2[mask]
+                                kFromChi_InBetween_Scaled[mask] = np.nan
+                                mask_scaled = mask & np.isfinite(scale2) & (scale2 > 0.0)
+                                kFromChi_InBetween_Scaled[mask_scaled] = (
+                                    kFromChi_InBetween[mask_scaled] / scale2[mask_scaled]
+                                )
                                 used_idx = np.where(pathsMC_filtForThisTAndInit_used)[0]
                                 for i_idx in used_idx:
                                     points_rows.append(dict(
@@ -881,6 +886,10 @@ def thermodynamicIntegration(filt, analysis_path):
                                         kFromChi_InBetween_Scaled=float(kFromChi_InBetween_Scaled[i_idx]) if not np.isnan(kFromChi_InBetween_Scaled[i_idx]) else np.nan,
                                         T=float(T[i_idx]) if not np.isnan(T[i_idx]) else np.nan,
                                         trajInit=str(trajsExtremesInitID[i_idx]),
+                                        scale2=(float(scale2[i_idx]) if (i_idx < len(scale2) and np.isfinite(scale2[i_idx])) else np.nan),
+                                        scale2_valid=bool(i_idx < len(scale2) and np.isfinite(scale2[i_idx]) and (scale2[i_idx] > 0.0)),
+                                        chi_chi=(float(chi_chi[i_idx]) if (i_idx < len(chi_chi) and not np.isnan(chi_chi[i_idx])) else np.nan),
+                                        chi_chi2=(float(chi_chi2[i_idx]) if (i_idx < len(chi_chi2) and not np.isnan(chi_chi2[i_idx])) else np.nan),
                                         computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                         analysis_rev="unversioned"
                                     ))
