@@ -424,6 +424,7 @@ RUNS_RESULTS_DTYPES = {
     "TIbeta": "float64",
     "TIhout": "float64",
     "TIQstar": "float64",
+    "scale2": "float64",
 }
 
 STDMCS_DTYPES = {
@@ -552,6 +553,16 @@ def scan_and_build(model: str, includes: List[str], outdir: Path, graphs_root: P
 
     df_params  = enforce_dtypes(pd.DataFrame(params_rows), RUNS_PARAMS_DTYPES)
     df_results = enforce_dtypes(pd.DataFrame(results_rows), RUNS_RESULTS_DTYPES)
+    # --- compute scale2 = chi_m2 * T + chi_c2 (deterministic, no thresholds here) ---
+    try:
+        _t = df_params[['run_uid','T']].copy().rename(columns={'T':'__T'})
+        _jr = df_results.merge(_t, on='run_uid', how='left')
+        df_results['scale2'] = (_jr['chi_m2'] * _jr['__T'] + _jr['chi_c2']).astype('float64')
+    except Exception:
+        # conservative fallback: create empty float column if anything goes wrong
+        if 'scale2' not in df_results.columns:
+            df_results['scale2'] = pd.Series(dtype='float64')
+
     df_std     = enforce_dtypes(pd.DataFrame(std_rows), STDMCS_DTYPES)
 
     upsert_parquet(df_params,  params_path,  key_col="run_uid")
