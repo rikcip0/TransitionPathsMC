@@ -8,7 +8,7 @@ thermodynamicIntegration_from_tables.py (patched)
 - Supporta colonne stdMC con o senza prefisso 'stMC_' (es. N / stMC_N, beta / stMC_beta, ...)
 - Mantiene i token stringa ('nan') per i key di matching (graphID, fieldType, fieldRealization, betaOfExtraction, configurationIndex, trajs*)
 - Esegue la tua thermodynamicIntegration senza alterazioni concettuali
-- Scrive v1/ti/ti_core.parquet + un manifest con diagnostica
+- Scrive v1/ti/ti_curves.parquet + un manifest con diagnostica
 
 Uso:
   python3 thermodynamicIntegration_from_tables.py --model realGraphs/ZKC -v
@@ -276,7 +276,7 @@ def _ensure_tables(outdir: Path, model: str):
 
 # ---------- Loader ----------
 def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes: list[str]|None=None, verbose: bool=False) -> int:
-    global N,T,beta,h_out,h_in,h_ext,Qstar,graphID,C,fPosJ,model_type
+    global N,T,beta,h_out,h_in,h_ext,Qstar,graphID,C,fPosJ,p,model_type
     global fieldType,fieldSigma,fieldRealization
     global betaOfExtraction,firstConfigurationIndex,secondConfigurationIndex,refConfInitID,refConfMutualQ
     global lastMeasureMC,MCprint,trajsJumpsInitID,trajsExtremesInitID,runPath,simulationType,ID
@@ -354,6 +354,7 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     graphID = _to_str_with_nan(df.get("graphID", pd.Series(["nan"]*len(df))).to_numpy(), len(df))
     C    = _series_or_default(df,"C")
     fPosJ= _series_or_default(df,"fPosJ")
+    p    = _series_or_default(df,"p")
 
     fieldType  = _to_str_with_nan(df.get("fieldType", pd.Series(["nan"]*len(df))).to_numpy(), len(df))
     fieldType =  np.asarray([fieldTypeDictionary[value] for value in fieldType])
@@ -613,6 +614,10 @@ def write_ti_curves_points(outdir: Path, model: str, curves_rows: list, points_r
         print(f"[write] {base/'ti_points.parquet'} rows={len(dfp)}")
     return base/'ti_curves.parquet', base/'ti_points.parquet'
 def thermodynamicIntegration(filt, analysis_path):
+    # -- diagnostics placeholders to avoid NameError --
+    max_value = np.nan
+    max_value2 = np.nan
+    max_value3 = np.nan
     curves_rows = []
     points_rows = []
 
@@ -697,6 +702,44 @@ def thermodynamicIntegration(filt, analysis_path):
                         TIPlotsFolder = os.path.join(TIFolder, f'N{sim_N}', f'h{sim_Hext}_f{sim_fieldType}{sim_fieldSigma}' if sim_fieldSigma!=0. else f'h{sim_Hext}_noField', f'g{sim_graphID}_fr{sim_fieldRealization}' if sim_fieldSigma!=0. else f'g{sim_graphID}',
                                                      f'bExt{sim_betOfEx}_cs{sim_firstConfIndex}_{sim_secondConfIndex}_{sim_Qif}' if (sim_firstConfIndex!="nan" and sim_firstConfIndex is not None) else 'FM',
                                                      f'meas_{(str)(sim_Hin)}_{(str)(sim_Hout)}_{(sim_nQstar):.3f}' if sim_Hin is not np.inf else f'meas_inf_inf_{(sim_nQstar):.3f}')
+                        # ---- Inject head: p{p}[C{C}]/fPosJ{fPosJ:.2f} (C only ER/RRG; p fallback=2) ----
+                        try:
+                            _mask_for_path = TIFilt3 if 'TIFilt3' in locals() else (TIFilt2 if 'TIFilt2' in locals() else (filt if 'filt' in locals() else slice(None)))
+                        except Exception:
+                            _mask_for_path = slice(None)
+                        try:
+                            sim_fPosJ = float(np.nanmean(fPosJ[_mask_for_path]))
+                        except Exception:
+                            sim_fPosJ = np.nan
+                        try:
+                            sim_C = float(np.nanmean(C[_mask_for_path])) if 'C' in globals() else np.nan
+                        except Exception:
+                            sim_C = np.nan
+                        try:
+                            sim_p = float(np.nanmean(p[_mask_for_path])) if 'p' in globals() else np.nan
+                        except Exception:
+                            sim_p = np.nan
+                        try:
+                            # Prefer model id from runPath to decide presence of C
+                            if 'runPath' in globals():
+                                if hasattr(_mask_for_path, 'dtype'):
+                                    idxs = np.where(_mask_for_path)[0]
+                                    _idx = int(idxs[0]) if idxs.size>0 else 0
+                                else:
+                                    _idx = 0
+                                _model_from_path = str(runPath[_idx])
+                            else:
+                                _model_from_path = ''
+                        except Exception:
+                            _model_from_path = ''
+                        include_C = (('ER' in _model_from_path) or ('RRG' in _model_from_path)) and np.isfinite(sim_C)
+                        sim_p_fmt = int(sim_p) if np.isfinite(sim_p) else 2
+                        head_segment = f"p{sim_p_fmt}"
+                        if include_C:
+                            head_segment = head_segment + f"C{sim_C:.3f}"
+                        fposj_segment = f"fPosJ{sim_fPosJ:.2f}" if np.isfinite(sim_fPosJ) else "fPosJnan"
+                        _rel = os.path.relpath(TIPlotsFolder, TIFolder)
+                        TIPlotsFolder = os.path.join(TIFolder, head_segment, fposj_segment, _rel)
 
                         thisTransitionData_T=[]
                         thisTransitionData_trajInit=[]
@@ -952,6 +995,20 @@ def thermodynamicIntegration(filt, analysis_path):
                                     computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                     analysis_rev="unversioned"
                                 ))
+                            except Exception as _e:
+                                print("[warn] failed collecting TIcurve rows:", _e)
+                            if Zfunction is None:
+                                continue
+                            mask = pathsMC_filtForThisTAndInit_used
+                            with np.errstate(divide='ignore', invalid='ignore'):
+                                ZFromTIBeta[mask] = Zfunction(beta[mask])
+                                kFromChi[mask] = ZFromTIBeta[mask] * chi_m[mask]
+                                kFromChi_InBetween[mask] = ZFromTIBeta[mask] * chi_m2[mask]
+                                kFromChi_InBetween_Scaled[mask] = kFromChi_InBetween[mask] / scale2[mask]
+                                minusLnKFromChi[mask] = -np.log(kFromChi[mask])
+                                minusLnKFromChi_2[mask] = -np.log(kFromChi_InBetween[mask])
+                                minusLnKFromChi_2_scaled[mask] = -np.log(kFromChi_InBetween_Scaled[mask])
+                                tentativeBarrier[mask] = -np.log(kFromChi[mask]) / N[mask]
                                 used_idx = np.where(pathsMC_filtForThisTAndInit_used)[0]
                                 for i_idx in used_idx:
                                     points_rows.append(dict(
@@ -979,20 +1036,6 @@ def thermodynamicIntegration(filt, analysis_path):
                                         computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                         analysis_rev="unversioned"
                                     ))
-                            except Exception as _e:
-                                print("[warn] failed collecting TIcurve rows:", _e)
-                            if Zfunction is None:
-                                continue
-                            mask = pathsMC_filtForThisTAndInit_used
-                            with np.errstate(divide='ignore', invalid='ignore'):
-                                ZFromTIBeta[mask] = Zfunction(beta[mask])
-                                kFromChi[mask] = ZFromTIBeta[mask] * chi_m[mask]
-                                kFromChi_InBetween[mask] = ZFromTIBeta[mask] * chi_m2[mask]
-                                kFromChi_InBetween_Scaled[mask] = kFromChi_InBetween[mask] / scale2[mask]
-                                minusLnKFromChi[mask] = -np.log(kFromChi[mask])
-                                minusLnKFromChi_2[mask] = -np.log(kFromChi_InBetween[mask])
-                                minusLnKFromChi_2_scaled[mask] = -np.log(kFromChi_InBetween_Scaled[mask])
-                                tentativeBarrier[mask] = -np.log(kFromChi[mask]) / N[mask]
                                 tentativeBarrier_2[mask] = -np.log(kFromChi_InBetween[mask]) / N[mask]
                                 tentativeBarrier_3[mask] = -np.log(kFromChi_InBetween_Scaled[mask]) / N[mask]
                             TDFirstConfIndex.append(sim_firstConfIndex)
@@ -1165,7 +1208,9 @@ def thermodynamicIntegration(filt, analysis_path):
 
                 for sim_Hin, sim_Hout, sim_nQstar in set(zip(h_in[TIFilt2], h_out[TIFilt2], normalizedQstar[TIFilt2])):
                     TIFilt3 = np.logical_and(TIFilt2, np.logical_and.reduce([h_in==sim_Hin, h_out==sim_Hout, normalizedQstar==sim_nQstar]))
-                    max_value=np.nanmax(rescaledBetas_M[TIFilt3])
+                    __vals = rescaledBetas_M[TIFilt3]
+                    __vals = __vals[np.isfinite(__vals)] if hasattr(__vals, 'shape') else np.array([])
+                    max_value = np.nanmax(__vals) if getattr(__vals, 'size', 0) > 0 else np.nan
                     if np.isnan(max_value):
                         continue
                     for discRescBeta in np.round(np.arange(0., max_value+discBetaStep, discBetaStep, dtype=float),decimals=4):
@@ -1183,9 +1228,15 @@ def thermodynamicIntegration(filt, analysis_path):
 
                 for sim_Hin, sim_Hout, sim_nQstar in set(zip(h_in[TIFilt2], h_out[TIFilt2], normalizedQstar[TIFilt2])):
                     TIFilt3 = np.logical_and(TIFilt2, np.logical_and.reduce([h_in==sim_Hin, h_out==sim_Hout, normalizedQstar==sim_nQstar]))
-                    max_value=np.nanmax(rescaledBetas_G[TIFilt3])
-                    max_value2=np.nanmax(rescaledBetas_G2[TIFilt3])
-                    max_value3=np.nanmax(rescaledBetas_G3[TIFilt3])
+                    __vals = rescaledBetas_G[TIFilt3]
+                    __vals = __vals[np.isfinite(__vals)] if hasattr(__vals, 'shape') else np.array([])
+                    max_value = np.nanmax(__vals) if getattr(__vals, 'size', 0) > 0 else np.nan
+                    __vals = rescaledBetas_G2[TIFilt3]
+                    __vals = __vals[np.isfinite(__vals)] if hasattr(__vals, 'shape') else np.array([])
+                    max_value2 = np.nanmax(__vals) if getattr(__vals, 'size', 0) > 0 else np.nan
+                    __vals = rescaledBetas_G3[TIFilt3]
+                    __vals = __vals[np.isfinite(__vals)] if hasattr(__vals, 'shape') else np.array([])
+                    max_value3 = np.nanmax(__vals) if getattr(__vals, 'size', 0) > 0 else np.nan
                     if np.isnan(max_value):
                         continue
                     for discRescBeta in np.round(np.arange(0., max_value+discBetaStep, discBetaStep, dtype=float),decimals=4):
@@ -1275,7 +1326,7 @@ def thermodynamicIntegration(filt, analysis_path):
             TDHout, TDHin, TDnQstar, TDBetaM, TDBetaG, TDBetaG2,TDBetaG3, TDbetaG2b,TDbetaG2c, TDBetaL, TDZmax, cleanFilt)   
 
 # ---------- Writer & diagnostica ----------
-def write_ti_core(outdir: Path, model: str, data: dict, verbose: bool=False) -> Path:
+def write_ti(outdir: Path, model: str, data: dict, verbose: bool=False) -> Path:
     base = outdir / model / "v1" / "ti"
     base.mkdir(parents=True, exist_ok=True)
     cols = [
@@ -1294,7 +1345,7 @@ def write_ti_core(outdir: Path, model: str, data: dict, verbose: bool=False) -> 
             arr = np.atleast_1d(v)
             payload[c] = (arr if len(arr)==n else list(arr) + [np.nan]*(n-len(arr)))
     df = pd.DataFrame(payload)
-    out = base / "ti_core.parquet"
+    out = base / "ti_curves.parquet"
     df.to_parquet(out, index=False)
     if verbose:
         print("[write] {} rows={}".format(out, len(df)))
@@ -1328,11 +1379,16 @@ def _write_manifest(manifest_path: Path, stats: dict, ti_rows: int, elapsed_s: f
     lines.append("- TI produced rows: {}\n".format(ti_rows))
     lines.append("- elapsed seconds: {:.3f}\n".format(elapsed_s))
     (
+        (
         lines.append("- output parquet: {}\n".format(out_parquet))
-     ) if not isinstance(out_parquet, (list, tuple)) else (
+    ) if not isinstance(out_parquet, (list, tuple)) else (
         lines.append(f"- output parquet (curves): {out_parquet[0]}\n"),
         lines.append(f"- output parquet (points): {out_parquet[1]}\n")
-     )
+    )
+    ) if not isinstance(out_parquet, (list, tuple)) else (
+        lines.append(f"- output parquet (curves): {out_parquet[0]}\n"),
+        lines.append(f"- output parquet (points): {out_parquet[1]}\n")
+    )
     manifest_path.write_text("".join(lines), encoding="utf-8")
 
 # ---------- CLI ----------
