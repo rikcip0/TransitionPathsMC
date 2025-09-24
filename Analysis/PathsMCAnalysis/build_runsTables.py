@@ -180,7 +180,6 @@ def scan_model_root(model_root: Path, includes: List[str], verbose: bool=False) 
                     if not de.is_dir():
                         continue
                     run_dir = Path(de.path)
-                    print(run_dir)
                     j = run_dir / "Results" / "runData.json"
                     if not j.exists():
                         continue
@@ -210,7 +209,6 @@ def scan_model_root(model_root: Path, includes: List[str], verbose: bool=False) 
 
 def extract_runs_params_row(data: Dict, run_dir: Path, model_type: str) -> Dict:
     cfg = data.get("configuration", {}) or {}
-    MCpars = cfg.get("mcParameters", {}) or {}
     par = cfg.get("parameters", {}) or {}
     ref = cfg.get("referenceConfigurationsInfo", {}) or {}
     mcp = cfg.get("mcParameters", {}) or {}
@@ -264,7 +262,6 @@ def extract_runs_params_row(data: Dict, run_dir: Path, model_type: str) -> Dict:
 def extract_runs_results_row(data: Dict, model_type: str, analysis_rev: str) -> Dict:
     res = data.get("results", {}) or {}
     cfg = data.get("configuration", {}) or {}
-    MCpars = cfg.get("mcParameters", {}) or {}
     par = cfg.get("parameters", {}) or {}
 
     chi1 = res.get("chiLinearFit") or {}
@@ -346,7 +343,7 @@ def extract_stdmcs_row(data: Dict, run_dir: Path) -> Optional[Dict]:
         runPath = str(run_dir),
         stMC_N      = par.get("N"),
         stMC_beta   = par.get("beta"),
-        stMC_MC   = MCpars.get("MC"),
+        stMC_MC     = MCpars.get("MC"),
         stMC_Hext   = par.get("hext") if par.get("hext") is not None else par.get("Hext"),
         stMC_Hout   = par.get("h_out") if par.get("h_out") is not None else par.get("Hout"),
         stMC_Qstar  = par.get("Qstar"),
@@ -627,22 +624,24 @@ def main():
         mf = manifest_root / f"build_runs_tables_{stamp}.md"
         block = f"""# build_runs_tables manifest
 
-- graphs_root: {graphs_root}
-- outdir:      {outdir}
-- model arg:   {model}
-- includes:    {ns.include}
-- analysis_rev:{ns.analysis_rev}
+                - graphs_root: {graphs_root}
+                - outdir:      {outdir}
+                - model arg:   {model}
+                - includes:    {ns.include}
+                - analysis_rev:{ns.analysis_rev}
 
-## Per-model stats
-- {model}: paths={stats['n_paths']} std={stats['n_std']} -> params={stats['n_params']} results={stats['n_results']} std_rows={stats['n_std_rows']} skipped_no_results={stats['skipped_no_results']}
-"""
-        if mf.exists():
-            with mf.open("a", encoding="utf-8") as f:
-                f.write("\n" + block)
-        else:
-            mf.write_text(block, encoding="utf-8")
-        print(block.strip())
+                ## Per-model stats
+                - model: {model}
+                - paths_runs:        {stats.get('n_paths', 0)}
+                - std_runs:          {stats.get('n_std', 0)}
+                - params_rows:       {stats.get('n_params', 0)}
+                - results_rows:      {stats.get('n_results', 0)}
+                - stdmcs_rows:       {stats.get('n_std_rows', 0)}
+                - skipped_no_results:{stats.get('skipped_no_results', 0)}
 
+                """
+        mf.write_text(block, encoding="utf-8")
+        print(f"[manifest] {mf}")
 
 if __name__ == "__main__":
     main()
