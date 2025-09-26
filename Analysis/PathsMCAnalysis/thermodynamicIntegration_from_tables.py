@@ -636,7 +636,7 @@ def thermodynamicIntegration(filt, analysis_path):
                         sim_p_fmt = int(sim_p) if np.isfinite(sim_p) else 2
                         head_segment = f"p{sim_p_fmt}"
                         if include_C:
-                            head_segment = head_segment + f"C{sim_C:.3f}"
+                            head_segment = head_segment + f"C{int(sim_C) if (np.isfinite(sim_C) and float(sim_C).is_integer()) else f'{sim_C:.3f}'}"
                         fposj_segment = f"fPosJ{sim_fPosJ:.2f}" if np.isfinite(sim_fPosJ) else "fPosJnan"
                         _rel = os.path.relpath(TIPlotsFolder, TIFolder)
                         TIPlotsFolder = os.path.join(TIFolder, head_segment, fposj_segment, _rel)
@@ -850,6 +850,11 @@ def thermodynamicIntegration(filt, analysis_path):
                                     _model_type = str(model_type[pathsMC_filtForThisTAndInit_used][np.where(pathsMC_filtForThisTAndInit_used)[0][0]])
                                 except Exception:
                                     _model_type = "unknown"
+                                try:
+                                    if (_model_type == "unknown") and ('cli_model_label' in globals()):
+                                        _model_type = str(globals()['cli_model_label'])
+                                except Exception:
+                                    pass
                                 TIcurve_id = make_TIcurve_id(_model_type, sim_N, sim_graphID, sim_fieldType, sim_fieldSigma,
                                                              sim_fieldRealization, sim_Hext, sim_Hout, sim_Hin, sim_Qstar,
                                                              sim_T, sim_trajInit, sim_betOfEx, sim_firstConfIndex, sim_secondConfIndex)
@@ -862,6 +867,9 @@ def thermodynamicIntegration(filt, analysis_path):
                                 n_stdmc_used = int(np.sum(stdMC_filtForThisTAndInit_used))
                                 curves_rows.append(dict(
                                     TIcurve_id=TIcurve_id, model_type=_model_type,
+                                    p=(float(sim_p) if (sim_p==sim_p) else float('nan')),
+                                    C=(float(sim_C) if (sim_C==sim_C) else float('nan')),
+                                    fPosJ=(float(sim_fPosJ) if (sim_fPosJ==sim_fPosJ) else float('nan')),
                                     N=int(sim_N), graphID=str(sim_graphID), fieldType=str(sim_fieldType),
                                     fieldSigma=float(sim_fieldSigma) if not pd.isna(sim_fieldSigma) else np.nan,
                                     fieldRealization=str(sim_fieldRealization),
@@ -1017,6 +1025,7 @@ def main():
     print("[paths] analysis   ={}".format(analysis_path))
 
     try:
+        globals()['cli_model_label'] = ns.model
         nrows = load_tables_as_arrays(ns.model, graphs_root, outdir, ns.include, verbose=ns.verbose)
     except FileNotFoundError as e:
         print("\n[ERROR] {}".format(e), file=sys.stderr)
