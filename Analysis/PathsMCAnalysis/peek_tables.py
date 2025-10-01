@@ -8,11 +8,14 @@ Quickly inspect model tables under MultiPathsMC:
 - stdmcs
 - ti_curves
 - ti_points
+- ti_rescale_refs
+- ti_rescale_members
+- ti_rescaled_points
 - ti_core (legacy)
 
 Usage examples:
   python3 peek_tables.py --model ER
-  python3 peek_tables.py --model realGraphs/ZKC --tables ti_curves ti_points
+  python3 peek_tables.py --model realGraphs/ZKC --tables ti_curves ti_points ti_rescale_refs
   python3 peek_tables.py --model ER --head 30
   python3 peek_tables.py --model ER --list
 """
@@ -26,7 +29,14 @@ pd.set_option("display.width", 220)
 pd.set_option("display.max_colwidth", 200)
 
 DEFAULT_TABLES: List[str] = ["runs_params", "runs_results", "stdmcs"]
-ALL_TABLES: List[str] = DEFAULT_TABLES + ["ti_curves", "ti_points", "ti_rescaled_points"]
+ALL_TABLES: List[str] = DEFAULT_TABLES + [
+    "ti_curves",
+    "ti_points",
+    "ti_rescale_refs",
+    "ti_rescale_members",
+    "ti_rescaled_points",
+    "ti_core",
+]
 
 def _exists_graphs_root(path: Path) -> bool:
     if not path or not path.exists():
@@ -71,13 +81,17 @@ def _path_for_table(base_v1: Path, table: str) -> Path:
         return base_v1 / "runs_results" / "runs_results.parquet"
     if table == "stdmcs":
         return base_v1 / "stdmcs" / "stdmcs.parquet"
-    if table == "ti_rescaled_points":
-        return base_v1 / "ti" / "ti_rescaled_points.parquet"
     if table == "ti_curves":
         return base_v1 / "ti" / "ti_curves.parquet"
     if table == "ti_points":
         return base_v1 / "ti" / "ti_points.parquet"
-    if table == "ti_core":
+    if table == "ti_rescale_refs":
+        return base_v1 / "ti" / "ti_rescale_refs.parquet"
+    if table == "ti_rescale_members":
+        return base_v1 / "ti" / "ti_rescale_members.parquet"
+    if table == "ti_rescaled_points":
+        return base_v1 / "ti" / "ti_rescaled_points.parquet"
+    if table == "ti_core":  # legacy
         return base_v1 / "ti" / "ti_core.parquet"
     raise ValueError(f"Unknown table: {table}")
 
@@ -120,7 +134,7 @@ def main():
     if ns.list:
         print("\n[available tables on disk]")
         for t, p in mapping.items():
-            print(f"- {t:12s}: {'FOUND' if p.exists() else 'missing'} -> {p}")
+            print(f"- {t:18s}: {'FOUND' if p.exists() else 'missing'} -> {p}")
         return
 
     to_show = ns.tables if ns.tables else DEFAULT_TABLES
