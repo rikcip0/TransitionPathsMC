@@ -1,19 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-fit_rates_vs_N.py (v3 - familying-first, logging robusto)
---------------------------------------------------------
-- Fit di -ln(k) vs N sui punti RAW e RESCALED (default anchors: M,G; ref_stat: median).
-- 3 colonne k di default: kFromChi, kFromChi_InBetween, kFromChi_InBetween_Scaled.
-- Usa le tabelle nuove: ti_subset_members, ti_subset_points_rescaled, ti_points, ti_family_subsets.
-- Logging sempre visibile per input/output; dettagli extra con -v.
+fit_rates_vs_N.py  (v7 – CLI pulita, niente legacy)
+---------------------------------------------------
+- Fit lineari di -ln(k) vs N su punti RAW e RESCALED.
+- Filtri qualità OBBLIGATORI:
+    RAW:      chi_chi2 <= chi2_threshold
+    RESCALED: chi_chi2 <= chi2_threshold, scale2_valid == True, scale2 >= scale_threshold
+- Default:
+    * k = [kFromChi, kFromChi_InBetween, kFromChi_InBetween_Scaled]
+    * anchors (RESCALED) = [M, G]
+    * ref_stat (RESCALED) = mean
+    * Δ beta* (binning) = 0.025
+
+Esempi:
+  python3 fit_rates_vs_N.py --model ER --subset-label 'N>30' -v
+  python3 fit_rates_vs_N.py --model ER --subset-label 'N>30' --anchors M,G --ref-stats mean -v
+  python3 fit_rates_vs_N.py --model ER --subset-id 3d770592476e771c --kcols kFromChi -v
 """
-import sys
 import argparse
 from pathlib import Path
 import math
 import numpy as np
 import pandas as pd
+import sys
 
 # ------------------------------
 # Utils
@@ -40,7 +50,6 @@ def _finite_mask(*arrs):
     return m
 
 def _linear_fit(x: np.ndarray, y: np.ndarray):
-    # returns slope, intercept, stderr (slope), r2, n
     n = len(x)
     if n < 2:
         return (np.nan, np.nan, np.nan, np.nan, n)
@@ -53,7 +62,7 @@ def _linear_fit(x: np.ndarray, y: np.ndarray):
     if n > 2:
         s2 = sse / (n - 2)
         sx2 = np.sum((x - np.mean(x))**2)
-        slope_stderr = math.sqrt(s2 / sx2) if sx2 > 0 else np.nan
+        slope_stderr = (s2 / sx2) ** 0.5 if sx2 > 0 else np.nan
     else:
         slope_stderr = np.nan
     return (slope, intercept, slope_stderr, r2, n)
@@ -63,8 +72,8 @@ def _bin_rescaled(beta_rescaled: pd.Series, step: float) -> pd.Series:
 
 def _anchor_list(arg: str|None) -> list[str]:
     all_anchors = ["M","L","G","G2","G3","G2b","G2c"]
-    if not arg:
-        return ["M","G"]  # default richiesto
+    if arg is None or arg.strip() == "":
+        return ["M","G"]
     toks = [t.strip() for t in arg.split(",") if t.strip()]
     for t in toks:
         if t not in all_anchors:
@@ -73,8 +82,8 @@ def _anchor_list(arg: str|None) -> list[str]:
 
 def _refstats_list(arg: str|None) -> list[str]:
     all_stats = ["mean","median"]
-    if not arg:
-        return ["median"]
+    if arg is None or arg.strip() == "":
+        return ["mean"]
     toks = [t.strip() for t in arg.split(",") if t.strip()]
     for t in toks:
         if t not in all_stats:
@@ -83,7 +92,7 @@ def _refstats_list(arg: str|None) -> list[str]:
 
 def _kcols_list(arg: str|None) -> list[str]:
     default = ["kFromChi","kFromChi_InBetween","kFromChi_InBetween_Scaled"]
-    if not arg:
+    if arg is None or arg.strip() == "":
         return default
     return [t.strip() for t in arg.split(",") if t.strip()]
 
@@ -98,9 +107,10 @@ def fit_raw(points: pd.DataFrame,
             kcol: str,
             include_unused: bool,
             min_unique_N: int,
+            chi2_thr: float,
             verbose: bool) -> list[dict]:
 
-    _ensure_cols(points, ["TIcurve_id","run_uid","beta",kcol], "ti_points")
+    _ensure_cols(points, ["TIcurve_id","run_uid","beta",kcol,"chi_chi2"], "ti_points")  # chi_chi2 OBBLIGATORIO
     need_m = ["TIcurve_id","subset_id","family_id","N","is_used"]
     _ensure_cols(members, need_m, "ti_subset_members")
 
@@ -111,12 +121,16 @@ def fit_raw(points: pd.DataFrame,
         mkey &= (members["is_used"]==True)
     mem = members.loc[mkey, ["TIcurve_id","subset_id","family_id","N","is_used"]].drop_duplicates()
 
-    df = points.merge(mem, on="TIcurve_id", how="inner")
+    use_cols = ["TIcurve_id","run_uid","beta",kcol,"chi_chi2"]
+    df = points[use_cols].merge(mem, on="TIcurve_id", how="inner")
 
+    # filtri
     k = df[kcol].to_numpy(dtype=float)
     N = df["N"].to_numpy(dtype=float)
     b = df["beta"].to_numpy(dtype=float)
-    good = (k > 0) & _finite_mask(k, N, b)
+    chi = df["chi_chi2"].to_numpy(dtype=float)
+    good = (k > 0) & _finite_mask(k, N, b, chi) & (chi <= chi2_thr)
+
     df = df.loc[good].copy()
 
     fits = []
@@ -173,9 +187,11 @@ def fit_rescaled(points: pd.DataFrame,
                  step: float,
                  include_unused: bool,
                  min_unique_N: int,
+                 chi2_thr: float,
+                 scale_thr: float,
                  verbose: bool) -> list[dict]:
 
-    _ensure_cols(points, ["TIcurve_id","run_uid","beta",kcol], "ti_points")
+    _ensure_cols(points, ["TIcurve_id","run_uid","beta",kcol,"chi_chi2","scale2","scale2_valid"], "ti_points")
     need_r = ["TIcurve_id","run_uid","beta","subset_id","ref_type","ref_stat","beta_rescaled"]
     _ensure_cols(rescaled_points, need_r, "ti_subset_points_rescaled")
     need_m = ["TIcurve_id","subset_id","family_id","N","is_used"]
@@ -195,15 +211,18 @@ def fit_rescaled(points: pd.DataFrame,
     rp = rp.loc[rkey]
 
     join_keys = ["TIcurve_id","run_uid","beta"]
-    df = rp.merge(points[join_keys + [kcol]], on=join_keys, how="inner")
+    df = rp.merge(points[join_keys + [kcol,"chi_chi2","scale2","scale2_valid"]], on=join_keys, how="inner")
     df = df.merge(mem, on=["TIcurve_id","subset_id"], how="inner")
 
     k = df[kcol].to_numpy(dtype=float)
     N = df["N"].to_numpy(dtype=float)
     br = df["beta_rescaled"].to_numpy(dtype=float)
-    good = (k > 0) & _finite_mask(k, N, br)
-    df = df.loc[good].copy()
+    chi = df["chi_chi2"].to_numpy(dtype=float)
+    s2 = df["scale2"].to_numpy(dtype=float)
+    s2v = df["scale2_valid"].astype(bool).to_numpy()
+    good = (k > 0) & _finite_mask(k, N, br, chi, s2) & (chi <= chi2_thr) & s2v & (s2 >= scale_thr)
 
+    df = df.loc[good].copy()
     df["beta_rescaled_bin"] = _bin_rescaled(df["beta_rescaled"], step)
 
     fits = []
@@ -249,21 +268,38 @@ def fit_rescaled(points: pd.DataFrame,
 # CLI
 # ------------------------------
 
-def main():
-    ap = argparse.ArgumentParser(description="Fit lineari di -ln(k) vs N (RAW/RESCALED).")
-    ap.add_argument("--model", required=True, help="Modello (es. ER, realGraphs/ZKC, ...)")
+def _parser() -> argparse.ArgumentParser:
+    ep = (
+"Esempi:\n"
+"  python3 fit_rates_vs_N.py --model ER --subset-label 'N>30' -v\n"
+"  python3 fit_rates_vs_N.py --model ER --subset-label 'N>30' --anchors M,G --ref-stats mean -v\n"
+"  python3 fit_rates_vs_N.py --model ER --subset-id <subset_id> --kcols kFromChi -v\n"
+)
+    ap = argparse.ArgumentParser(
+        description="Fit -ln(k) vs N (RAW + RESCALED). Niente flag legacy; usare i parametri esatti.",
+        epilog=ep,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    ap.add_argument("--model", required=True, help="Modello (es. ER, RRG, realGraphs/ZKC, ...)")
     ap.add_argument("--data-root", default=None, help="Root Data (default: ../../Data)")
-    ap.add_argument("--subset-label", default="all", help="Subset label (es. all, N>30)")
-    ap.add_argument("--subset-id", default=None, help="Subset ID specifico (opzionale; sovrascrive subset-label)")
+    ap.add_argument("--subset-label", default="all", help="Label del subset (es. all, 'N>30')")
+    ap.add_argument("--subset-id", default=None, help="Subset ID (sovrascrive label)")
     ap.add_argument("--family-id", default=None, help="Family ID (opzionale)")
-    ap.add_argument("--kcols", default=None, help="Lista colonne k separate da virgola (default: 3 standard)")
-    ap.add_argument("--anchors", default=None, help="Anchor rescaled (default: M,G)")
-    ap.add_argument("--ref-stats", default=None, help="Statistiche ref (default: median; usa 'mean,median' per entrambe)")
-    ap.add_argument("--rescaled-step", type=float, default=0.025, help="Δ per il binning di beta_rescaled (default: 0.02)")
-    ap.add_argument("--min-unique-N", type=int, default=2, help="Min # di N distinti nel fit (default: 2)")
+    ap.add_argument("--kcols", default=None, help="Lista colonne k (comma). Default: tre standard")
+    ap.add_argument("--anchors", default=None, help="Anchors per RESCALED (default: M,G). Usa stringa vuota per disattivare RESCALED")
+    ap.add_argument("--ref-stats", default=None, help="Statistiche per anchor (default: mean; usare 'mean,median' per entrambe)")
+    ap.add_argument("--rescaled-step", type=float, default=0.025, help="Δ per binning di beta_rescaled")
+    ap.add_argument("--min-unique-N", type=int, default=2, help="Min # di N distinti nel fit")
     ap.add_argument("--include-unused", action="store_true", help="Includi anche TIcurve con is_used=False")
-    ap.add_argument("--outname", default="ti_linear_fits.parquet", help="Output parquet (default: ti_linear_fits.parquet)")
+    ap.add_argument("--chi2-threshold", type=float, default=0.43, help="Soglia su chi_chi2")
+    ap.add_argument("--scale-threshold", type=float, default=0.33, help="Soglia su scale2 (solo RESCALED)")
+    ap.add_argument("--outname", default="ti_linear_fits.parquet", help="Nome file output parquet")
     ap.add_argument("-v", "--verbose", action="store_true")
+    return ap
+
+
+def main():
+    ap = _parser()
     ns = ap.parse_args()
 
     base = _path_base(ns.model, ns.data_root)
@@ -272,65 +308,72 @@ def main():
     rescaled_path = base / "ti_subset_points_rescaled.parquet"
     subsets_path  = base / "ti_family_subsets.parquet"
 
-    # Log input paths ALWAYS
-    print("[in ]", points_path); sys.stdout.flush()
-    print("[in ]", members_path); sys.stdout.flush()
-    print("[in ]", rescaled_path); sys.stdout.flush()
-    print("[in ]", subsets_path); sys.stdout.flush()
+    print("[in ]", points_path)
+    print("[in ]", members_path)
+    print("[in ]", rescaled_path)
+    print("[in ]", subsets_path)
 
     points   = _load_parquet(points_path, "ti_points")
     members  = _load_parquet(members_path, "ti_subset_members")
     rescaled = _load_parquet(rescaled_path, "ti_subset_points_rescaled")
     subsets  = _load_parquet(subsets_path, "ti_family_subsets")
 
+    # Enforce qualità richieste
+    _ensure_cols(points, ["chi_chi2"], "ti_points (RAW quality)")
+
+    anchors = _anchor_list(ns.anchors)
+    do_rescaled = len(anchors) > 0
+    if do_rescaled:
+        _ensure_cols(points, ["scale2","scale2_valid"], "ti_points (RESCALED quality)")
+
+    # subset target
     if ns.subset_id:
         target_subset_ids = [ns.subset_id]
     else:
         _ensure_cols(subsets, ["subset_id","subset_label"], "ti_family_subsets")
         target_subset_ids = subsets.loc[subsets["subset_label"]==ns.subset_label, "subset_id"].drop_duplicates().tolist()
-        if ns.verbose:
-            print(f"[subset] label='{ns.subset_label}' -> {len(target_subset_ids)} subset_id"); sys.stdout.flush()
+        print(f"[subset] label='{ns.subset_label}' -> {len(target_subset_ids)} subset_id")
 
     fam_ids = [ns.family_id] if ns.family_id else None
-
     kcols = _kcols_list(ns.kcols)
-    anchors = _anchor_list(ns.anchors)
     ref_stats = _refstats_list(ns.ref_stats)
 
     if ns.verbose:
         print(f"[conf] kcols={kcols} anchors={anchors} ref_stats={ref_stats} step={ns.rescaled_step} include_unused={ns.include_unused}")
-        print(f"[sizes] points={len(points)} members={len(members)} rescaled={len(rescaled)}"); sys.stdout.flush()
+        print(f"[thr ] chi2<= {ns.chi2_threshold} ; scale2>= {ns.scale_threshold} (solo RESCALED)")
+        print(f"[sizes] points={len(points)} members={len(members)} rescaled={len(rescaled)}")
 
     fits_all = []
     # RAW
     for kcol in kcols:
         if kcol not in points.columns:
-            print(f"[skip] colonna k assente in ti_points: {kcol}"); sys.stdout.flush()
+            print(f"[skip] colonna k assente in ti_points: {kcol}")
             continue
         fits_all.extend(
-            fit_raw(points, members, target_subset_ids, fam_ids, kcol, ns.include_unused, ns.min_unique_N, ns.verbose)
+            fit_raw(points, members, target_subset_ids, fam_ids, kcol, ns.include_unused, ns.min_unique_N, ns.chi2_threshold, ns.verbose)
         )
+
     # RESCALED
-    for kcol in kcols:
-        if kcol not in points.columns:
-            continue
-        fits_all.extend(
-            fit_rescaled(points, rescaled, members, target_subset_ids, fam_ids, kcol, anchors, ref_stats,
-                         ns.rescaled_step, ns.include_unused, ns.min_unique_N, ns.verbose)
-        )
+    if do_rescaled:
+        for kcol in kcols:
+            if kcol not in points.columns:
+                continue
+            fits_all.extend(
+                fit_rescaled(points, rescaled, members, target_subset_ids, fam_ids, kcol, anchors, ref_stats,
+                             ns.rescaled_step, ns.include_unused, ns.min_unique_N, ns.chi2_threshold, ns.scale_threshold, ns.verbose)
+            )
 
     out_df = pd.DataFrame(fits_all)
     out_path = base / ns.outname
     if len(out_df) == 0:
-        print("[warn] Nessun fit calcolato: controlla subset/anchors/kcols o dati insufficienti."); sys.stdout.flush()
+        print("[warn] Nessun fit calcolato: controlla subset/anchors/kcols o filtri troppo stringenti.")
         return
 
     out_df["computed_at"] = pd.Timestamp.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     out_df["analysis_rev"] = "unversioned"
     out_df.to_parquet(out_path, index=False)
 
-    # Log output ALWAYS
-    print(f"[done] {out_path} (rows={len(out_df)})"); sys.stdout.flush()
+    print(f"[done] {out_path} (rows={len(out_df)})")
 
 if __name__ == "__main__":
     main()
