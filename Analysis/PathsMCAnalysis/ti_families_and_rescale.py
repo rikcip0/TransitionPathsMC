@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ti_families_and_rescale.py  (clean v4)
+ti_families_and_rescale.py  (normQ v6)
 -------------------------------------
-- Elimina totalmente 'fixed_family' / 'fixed_family_N'.
-- Usa firma di famiglia (physics signature) con chiavi presenti tra:
-  ['model_type','fieldType','fieldSigma','Hext','Hout','Hin','Qstar','C','fPosJ','p']  (fieldSigma->0.0 se NaN)
-- Sottinsiemi (subset) descritti in JSON canonico (uguaglianze/disuguaglianze); default: 'all' e 'N>30'.
-- Scrive SOLO le tabelle nuove:
-    ti_families.parquet
-    ti_family_subsets.parquet
-    ti_subset_members.parquet        (autorità is_used: per curva, per subset; + anchors_available)
-    ti_subset_refs.parquet
-    ti_subset_points_rescaled.parquet (rescaling continuo; mirror is_used; tip_id/ref_id)
-- Path Data configurabile: --data-root (default: '../../Data').
+- Firma di famiglia con 'normalizedQstar' (non 'Qstar').
+- Se 'normalizedQstar' manca: **DERIVA** come Qstar / N (con np.errstate).
+- Nessun riferimento a fixed_family / fixed_family_N.
+- Scrive SOLO le nuove tabelle (families / family_subsets / subset_members / subset_refs / subset_points_rescaled).
+- Base path configurabile con --data-root (default ../../Data).
 """
 
 import os
@@ -36,7 +30,7 @@ def _canonical_json(obj) -> str:
 _ANCHOR_MAP = {
     'betaM':'M','betaL':'L','betaG':'G','betaG2':'G2','betaG3':'G3','betaG2b':'G2b','betaG2c':'G2c',
 }
-_CANON_FAMILY_KEYS = ['model_type','fieldType','fieldSigma','Hext','Hout','Hin','Qstar','C','fPosJ','p']
+_CANON_FAMILY_KEYS = ['model_type','fieldType','fieldSigma','Hext','Hout','Hin','normalizedQstar','C','fPosJ','p']
 
 _TRAJINIT_PRIORITY = [740, 74, 73, 72, 71, 70]
 
@@ -57,7 +51,7 @@ def _physics_signature_from_row(row: 'pd.Series', fam_keys) -> dict:
     sig = {}
     for k in fam_keys:
         v = row.get(k)
-        if k == 'fieldSigma' and (v is None or pd.isna(v)):
+        if (k in ('fieldSigma','normalizedQstar')) and (v is None or pd.isna(v)):
             v = 0.0  # mai NaN nelle chiavi
         sig[k] = v
     return sig
@@ -130,6 +124,17 @@ def main():
         print(f'[in]  ti_points: {paths["ti_points"]}')
         print('[curves] rows=', len(curves), 'unique TIcurve_id=', curves["TIcurve_id"].nunique())
 
+    # ---- DERIVE normalizedQstar := Qstar / N if missing ----
+    if 'normalizedQstar' not in curves.columns:
+        if 'Qstar' in curves.columns and 'N' in curves.columns:
+            with np.errstate(divide='ignore', invalid='ignore'):
+                curves['normalizedQstar'] = curves['Qstar'].astype(float) / curves['N'].astype(float)
+            if ns.verbose:
+                print('[derive] normalizedQstar := Qstar / N')
+        else:
+            if ns.verbose:
+                print('[warn] normalizedQstar missing and cannot derive (need Qstar and N)')
+
     # Families (physics signature)
     fam_keys = _available_family_keys(curves.columns)
     if ns.verbose:
@@ -188,7 +193,6 @@ def main():
     member_rows = []
     for fam in families_df['family_id'].unique():
         fam_curves = curves[curves['family_id'] == fam].copy()
-        # signature for meta
         sig = _physics_signature_from_row(fam_curves.iloc[0], fam_keys)
         atFixed, atValues, atLabel = _at_strings_from_signature(sig)
         for _, sub in subsets_df[subsets_df['family_id'] == fam].iterrows():
@@ -259,7 +263,6 @@ def main():
             subset_id = row['subset_id']
             available_refs = refs_df.loc[refs_df['subset_id']==subset_id, 'ref_type'].unique().tolist()
             for ref_type in available_refs:
-                # back-map ref_type -> column
                 col = next(k for k,v in _ANCHOR_MAP.items() if v==ref_type)
                 beta_curve = float(curv_av[col]) if (curv_av is not None and col in curv_av.index and pd.notna(curv_av[col])) else np.nan
                 if not np.isfinite(beta_curve) or beta_curve <= 0.0:

@@ -35,8 +35,12 @@ from MyBasePlots.plotWithDifferentColorbars import plotWithDifferentColorbars
 
 fieldTypeDictionary ={"2":"gauss", "1":"bernoulli", "nan":"noField"}
 fieldTypePathDictionary ={"gauss":"stdGaussian", "bernoulli":"stdBernoulli"}
-trajInitShortDescription_Dict= {0: "stdMC", 70: "Random", '71': "Ref 12", 72: "Ref 21", 73: "Annealing", 74: "Annealing", '740': "AnnealingF", -2:"Fit"}
-edgeColorPerInitType_Dic={'0': "None", 70: "lightGreen", '71': "black", 72: "purple", 73: "orange", 74: "orange", '740': "red", -2:"black"}
+trajInitShortDescription_Dict= {0: "stdMC", 70: "Random", 71: "RandomZ2", 72: "Annealing", 73: "Annealing", 74: "Annealing", 740: "AnnealingF", -2:"Fit"}
+edgeColorPerInitType_Dic={0: "None", 70: "black", 71: "black", 72: "purple", 73: "orange", 74: "orange", 740: "red", -2:"black"}
+# Accept both int and str keys
+trajInitShortDescription_Dict = {**trajInitShortDescription_Dict, **{str(k): v for k, v in trajInitShortDescription_Dict.items()}}
+edgeColorPerInitType_Dic      = {**edgeColorPerInitType_Dic,      **{str(k): v for k, v in edgeColorPerInitType_Dic.items()}}
+
 preferred_trajInit = [740, 74, 73, 72, 71, 70]
 nameOfFoldersContainingGraphs = ["fPosJ","realGraphs"
                                ]
@@ -307,6 +311,9 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
         for tok in includes:
             mask |= rp.astype(str).str.contains(str(tok), na=False)
         df = df.loc[mask].copy()
+    # Reassign after filtering to avoid index drift
+    globals()['run_uid']   = df['run_uid'].to_numpy()
+    globals()['model_type'] = df.get('model_type', pd.Series(['unknown']*len(df))).to_numpy()
 
     if verbose:
         print("[load] rows in runs: {}".format(len(df)))
@@ -601,7 +608,7 @@ def thermodynamicIntegration(filt, analysis_path):
 
                         TIPlotsFolder = os.path.join(TIFolder, f'N{sim_N}', f'h{sim_Hext}_f{sim_fieldType}{sim_fieldSigma}' if sim_fieldSigma!=0. else f'h{sim_Hext}_noField', f'g{sim_graphID}_fr{sim_fieldRealization}' if sim_fieldSigma!=0. else f'g{sim_graphID}',
                                                      f'bExt{sim_betOfEx}_cs{sim_firstConfIndex}_{sim_secondConfIndex}_{sim_Qif}' if (sim_firstConfIndex!="nan" and sim_firstConfIndex is not None) else 'FM',
-                                                     f'meas_{(str)(sim_Hin)}_{(str)(sim_Hout)}_{(sim_nQstar):.3f}' if sim_Hin is not np.inf else f'meas_inf_inf_{(sim_nQstar):.3f}')
+                                                     f'meas_{(str)(sim_Hin)}_{(str)(sim_Hout)}_{(sim_nQstar):.3f}' if not np.isinf(sim_Hin) else f'meas_inf_inf_{(sim_nQstar):.3f}')
                         # ---- Inject head: p{p}[C{C}]/fPosJ{fPosJ:.2f} (C only ER/RRG; p fallback=2) ----
                         try:
                             _mask_for_path = TIFilt3 if 'TIFilt3' in locals() else (TIFilt2 if 'TIFilt2' in locals() else (filt if 'filt' in locals() else slice(None)))
@@ -695,7 +702,10 @@ def thermodynamicIntegration(filt, analysis_path):
                             pathsMC_filtForThisTAndInit_used = np.logical_and(pathMCFilter_forThisTAndInit, beta >= smallestPathsMcBetaToConsider)
 
                             temp = np.sort(np.concatenate([stMC_beta[stdMC_filtForThisTAndInit_used], beta[pathsMC_filtForThisTAndInit_used]]))
-                            maxBetaNotTooSpaced = np.nanmax([temp[i] for i in range(len(temp)-1,0,-1) if temp[i] - temp[i-1] <= 0.101])
+                            maxBetaNotTooSpaced_candidates = [temp[i] for i in range(len(temp)-1,0,-1) if temp[i] - temp[i-1] <= 0.101]
+                            maxBetaNotTooSpaced = (np.nanmax(maxBetaNotTooSpaced_candidates)
+                                                     if len(maxBetaNotTooSpaced_candidates) > 0 else
+                                                     (np.nanmax(temp) if len(temp)>0 else np.nan))
 
                             stdMC_filtForThisTAndInit_used = np.logical_and(stdMC_filtForThisTAndInit_used, stMC_beta <= maxBetaNotTooSpaced)
                             pathsMC_filtForThisTAndInit_used = np.logical_and(pathsMC_filtForThisTAndInit_used, beta <= maxBetaNotTooSpaced+0.1)
@@ -727,7 +737,20 @@ def thermodynamicIntegration(filt, analysis_path):
                             if np.fabs(largestStdMcTIToConsider-smallestPathsMcTIToConsider)<TIDifferenceMax/15.:
                                 print("doing g ", sim_graphID)
 
-                                f_interp = interpolate.InterpolatedUnivariateSpline(TIx, TIy, k=3)
+                                # Ensure strictly increasing unique x for spline; average duplicates
+                                _order = np.argsort(TIx)
+                                TIx_sorted = TIx[_order]; TIy_sorted = TIy[_order]
+                                if TIx_sorted.size == 0:
+                                    continue
+                                _ux, _idx, _inv = np.unique(TIx_sorted, return_index=True, return_inverse=True)
+                                _sum = np.zeros_like(_ux, dtype=float)
+                                _cnt = np.zeros_like(_ux, dtype=float)
+                                for _i, _g in enumerate(_inv):
+                                    _sum[_g] += float(TIy_sorted[_i]); _cnt[_g] += 1.0
+                                _uy = _sum / np.maximum(_cnt, 1.0)
+                                _k = int(min(3, max(1, _ux.size - 1)))
+                                f_interp = interpolate.InterpolatedUnivariateSpline(_ux, _uy, k=_k)
+
 
                                 p_up_0 = (sim_N*(1.+sim_Qif))/(2.*sim_N)
                                 p_up_t = 0.5*(1.+(2.*p_up_0-1.)*np.exp(-2.*sim_T))
@@ -986,18 +1009,15 @@ def _write_manifest(manifest_path: Path, stats: dict, ti_rows: int, elapsed_s: f
         lines.append("  - C={} Hext={} fieldType='{}' fieldSigma={} -> {}\n".format(Cval, HextVal, ftype, fsig, c))
     lines.append("- TI produced rows: {}\n".format(ti_rows))
     lines.append("- elapsed seconds: {:.3f}\n".format(elapsed_s))
-    (
-        (
-        lines.append("- output parquet: {}\n".format(out_parquet))
-    ) if not isinstance(out_parquet, (list, tuple)) else (
-        lines.append(f"- output parquet (curves): {out_parquet[0]}\n"),
+    if isinstance(out_parquet, (list, tuple)) and len(out_parquet) >= 2:
+        lines.append(f"- output parquet (curves): {out_parquet[0]}\n")
         lines.append(f"- output parquet (points): {out_parquet[1]}\n")
-    )
-    ) if not isinstance(out_parquet, (list, tuple)) else (
-        lines.append(f"- output parquet (curves): {out_parquet[0]}\n"),
-        lines.append(f"- output parquet (points): {out_parquet[1]}\n")
-    )
+    else:
+        lines.append(f"- output parquet: {out_parquet}\n")
     manifest_path.write_text("".join(lines), encoding="utf-8")
+
+# ---------- CLI ----------
+
 
 # ---------- CLI ----------
 def parse_args() -> argparse.ArgumentParser:

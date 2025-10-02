@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-peek_tables.py (enhanced)
+peek_tables.py
 Quickly inspect model tables under MultiPathsMC:
 - runs_params
 - runs_results
 - stdmcs
 - ti_curves
 - ti_points
-- ti_rescale_refs
-- ti_rescale_members
-- ti_rescaled_points
-- ti_core (legacy)
+- ti_families                 (NEW)
+- ti_family_subsets           (NEW)
+- ti_subset_members           (NEW)
+- ti_subset_refs              (NEW)
+- ti_subset_points_rescaled   (NEW)
+- ti_linear_fits   (NEW)
 
 Usage examples:
   python3 peek_tables.py --model ER
-  python3 peek_tables.py --model realGraphs/ZKC --tables ti_curves ti_points ti_rescale_refs
+  python3 peek_tables.py --model realGraphs/ZKC --tables ti_curves ti_points ti_subset_members
   python3 peek_tables.py --model ER --head 30
   python3 peek_tables.py --model ER --list
 """
@@ -32,10 +34,13 @@ DEFAULT_TABLES: List[str] = ["runs_params", "runs_results", "stdmcs"]
 ALL_TABLES: List[str] = DEFAULT_TABLES + [
     "ti_curves",
     "ti_points",
-    "ti_rescale_refs",
-    "ti_rescale_members",
-    "ti_rescaled_points",
-    "ti_core",
+    # NEW familying-first artifacts
+    "ti_families",
+    "ti_family_subsets",
+    "ti_subset_members",
+    "ti_subset_refs",
+    "ti_subset_points_rescaled",
+    "ti_linear_fits",
 ]
 
 def _exists_graphs_root(path: Path) -> bool:
@@ -85,14 +90,19 @@ def _path_for_table(base_v1: Path, table: str) -> Path:
         return base_v1 / "ti" / "ti_curves.parquet"
     if table == "ti_points":
         return base_v1 / "ti" / "ti_points.parquet"
-    if table == "ti_rescale_refs":
-        return base_v1 / "ti" / "ti_rescale_refs.parquet"
-    if table == "ti_rescale_members":
-        return base_v1 / "ti" / "ti_rescale_members.parquet"
-    if table == "ti_rescaled_points":
-        return base_v1 / "ti" / "ti_rescaled_points.parquet"
-    if table == "ti_core":  # legacy
-        return base_v1 / "ti" / "ti_core.parquet"
+    # NEW tables
+    if table == "ti_families":
+        return base_v1 / "ti" / "ti_families.parquet"
+    if table == "ti_family_subsets":
+        return base_v1 / "ti" / "ti_family_subsets.parquet"
+    if table == "ti_subset_members":
+        return base_v1 / "ti" / "ti_subset_members.parquet"
+    if table == "ti_subset_refs":
+        return base_v1 / "ti" / "ti_subset_refs.parquet"
+    if table == "ti_subset_points_rescaled":
+        return base_v1 / "ti" / "ti_subset_points_rescaled.parquet"
+    if table == "ti_linear_fits":
+        return base_v1 / "ti" / "ti_linear_fits.parquet"
     raise ValueError(f"Unknown table: {table}")
 
 def _load_parquet(p: Path, name: str, head_n: int, verbose: bool):
@@ -112,12 +122,12 @@ def _load_parquet(p: Path, name: str, head_n: int, verbose: bool):
 
 def parse_args():
     p = argparse.ArgumentParser(description="Inspect MultiPathsMC tables for a model.")
-    p.add_argument("--graphs-root", type=Path, default=None, help="Root Data/Graphs (auto-discovery if omitted).")
-    p.add_argument("--outdir", type=Path, default=None, help="Root MultiPathsMC (defaults next to Graphs).")
-    p.add_argument("--model", type=str, required=True, help="Model name, e.g. ER, RRG, realGraphs/ZKC.")
-    p.add_argument("--tables", nargs="*", choices=ALL_TABLES, help="Which tables to print. Default: runs_params runs_results stdmcs.")
-    p.add_argument("--head", type=int, default=100, help="Number of rows to print from the head (default: 100).")
-    p.add_argument("--list", action="store_true", help="List available tables on disk and exit.")
+    p.add_argument("--graphs-root", type=Path, default=None, help="Root Data/Graphs (auto-discovery if omitted)." )
+    p.add_argument("--outdir", type=Path, default=None, help="Root MultiPathsMC (defaults next to Graphs)." )
+    p.add_argument("--model", type=str, required=True, help="Model name, e.g. ER, RRG, realGraphs/ZKC." )
+    p.add_argument("--tables", nargs="*", choices=ALL_TABLES, help="Which tables to print. Default: runs_params runs_results stdmcs." )
+    p.add_argument("--head", type=int, default=100, help="Number of rows to print from the head (default: 100)." )
+    p.add_argument("--list", action="store_true", help="List available tables on disk and exit." )
     p.add_argument("--verbose","-v", action="store_true")
     return p
 
@@ -134,7 +144,7 @@ def main():
     if ns.list:
         print("\n[available tables on disk]")
         for t, p in mapping.items():
-            print(f"- {t:18s}: {'FOUND' if p.exists() else 'missing'} -> {p}")
+            print(f"- {t:22s}: {'FOUND' if p.exists() else 'missing'} -> {p}")
         return
 
     to_show = ns.tables if ns.tables else DEFAULT_TABLES

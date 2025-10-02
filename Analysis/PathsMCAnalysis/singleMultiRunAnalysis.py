@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 
 from scipy import interpolate
 sys.path.append('../')
@@ -2136,7 +2137,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             #-------------------- 0) Pre‑elabora dati --------------------
             from scipy.optimize import least_squares
             avChiErr = np.sqrt(avChi * (1.0 - avChi))              # errore binomiale
-
+            avTime=np.asarray(avTime)
             core_mask = (
                 np.isfinite(avTime) & np.isfinite(avChi) &
                 np.isfinite(avChiErr) & (avChiErr > 0) & (avTime > 3)
@@ -2148,305 +2149,305 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType):
             avChiErr_fit = avChiErr[mask]
 
             if time_fit.size < 5:
-                raise ValueError("Troppi pochi punti utili per effettuare il fit.")
-
-            # -------------------- 1) Stime iniziali comuni --------------
-            y_tail = np.mean(avChi_fit[-min(20, len(avChi_fit)):])
-            r0  = max(y_tail / (1 - 2 * y_tail), 2.0)              # r > 1
-            k0  = 1.0 / (time_fit[-1] - time_fit[0])               # k grezzo
-            tau0 = time_fit.min()                                  # τ iniziale
-
-            tau_min = time_fit.min() - (time_fit.max() - time_fit.min())
-            tau_max = time_fit.max()
-
-            w_all = 1.0 / avChiErr_fit**2                          # pesi generali
-
-            # Verifica condizione per modello quadratico ---------------
-            quad_case = np.all(N[filt] == 34) and np.all(beta[filt] > 0.65)
-            lin_case   = np.all(N[filt] == 34) and np.all(beta[filt] >= 0.3) and np.all(beta[filt] <= 0.4)
-            sat_case   = np.all(N[filt] == 34) and np.all(beta[filt] < 0.3)
-
-            # ===========================================================
-            # ===               CASO 1: modello quadratico            ===
-            # ===========================================================
-            if quad_case:
-                def residuals_quad(p):
-                    log_a, tau = p
-                    a = np.exp(log_a)
-
-                    tt = time_fit - tau
-                    m = tt > 0
-                    if m.sum() < 2:                                # minimo 2 punti
-                        return np.full(time_fit.size, 1e6)
-
-                    base_all = a * tt**2
-                    C = np.sum(w_all[m] * (avChi_fit[m] - base_all[m])) / np.sum(w_all[m])
-
-                    res = (base_all + C - avChi_fit) / avChiErr_fit
-                    res[~m] = 0.0
-                    return res
-
-                # bounds & p0 quadratico
-                log_a0 = np.log(
-                    (avChi_fit.max() - avChi_fit.min()) /
-                    ((time_fit.max() - tau0) ** 2 + 1e-12)
-                )
-                p0_q   = np.array([log_a0, tau0])
-                lower_q = np.array([-40.0, tau_min])               # a ≳ e^-40
-                upper_q = np.array([ 40.0, tau_max])
-
-                res = least_squares(residuals_quad, p0_q,
-                                    bounds=(lower_q, upper_q), max_nfev=3000000)
-
-                log_a_fit, tau_fit = res.x
-                a_fit = np.exp(log_a_fit)
-
-                tt_best = time_fit - tau_fit
-                m_best  = tt_best > 0
-                base_best = a_fit * tt_best**2
-                C_fit = np.sum(w_all[m_best] *
-                            (avChi_fit[m_best] - base_best[m_best])) / np.sum(w_all[m_best])
-
-                # errori
-                J = res.jac
-                dof = m_best.sum() - 2
-                sigma2 = 2 * res.cost / dof
-                cov = np.linalg.pinv(J.T @ J) * sigma2
-                a_err, tau_err = np.sqrt(np.diag(cov)) * np.array([a_fit, 1.0])
-
-                chi2_red = sigma2
-
-                # ---------------- plotting ----------------
-                t_plot = np.linspace(time_fit[m_best].min(),
-                                    time_fit[m_best].max(), 600)
-                plt.plot(t_plot, a_fit * (t_plot - tau_fit) ** 2 + C_fit,
-                        'r-', lw=1.6, label='quadratic fit (t>τ)')
-                plt.axvline(tau_fit, ls='--', color='k', alpha=0.4, lw=1.0, label=r'$\tau$')
-
-                param_label = (fr"a={a_fit:.3g}±{a_err:.1g}, "
-                            fr"$\tau$={tau_fit:.3g}±{tau_err:.1g}, "
-                            fr"C*={C_fit:.3g}, "
-                            fr"$\chi^2_{{red}}$={chi2_red:.3f}")
-                plt.plot([], [], ' ', label=param_label)
-                plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
-                        fontsize='small', frameon=True, handlelength=0)
-                plt.tight_layout(rect=[0, 0, 0.8, 1])
-                # (se usi addInfoLines()) …
-
-            # -----------------------------------------------------------
-            # === CASE 2 : LINEAR (late-time affine regime)           ===
-            # -----------------------------------------------------------
-            elif lin_case:
-                # --- usa TUTTI i punti di TI, nessun mask aggiuntivo ---
-                tempfilt = filt.copy()
-
-                # --- nuovo filtro per ripulire NaN / Inf su x e Z ---
-                clean = np.isfinite(x) & np.isfinite(ZFromTIBeta)
-                filt  = filt & clean 
-                time_ti   = x[filt]
-                chi_ti    = ZFromTIBeta[filt]
-
-                # errore binomiale con clip di sicurezza
-                eps = 1e-12
-                chi_ti     = np.clip(chi_ti, eps, 1-eps)
-                chiErr_ti  = np.sqrt(chi_ti * (1.0 - chi_ti))
-                w_ti       = 1.0 / chiErr_ti**2
-
-                # ---------------- fit lineare shiftato -----------------
-                def residuals_lin(p):
-                    log_k, tau = p
-                    k  = np.exp(log_k)
-
-                    tt = time_ti - tau
-                    m  = tt > 0                      # usa solo t > tau
-                    if m.sum() < 2:
-                        return np.full(time_ti.size, 1e6)
-
-                    base_all = k * tt
-                    # shift verticale ottimo sui soli punti validi
-                    C = np.sum(w_ti[m] * (chi_ti[m] - base_all[m])) / np.sum(w_ti[m])
-
-                    res = (base_all + C - chi_ti) / chiErr_ti
-                    res[~m] = 0.0                    # azzera dove tt≤0
-                    return res
-
-                # bounds & p0
-                log_k0  = np.log(max(k0, 1e-10))
-                p0_l    = np.array([log_k0, tau0])
-                lower_l = np.array([np.log(1e-12), time_ti.min()-time_ti.ptp()])
-                upper_l = np.array([np.log(1e-1),  time_ti.max()])
-
-                res = least_squares(residuals_lin, p0_l,
-                                    bounds=(lower_l, upper_l), max_nfev=3000000)
-
-                log_k_fit, tau_fit = res.x
-                k_fit = np.exp(log_k_fit)
-
-                tt_best   = time_ti - tau_fit
-                m_best    = tt_best > 0
-                C_fit     = np.sum(w_ti[m_best] *
-                            (chi_ti[m_best] - k_fit*tt_best[m_best])) / np.sum(w_ti[m_best])
-
-                # errori su k, tau
-                J        = res.jac
-                dof      = m_best.sum() - 2
-                sigma2   = 2*res.cost / dof
-                cov      = np.linalg.pinv(J.T @ J) * sigma2
-                k_err, tau_err = np.sqrt(np.diag(cov)) * np.array([k_fit, 1.0])
-                chi2_red = sigma2
-
-                # ----- plot -----
-                t_plot = np.linspace(time_ti[m_best].min(), time_ti[m_best].max(), 600)
-                plt.plot(t_plot, k_fit*(t_plot - tau_fit) + C_fit,
-                        'r-', lw=1.6, label='linear fit (t>τ)')
-                plt.axvline(tau_fit, ls='--', color='k', alpha=0.4, lw=1.0)   # niente label -> niente “pallocco”
-
-                plt.plot([], [], ' ', label=
-                    fr"k={k_fit:.3g}±{k_err:.1g}, "
-                    fr"$\tau$={tau_fit:.3g}±{tau_err:.1g}, "
-                    fr"C*={C_fit:.3g}, "
-                    fr"$\chi^2_{{red}}$={chi2_red:.3f}")
-                plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1), frameon=True,
-                fontsize='small', handlelength=0)
-                filt = tempfilt
-
-            # -----------------------------------------------------------
-            # === CASE 3 : SATURATION (high-T)                       ===
-            # -----------------------------------------------------------
-            elif sat_case:
-                tempfilt = filt.copy()
-
-                # --- nuovo filtro per ripulire NaN / Inf su x e Z ---
-                clean = np.isfinite(x) & np.isfinite(ZFromTIBeta)
-                filt  = filt & clean 
-                time_ti  = x[filt]
-                chi_ti   = ZFromTIBeta[filt]
-
-                eps = 1e-12
-                chi_ti    = np.clip(chi_ti, eps, 1-eps)
-                chiErr_ti = np.sqrt(chi_ti*(1-chi_ti))
-                w_ti      = 1.0/chiErr_ti**2
-
-                # modello di saturazione: c*(1 - exp(-m*(t-s)))
-                def base_sat(t, c, m, s):
-                    tt = t - s
-                    out = np.zeros_like(t)
-                    mask = tt > 0
-                    out[mask] = c * (1.0 - np.exp(-m * tt[mask]))
-                    return out
-
-                def residuals_sat(p):
-                    log_c, log_m, s = p
-                    c, m = np.exp(log_c), np.exp(log_m)
-                    return (base_sat(time_ti, c, m, s) - chi_ti) / chiErr_ti
-
-                # p0 e bounds
-                log_c0 = np.log(chi_ti[-1])
-                log_m0 = np.log(k0)
-                p0_s   = np.array([log_c0, log_m0, tau0])
-                lower_s = np.array([np.log(1e-6), np.log(1e-6), time_ti.min()-time_ti.ptp()])
-                upper_s = np.array([np.log(1.0),  np.log(1e-1), time_ti.max()])
-
-                res = least_squares(residuals_sat, p0_s,
-                                    bounds=(lower_s, upper_s), max_nfev=3000000)
-
-                log_c_fit, log_m_fit, s_fit = res.x
-                c_fit, m_fit = np.exp(log_c_fit), np.exp(log_m_fit)
-
-                # errori
-                J        = res.jac
-                dof      = time_ti.size - 3
-                sigma2   = 2*res.cost / dof
-                cov      = np.linalg.pinv(J.T @ J) * sigma2
-                c_err, m_err, s_err = np.sqrt(np.diag(cov)) * np.array([c_fit, m_fit, 1.0])
-                chi2_red = sigma2
-
-                # ----- plot -----
-                t_plot = np.linspace(time_ti.min(), time_ti.max(), 600)
-                plt.plot(t_plot, base_sat(t_plot, c_fit, m_fit, s_fit),
-                        'r-', lw=1.6, label='sat. fit')
-                plt.axvline(s_fit, ls='--', color='k', alpha=0.4, lw=1.0)
-
-                plt.plot([], [], ' ', label=
-                    fr"c={c_fit:.3g}±{c_err:.1g}, "
-                    fr"m={m_fit:.3g}±{m_err:.1g}, "
-                    fr"s={s_fit:.3g}±{s_err:.1g}, "
-                    fr"$\chi^2_{{red}}$={chi2_red:.3f}")
-                plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1), frameon=True,
-                fontsize='small', handlelength=0)
-                filt = tempfilt
+                warnings.warn("Troppi pochi punti utili per effettuare il fit.")
             else:
-                # modello base
-                def base_shifted(t, r, k, tau):
-                    tt = t - tau
-                    return (r/(2*r+1)
-                            - 0.5*np.exp(-k*tt)
-                            + 0.5/(2*r+1)*np.exp(-k*(2*r+1)*tt))
+                # -------------------- 1) Stime iniziali comuni --------------
+                y_tail = np.mean(avChi_fit[-min(20, len(avChi_fit)):])
+                r0  = max(y_tail / (1 - 2 * y_tail), 2.0)              # r > 1
+                k0  = 1.0 / (time_fit[-1] - time_fit[0])               # k grezzo
+                tau0 = time_fit.min()                                  # τ iniziale
 
-                # residuali
-                def residuals_exp(p):
-                    log_r, log_k, tau = p
-                    r = np.exp(log_r); k = np.exp(log_k)
+                tau_min = time_fit.min() - (time_fit.max() - time_fit.min())
+                tau_max = time_fit.max()
 
-                    tt = time_fit - tau
-                    m = tt > 0
-                    if m.sum() < 3:
-                        return np.full(time_fit.size, 1e6)
+                w_all = 1.0 / avChiErr_fit**2                          # pesi generali
 
-                    base_all = base_shifted(time_fit, r, k, tau)
-                    C = np.sum(w_all[m] * (avChi_fit[m] - base_all[m])) / np.sum(w_all[m])
+                # Verifica condizione per modello quadratico ---------------
+                quad_case = np.all(N[filt] == 34) and np.all(beta[filt] > 0.65)
+                lin_case   = np.all(N[filt] == 34) and np.all(beta[filt] >= 0.3) and np.all(beta[filt] <= 0.4)
+                sat_case   = np.all(N[filt] == 34) and np.all(beta[filt] < 0.3)
 
-                    res = (base_all + C - avChi_fit) / avChiErr_fit
-                    res[~m] = 0.0
-                    return res
+                # ===========================================================
+                # ===               CASO 1: modello quadratico            ===
+                # ===========================================================
+                if quad_case:
+                    def residuals_quad(p):
+                        log_a, tau = p
+                        a = np.exp(log_a)
 
-                # bounds & p0 expon
-                log_r_min, log_r_max = 0.8, 80.0
-                log_k_min, log_k_max = np.log(1e-12), np.log(1e-3)
-                log_r0 = np.clip(np.log(r0), log_r_min+1e-12, log_r_max-1e-12)
-                log_k0 = np.clip(np.log(max(k0, 1e-12)), log_k_min+1e-12, log_k_max-1e-12)
-                p0_e = np.array([log_r0, log_k0, tau0])
-                lower_e = np.array([log_r_min, log_k_min, tau_min])
-                upper_e = np.array([log_r_max, log_k_max, tau_max])
+                        tt = time_fit - tau
+                        m = tt > 0
+                        if m.sum() < 2:                                # minimo 2 punti
+                            return np.full(time_fit.size, 1e6)
 
-                res = least_squares(residuals_exp, p0_e,
-                                    bounds=(lower_e, upper_e), max_nfev=3000000)
+                        base_all = a * tt**2
+                        C = np.sum(w_all[m] * (avChi_fit[m] - base_all[m])) / np.sum(w_all[m])
 
-                log_r_fit, log_k_fit, tau_fit = res.x
-                r_fit, k_fit = np.exp(log_r_fit), np.exp(log_k_fit)
+                        res = (base_all + C - avChi_fit) / avChiErr_fit
+                        res[~m] = 0.0
+                        return res
 
-                tt_best = time_fit - tau_fit
-                m_best  = tt_best > 0
-                base_best = base_shifted(time_fit, r_fit, k_fit, tau_fit)
-                C_fit = np.sum(w_all[m_best] *
-                            (avChi_fit[m_best] - base_best[m_best])) / np.sum(w_all[m_best])
+                    # bounds & p0 quadratico
+                    log_a0 = np.log(
+                        (avChi_fit.max() - avChi_fit.min()) /
+                        ((time_fit.max() - tau0) ** 2 + 1e-12)
+                    )
+                    p0_q   = np.array([log_a0, tau0])
+                    lower_q = np.array([-40.0, tau_min])               # a ≳ e^-40
+                    upper_q = np.array([ 40.0, tau_max])
 
-                # errori
-                J = res.jac
-                dof = m_best.sum() - 3
-                sigma2 = 2 * res.cost / dof
-                cov = np.linalg.pinv(J.T @ J) * sigma2
-                perr = np.sqrt(np.diag(cov))
-                r_err, k_err, tau_err = r_fit*perr[0], k_fit*perr[1], perr[2]
-                chi2_red = sigma2
+                    res = least_squares(residuals_quad, p0_q,
+                                        bounds=(lower_q, upper_q), max_nfev=3000000)
 
-                # ---------------- plotting ----------------
-                t_plot = np.linspace(time_fit[m_best].min(),
-                                    time_fit[m_best].max(), 600)
-                plt.plot(t_plot, base_shifted(t_plot, r_fit, k_fit, tau_fit) + C_fit,
-                        'r-', lw=1.6, label='exp fit (t>τ)')
-                plt.axvline(tau_fit, ls='--', color='k', alpha=0.4, lw=1.0, label=r'$\tau$')
+                    log_a_fit, tau_fit = res.x
+                    a_fit = np.exp(log_a_fit)
 
-                param_label = (fr"r={r_fit:.3g}±{r_err:.1g}, "
-                            fr"k={k_fit:.3g}±{k_err:.1g}, "
-                            fr"$\tau$={tau_fit:.3g}±{tau_err:.1g}, "
-                            fr"C*={C_fit:.3g}, "
-                            fr"$\chi^2_{{red}}$={chi2_red:.3f}")
-                plt.plot([], [], ' ', label=param_label)
+                    tt_best = time_fit - tau_fit
+                    m_best  = tt_best > 0
+                    base_best = a_fit * tt_best**2
+                    C_fit = np.sum(w_all[m_best] *
+                                (avChi_fit[m_best] - base_best[m_best])) / np.sum(w_all[m_best])
 
-                plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
-                        fontsize='small', frameon=True, handlelength=0)
-                plt.tight_layout(rect=[0, 0, 0.8, 1])
+                    # errori
+                    J = res.jac
+                    dof = m_best.sum() - 2
+                    sigma2 = 2 * res.cost / dof
+                    cov = np.linalg.pinv(J.T @ J) * sigma2
+                    a_err, tau_err = np.sqrt(np.diag(cov)) * np.array([a_fit, 1.0])
+
+                    chi2_red = sigma2
+
+                    # ---------------- plotting ----------------
+                    t_plot = np.linspace(time_fit[m_best].min(),
+                                        time_fit[m_best].max(), 600)
+                    plt.plot(t_plot, a_fit * (t_plot - tau_fit) ** 2 + C_fit,
+                            'r-', lw=1.6, label='quadratic fit (t>τ)')
+                    plt.axvline(tau_fit, ls='--', color='k', alpha=0.4, lw=1.0, label=r'$\tau$')
+
+                    param_label = (fr"a={a_fit:.3g}±{a_err:.1g}, "
+                                fr"$\tau$={tau_fit:.3g}±{tau_err:.1g}, "
+                                fr"C*={C_fit:.3g}, "
+                                fr"$\chi^2_{{red}}$={chi2_red:.3f}")
+                    plt.plot([], [], ' ', label=param_label)
+                    plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
+                            fontsize='small', frameon=True, handlelength=0)
+                    plt.tight_layout(rect=[0, 0, 0.8, 1])
+                    # (se usi addInfoLines()) …
+
+                # -----------------------------------------------------------
+                # === CASE 2 : LINEAR (late-time affine regime)           ===
+                # -----------------------------------------------------------
+                elif lin_case:
+                    # --- usa TUTTI i punti di TI, nessun mask aggiuntivo ---
+                    tempfilt = filt.copy()
+
+                    # --- nuovo filtro per ripulire NaN / Inf su x e Z ---
+                    clean = np.isfinite(x) & np.isfinite(ZFromTIBeta)
+                    filt  = filt & clean 
+                    time_ti   = x[filt]
+                    chi_ti    = ZFromTIBeta[filt]
+
+                    # errore binomiale con clip di sicurezza
+                    eps = 1e-12
+                    chi_ti     = np.clip(chi_ti, eps, 1-eps)
+                    chiErr_ti  = np.sqrt(chi_ti * (1.0 - chi_ti))
+                    w_ti       = 1.0 / chiErr_ti**2
+
+                    # ---------------- fit lineare shiftato -----------------
+                    def residuals_lin(p):
+                        log_k, tau = p
+                        k  = np.exp(log_k)
+
+                        tt = time_ti - tau
+                        m  = tt > 0                      # usa solo t > tau
+                        if m.sum() < 2:
+                            return np.full(time_ti.size, 1e6)
+
+                        base_all = k * tt
+                        # shift verticale ottimo sui soli punti validi
+                        C = np.sum(w_ti[m] * (chi_ti[m] - base_all[m])) / np.sum(w_ti[m])
+
+                        res = (base_all + C - chi_ti) / chiErr_ti
+                        res[~m] = 0.0                    # azzera dove tt≤0
+                        return res
+
+                    # bounds & p0
+                    log_k0  = np.log(max(k0, 1e-10))
+                    p0_l    = np.array([log_k0, tau0])
+                    lower_l = np.array([np.log(1e-12), time_ti.min()-time_ti.ptp()])
+                    upper_l = np.array([np.log(1e-1),  time_ti.max()])
+
+                    res = least_squares(residuals_lin, p0_l,
+                                        bounds=(lower_l, upper_l), max_nfev=3000000)
+
+                    log_k_fit, tau_fit = res.x
+                    k_fit = np.exp(log_k_fit)
+
+                    tt_best   = time_ti - tau_fit
+                    m_best    = tt_best > 0
+                    C_fit     = np.sum(w_ti[m_best] *
+                                (chi_ti[m_best] - k_fit*tt_best[m_best])) / np.sum(w_ti[m_best])
+
+                    # errori su k, tau
+                    J        = res.jac
+                    dof      = m_best.sum() - 2
+                    sigma2   = 2*res.cost / dof
+                    cov      = np.linalg.pinv(J.T @ J) * sigma2
+                    k_err, tau_err = np.sqrt(np.diag(cov)) * np.array([k_fit, 1.0])
+                    chi2_red = sigma2
+
+                    # ----- plot -----
+                    t_plot = np.linspace(time_ti[m_best].min(), time_ti[m_best].max(), 600)
+                    plt.plot(t_plot, k_fit*(t_plot - tau_fit) + C_fit,
+                            'r-', lw=1.6, label='linear fit (t>τ)')
+                    plt.axvline(tau_fit, ls='--', color='k', alpha=0.4, lw=1.0)   # niente label -> niente “pallocco”
+
+                    plt.plot([], [], ' ', label=
+                        fr"k={k_fit:.3g}±{k_err:.1g}, "
+                        fr"$\tau$={tau_fit:.3g}±{tau_err:.1g}, "
+                        fr"C*={C_fit:.3g}, "
+                        fr"$\chi^2_{{red}}$={chi2_red:.3f}")
+                    plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1), frameon=True,
+                    fontsize='small', handlelength=0)
+                    filt = tempfilt
+
+                # -----------------------------------------------------------
+                # === CASE 3 : SATURATION (high-T)                       ===
+                # -----------------------------------------------------------
+                elif sat_case:
+                    tempfilt = filt.copy()
+
+                    # --- nuovo filtro per ripulire NaN / Inf su x e Z ---
+                    clean = np.isfinite(x) & np.isfinite(ZFromTIBeta)
+                    filt  = filt & clean 
+                    time_ti  = x[filt]
+                    chi_ti   = ZFromTIBeta[filt]
+
+                    eps = 1e-12
+                    chi_ti    = np.clip(chi_ti, eps, 1-eps)
+                    chiErr_ti = np.sqrt(chi_ti*(1-chi_ti))
+                    w_ti      = 1.0/chiErr_ti**2
+
+                    # modello di saturazione: c*(1 - exp(-m*(t-s)))
+                    def base_sat(t, c, m, s):
+                        tt = t - s
+                        out = np.zeros_like(t)
+                        mask = tt > 0
+                        out[mask] = c * (1.0 - np.exp(-m * tt[mask]))
+                        return out
+
+                    def residuals_sat(p):
+                        log_c, log_m, s = p
+                        c, m = np.exp(log_c), np.exp(log_m)
+                        return (base_sat(time_ti, c, m, s) - chi_ti) / chiErr_ti
+
+                    # p0 e bounds
+                    log_c0 = np.log(chi_ti[-1])
+                    log_m0 = np.log(k0)
+                    p0_s   = np.array([log_c0, log_m0, tau0])
+                    lower_s = np.array([np.log(1e-6), np.log(1e-6), time_ti.min()-time_ti.ptp()])
+                    upper_s = np.array([np.log(1.0),  np.log(1e-1), time_ti.max()])
+
+                    res = least_squares(residuals_sat, p0_s,
+                                        bounds=(lower_s, upper_s), max_nfev=3000000)
+
+                    log_c_fit, log_m_fit, s_fit = res.x
+                    c_fit, m_fit = np.exp(log_c_fit), np.exp(log_m_fit)
+
+                    # errori
+                    J        = res.jac
+                    dof      = time_ti.size - 3
+                    sigma2   = 2*res.cost / dof
+                    cov      = np.linalg.pinv(J.T @ J) * sigma2
+                    c_err, m_err, s_err = np.sqrt(np.diag(cov)) * np.array([c_fit, m_fit, 1.0])
+                    chi2_red = sigma2
+
+                    # ----- plot -----
+                    t_plot = np.linspace(time_ti.min(), time_ti.max(), 600)
+                    plt.plot(t_plot, base_sat(t_plot, c_fit, m_fit, s_fit),
+                            'r-', lw=1.6, label='sat. fit')
+                    plt.axvline(s_fit, ls='--', color='k', alpha=0.4, lw=1.0)
+
+                    plt.plot([], [], ' ', label=
+                        fr"c={c_fit:.3g}±{c_err:.1g}, "
+                        fr"m={m_fit:.3g}±{m_err:.1g}, "
+                        fr"s={s_fit:.3g}±{s_err:.1g}, "
+                        fr"$\chi^2_{{red}}$={chi2_red:.3f}")
+                    plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1), frameon=True,
+                    fontsize='small', handlelength=0)
+                    filt = tempfilt
+                else:
+                    # modello base
+                    def base_shifted(t, r, k, tau):
+                        tt = t - tau
+                        return (r/(2*r+1)
+                                - 0.5*np.exp(-k*tt)
+                                + 0.5/(2*r+1)*np.exp(-k*(2*r+1)*tt))
+
+                    # residuali
+                    def residuals_exp(p):
+                        log_r, log_k, tau = p
+                        r = np.exp(log_r); k = np.exp(log_k)
+
+                        tt = time_fit - tau
+                        m = tt > 0
+                        if m.sum() < 3:
+                            return np.full(time_fit.size, 1e6)
+
+                        base_all = base_shifted(time_fit, r, k, tau)
+                        C = np.sum(w_all[m] * (avChi_fit[m] - base_all[m])) / np.sum(w_all[m])
+
+                        res = (base_all + C - avChi_fit) / avChiErr_fit
+                        res[~m] = 0.0
+                        return res
+
+                    # bounds & p0 expon
+                    log_r_min, log_r_max = 0.8, 80.0
+                    log_k_min, log_k_max = np.log(1e-12), np.log(1e-3)
+                    log_r0 = np.clip(np.log(r0), log_r_min+1e-12, log_r_max-1e-12)
+                    log_k0 = np.clip(np.log(max(k0, 1e-12)), log_k_min+1e-12, log_k_max-1e-12)
+                    p0_e = np.array([log_r0, log_k0, tau0])
+                    lower_e = np.array([log_r_min, log_k_min, tau_min])
+                    upper_e = np.array([log_r_max, log_k_max, tau_max])
+
+                    res = least_squares(residuals_exp, p0_e,
+                                        bounds=(lower_e, upper_e), max_nfev=3000000)
+
+                    log_r_fit, log_k_fit, tau_fit = res.x
+                    r_fit, k_fit = np.exp(log_r_fit), np.exp(log_k_fit)
+
+                    tt_best = time_fit - tau_fit
+                    m_best  = tt_best > 0
+                    base_best = base_shifted(time_fit, r_fit, k_fit, tau_fit)
+                    C_fit = np.sum(w_all[m_best] *
+                                (avChi_fit[m_best] - base_best[m_best])) / np.sum(w_all[m_best])
+
+                    # errori
+                    J = res.jac
+                    dof = m_best.sum() - 3
+                    sigma2 = 2 * res.cost / dof
+                    cov = np.linalg.pinv(J.T @ J) * sigma2
+                    perr = np.sqrt(np.diag(cov))
+                    r_err, k_err, tau_err = r_fit*perr[0], k_fit*perr[1], perr[2]
+                    chi2_red = sigma2
+
+                    # ---------------- plotting ----------------
+                    t_plot = np.linspace(time_fit[m_best].min(),
+                                        time_fit[m_best].max(), 600)
+                    plt.plot(t_plot, base_shifted(t_plot, r_fit, k_fit, tau_fit) + C_fit,
+                            'r-', lw=1.6, label='exp fit (t>τ)')
+                    plt.axvline(tau_fit, ls='--', color='k', alpha=0.4, lw=1.0, label=r'$\tau$')
+
+                    param_label = (fr"r={r_fit:.3g}±{r_err:.1g}, "
+                                fr"k={k_fit:.3g}±{k_err:.1g}, "
+                                fr"$\tau$={tau_fit:.3g}±{tau_err:.1g}, "
+                                fr"C*={C_fit:.3g}, "
+                                fr"$\chi^2_{{red}}$={chi2_red:.3f}")
+                    plt.plot([], [], ' ', label=param_label)
+
+                    plt.legend(loc='upper left', bbox_to_anchor=(1.02, 1),
+                            fontsize='small', frameon=True, handlelength=0)
+                    plt.tight_layout(rect=[0, 0, 0.8, 1])
 
 
 

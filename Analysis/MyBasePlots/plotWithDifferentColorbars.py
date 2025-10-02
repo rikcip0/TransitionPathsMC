@@ -409,7 +409,7 @@ def plotWithDifferentColorbars(name, x, xName, y, yName, title,
                     if keyIsNan:
                         BetaOfExAndQif[0]='nan'
 
-                    color = cmaps[str(BetaOfExAndQif[0])](norm(BetaOfExAndQif[1].astype(np.float64)))
+                    color = cmaps[str(BetaOfExAndQif[0])](norm(BetaOfExAndQif[1]))
                     ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40, alpha=0.01)
 
     plottedYs = np.asarray(plottedYs)

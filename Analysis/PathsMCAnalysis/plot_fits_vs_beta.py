@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-plot_fits_vs_beta.py  (subset-separato, logica precedente ripristinata + physical signature spezzata)
------------------------------------------------------------------------------------------------
-• Identico comportamento di plotting al file precedente che funzionava, con in più
-  la gerarchia di cartelle per la signature fisica spezzata: model / C&fPosJ / fieldType / fieldSigma / Hext / (Hin,Hout,nQstar).
-• Verbose migliorato: stampa il numero di righe per ogni (subset,kcol,anchor).
+plot_fits_vs_beta.py  (subset-separato, firma fisica spezzata in cartelle)
++ overlay curva teorica (data.txt) per family RRG, C=3, fPosJ=1, noField, Hext=0
+  **sullo stesso asse y** e **per RAW e RESCALED**.
+  Y della teoria = beta*barrier (colonna 2 del file).
+  Modifiche: aggiunte barre di errore sui punti (se disponibile la colonna *_stderr).
+  - niente stampa di check quando y==0;
+  - taglio della curva teorica al range x dei dati.
 """
 import argparse
 from pathlib import Path
@@ -113,11 +115,6 @@ def _phys_signature_parts(df_plot: pd.DataFrame, families_df: pd.DataFrame, memb
     parts.append(_sanitize(f"Hin_{_fmt_val(r.get('Hin'))}__Hout_{_fmt_val(r.get('Hout'))}__nQstar_{_fmt_val(nq)}__{str(fid)[:8]}"))
     return parts
 
-# ---------------- Plot helpers ----------------
-def _pick_top_families(df: pd.DataFrame, top: int) -> list[str]:
-    vc = df['family_id'].dropna().value_counts()
-    return vc.index[:top].tolist()
-
 def _legend_label_map(families_df: pd.DataFrame|None) -> dict:
     lab = {}
     if families_df is None or families_df.empty:
@@ -135,9 +132,107 @@ def _legend_label_map(families_df: pd.DataFrame|None) -> dict:
         lab[fid] = ', '.join(parts) if parts else str(fid)
     return lab
 
+# ---------------- Theory overlay helpers ----------------
+_THEORY_CACHE = None  # (beta, beta*barrier)
+
+def _family_matches_theory(model: str, fam_row: pd.Series) -> bool:
+    try:
+        if str(model) != "RRG":
+            return False
+        cond = True
+        cond &= (fam_row.get('C', None) == 3 or float(fam_row.get('C')) == 3.0)
+        cond &= (fam_row.get('fPosJ', None) == 1 or float(fam_row.get('fPosJ')) == 1.0)
+        cond &= (str(fam_row.get('fieldType','')) == 'noField')
+        cond &= (float(fam_row.get('Hext', 0.0)) == 0.0)
+        return bool(cond)
+    except Exception:
+        return False
+
+def _subset_has_theory_family(model: str, families_df: pd.DataFrame, members: pd.DataFrame, subset_id: str) -> bool:
+    fams = _families_for_subset(pd.DataFrame({'family_id': []}), members, subset_id)
+    if not fams or families_df is None or families_df.empty:
+        return False
+    rows = families_df[families_df['family_id'].isin(fams)]
+    for _, r in rows.iterrows():
+        if _family_matches_theory(model, r):
+            return True
+    return False
+
+def _load_theory_from_txt(txt_path: Path) -> tuple[np.ndarray, np.ndarray]:
+    # data.txt con due colonne: beta, beta*barrier
+    arr = np.loadtxt(txt_path)
+    if arr.ndim == 1:
+        if arr.size < 2:
+            raise ValueError("data.txt troppo corto")
+        arr = arr.reshape((-1, 2))
+    beta = arr[:,0].astype(float)
+    betabar = arr[:,1].astype(float)  # y teorica = beta*barrier (già in input)
+    m = np.isfinite(beta) & np.isfinite(betabar)
+    return beta[m], betabar[m]
+
+def _maybe_draw_theory(ax, model: str, families_df: pd.DataFrame, members: pd.DataFrame,
+                       subset_id: str, x_min: float, x_max: float, verbose: bool):
+    """Disegna (beta, beta*barrier) dal file data.txt **sullo stesso asse y**,
+    se il subset contiene una family RRG, C=3, fPosJ=1, noField, Hext=0.
+    Attivo sia per RAW che per RESCALED.
+    La curva viene tagliata al range [x_min, x_max] dei dati del pannello.
+    """
+    global _THEORY_CACHE
+    if not _subset_has_theory_family(model, families_df, members, subset_id):
+        return False
+
+    txt = Path("data.txt")
+    if not txt.exists():
+        if verbose:
+            print("[theory] data.txt non trovato nella CWD -> overlay saltato")
+        return False
+
+    if _THEORY_CACHE is None:
+        try:
+            beta, betabar = _load_theory_from_txt(txt)
+            _THEORY_CACHE = (beta, betabar)
+            if verbose:
+                # Stampa controllo vicino a beta=1 solo se ha senso
+                idx = (np.abs(beta-1.0)).argmin()
+                y = float(betabar[idx])
+                if y != 0.0:
+                    print(f"[theory] caricato data.txt: {len(beta)} punti; near beta=1: y={y:.6g}")
+        except Exception as e:
+            print(f"[theory] errore lettura data.txt: {e}")
+            return False
+
+    beta, betabar = _THEORY_CACHE
+    # Clip al range dei dati (niente valori superiori a max x)
+    m = np.isfinite(beta) & np.isfinite(betabar) & (beta >= x_min) & (beta <= x_max)
+    if not np.any(m):
+        if verbose:
+            print(f"[theory] nessun punto teorico nel range x=[{x_min:.3g},{x_max:.3g}]")
+        return False
+    bx, by = beta[m], betabar[m]
+    order = np.argsort(bx)
+    ax.plot(bx[order], by[order], '--', lw=1.2, label='theory (beta*barrier)')
+    return True
+
+# ---------------- Error bars helper ----------------
+def _stderr_column_available(df: pd.DataFrame, value_col: str) -> str|None:
+    """Ritorna il nome della colonna degli errori se disponibile.
+    Regola conservativa: prima prova <value>_stderr, altrimenti mapping noti.
+    """
+    cand = f"{value_col}_stderr"
+    if cand in df.columns:
+        return cand
+    mapping = {
+        'slope': 'slope_stderr',
+        'intercept': 'intercept_stderr',
+    }
+    alt = mapping.get(value_col)
+    if alt and alt in df.columns:
+        return alt
+    return None
+
 # ---------------- CLI ----------------
 def parse_args():
-    ap = argparse.ArgumentParser(description='Plot slope vs beta (raw e rescaled), separato per subset.')
+    ap = argparse.ArgumentParser(description='Plot slope vs beta (raw e rescaled), separato per subset, con barre di errore se disponibili. Overlay teorico (beta*barrier) stessa y.')
     ap.add_argument('--model', required=True)
     ap.add_argument('--data-root', default=None)
     ap.add_argument('--subset-label', default='all')
@@ -148,6 +243,7 @@ def parse_args():
     ap.add_argument('--anchors', default='raw,M,G')
     ap.add_argument('--ref-stats', default='mean')
     ap.add_argument('--value', default='slope')
+    ap.add_argument('--no-errorbars', action='store_true', help='Disattiva le barre di errore')
     ap.add_argument('-v','--verbose', action='store_true')
     return ap.parse_args()
 
@@ -229,24 +325,32 @@ def main():
             for anc in anchors:
                 if anc == 'raw':
                     sel = (fits['beta_kind']=='raw') & (fits['subset_id']==sid) & (fits['kcol']==kcol)
-                    df = fits.loc[sel, ['family_id','subset_id','beta','kcol',ns.value]].dropna(subset=['beta', ns.value])
+                    cols = ['family_id','subset_id','beta','kcol',ns.value]
+                    # opzionale stderr
+                    err_col = _stderr_column_available(fits, ns.value)
+                    if err_col:
+                        cols.append(err_col)
+                    df = fits.loc[sel, cols].dropna(subset=['beta', ns.value])
                     x_col = 'beta'
-                    x_label = '$\\beta$'
+                    x_label = r'$\beta$'
                     anchor_tag = 'raw'
                 else:
                     need_cols = ['anchor','beta_rescaled_bin','ref_stat']
                     if not set(need_cols).issubset(fits.columns):
-                        if ns.verbose:
-                            print('[skip] manca una delle colonne richieste per RESCALED:', need_cols)
                         continue
-                    sel = (fits['beta_kind']=='rescaled') & (fits['subset_id']==sid) & (fits['kcol']==kcol) &                           (fits['anchor']==anc) & (fits['ref_stat'].isin(ref_stats))
-                    df = fits.loc[sel, ['family_id','subset_id','beta_rescaled_bin','ref_stat','kcol',ns.value]].dropna(subset=['beta_rescaled_bin', ns.value])
+                    sel = (fits['beta_kind']=='rescaled') & (fits['subset_id']==sid) & (fits['kcol']==kcol) & \
+                          (fits['anchor']==anc) & (fits['ref_stat'].isin(ref_stats))
+                    cols = ['family_id','subset_id','beta_rescaled_bin','ref_stat','kcol',ns.value]
+                    err_col = _stderr_column_available(fits, ns.value)
+                    if err_col:
+                        cols.append(err_col)
+                    df = fits.loc[sel, cols].dropna(subset=['beta_rescaled_bin', ns.value])
                     x_col = 'beta_rescaled_bin'
-                    x_label = '$\\tilde{\\beta}$'
+                    x_label = r'$\tilde{\beta}$'
                     anchor_tag = f'rescaled/{anc}'
 
                 if ns.verbose:
-                    print(f"[sel] subset={sid[:8]} k={kcol} anchor={anc} -> rows={len(df)}")
+                    print(f"[sel] subset={sid[:8]} k={kcol} anchor={anc} -> rows={len(df)}; stderr={err_col if not ns.no_errorbars else 'DISABLED'}")
                 if df.empty:
                     continue
 
@@ -261,7 +365,7 @@ def main():
                 # physical signature folders
                 phys_sig_parts = _phys_signature_parts(df, families, members, sid)
 
-                # choose families to draw (like the earlier file)
+                # choose families to draw
                 fam_ids = df['family_id'].dropna().unique().tolist()
                 if ns.family_id:
                     fam_ids = [f for f in fam_ids if f in ns.family_id]
@@ -273,21 +377,34 @@ def main():
                 # Plot
                 fig, ax = plt.subplots(figsize=(7,5), dpi=140)
                 ax.plot([], [], ' ', label=f"subset: {meta['desc']}")
-                if fam_ids == ['__ALL__']:
-                    x = df[x_col].astype(float).to_numpy()
-                    y = df[ns.value].astype(float).to_numpy()
+
+                def _plot_xy(dsub: pd.DataFrame, label: str):
+                    x = dsub[x_col].astype(float).to_numpy()
+                    y = dsub[ns.value].astype(float).to_numpy()
                     order = np.argsort(x)
-                    ax.plot(x[order], y[order], marker='o', linestyle='-', label='ALL')
+                    x, y = x[order], y[order]
+                    if (not ns.no_errorbars) and (err_col is not None) and (err_col in dsub.columns):
+                        yerr = dsub[err_col].astype(float).to_numpy()[order]
+                        ax.errorbar(x, y, yerr=yerr, fmt='o-', capsize=2, label=label)
+                    else:
+                        ax.plot(x, y, 'o-', label=label)
+
+                if fam_ids == ['__ALL__']:
+                    _plot_xy(df, 'ALL')
                 else:
                     for fid in fam_ids:
                         d = df[df['family_id']==fid]
                         if d.empty:
                             continue
-                        x = d[x_col].astype(float).to_numpy()
-                        y = d[ns.value].astype(float).to_numpy()
-                        order = np.argsort(x)
                         lbl = fam_label_map.get(fid, str(fid)[:8])
-                        ax.plot(x[order], y[order], marker='o', linestyle='-', label=lbl)
+                        _plot_xy(d, lbl)
+
+                # overlay teorico sullo stesso asse: attivo per RAW e RESCALED, tagliato al range x dei dati
+                x_vals = df[x_col].astype(float).to_numpy()
+                x_min, x_max = float(np.nanmin(x_vals)), float(np.nanmax(x_vals))
+                used = _maybe_draw_theory(ax, ns.model, families, members, sid, x_min, x_max, ns.verbose)
+                if ns.verbose and used:
+                    print(f"[theory] overlay teorico (beta*barrier) aggiunto nel range x=[{x_min:.3g},{x_max:.3g}]")
 
                 ax.set_xlabel(x_label)
                 ax.set_ylabel(ns.value)

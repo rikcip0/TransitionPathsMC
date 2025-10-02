@@ -1,0 +1,18 @@
+# thermodynamicIntegration run manifest
+- rows loaded: 2589
+- unique groups (C,Hext,fieldType,fieldSigma): 19
+- top groups (count):
+  - C=3.0 Hext=0.0 fieldType='noField' fieldSigma=0.0 -> 1118
+  - C=4.0 Hext=0.0 fieldType='noField' fieldSigma=0.0 -> 481
+  - C=3.0 Hext=0.0 fieldType='gauss' fieldSigma=0.3 -> 247
+  - C=3.0 Hext=0.0 fieldType='gauss' fieldSigma=-0.3 -> 237
+  - C=3.0 Hext=0.0 fieldType='gauss' fieldSigma=-0.6 -> 213
+  - C=3.0 Hext=0.0 fieldType='gauss' fieldSigma=0.6 -> 193
+  - C=3.0 Hext=0.0 fieldType='gauss' fieldSigma=0.4 -> 34
+  - C=3.0 Hext=0.0 fieldType='gauss' fieldSigma=0.8 -> 18
+  - C=3.0 Hext=0.0 fieldType='gauss' fieldSigma=-0.8 -> 13
+  - C=3.0 Hext=0.0 fieldType='gauss' fieldSigma=0.2 -> 6
+- TI produced rows: 105
+- elapsed seconds: 1537.300
+- output parquet (curves): /mnt/c/Users/ricca/Desktop/College/Codici/TransitionPathsMC/Data/MultiPathsMC/RRG/v1/ti/ti_curves.parquet
+- output parquet (points): /mnt/c/Users/ricca/Desktop/College/Codici/TransitionPathsMC/Data/MultiPathsMC/RRG/v1/ti/ti_points.parquet
