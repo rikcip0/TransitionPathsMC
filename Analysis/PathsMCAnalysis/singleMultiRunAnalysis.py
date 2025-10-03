@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 
 from scipy import interpolate
 sys.path.append('../')
@@ -2260,7 +2261,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType, toPdf=False):
             #-------------------- 0) Pre‑elabora dati --------------------
             from scipy.optimize import least_squares
             avChiErr = np.sqrt(avChi * (1.0 - avChi))              # errore binomiale
-
+            avTime=np.asarray(avTime)
             core_mask = (
                 np.isfinite(avTime) & np.isfinite(avChi) &
                 np.isfinite(avChiErr) & (avChiErr > 0) & (avTime > 3)
@@ -2271,11 +2272,8 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType, toPdf=False):
             avChi_fit    = avChi[mask]
             avChiErr_fit = avChiErr[mask]
 
-            
-            if "StudyInT" not in studyName:
-                print("")
-            elif time_fit.size < 5:
-                print("Troppi pochi punti utili per effettuare il fit.")
+            if time_fit.size < 5:
+                warnings.warn("Troppi pochi punti utili per effettuare il fit.")
             else:
                 # -------------------- 1) Stime iniziali comuni --------------
                 y_tail = np.mean(avChi_fit[-min(20, len(avChi_fit)):])

@@ -751,213 +751,260 @@ def plotWithDifferentColorbars(
                     elif shape_arr.size > 0:
                         shape_arr = np.repeat(shape_arr.flat[0], addX.size)
                     else:
-                        shape_arr = None
+                        ax1.scatter(x[condition], y[condition], color=color, marker=marker, edgecolor=edgeColorPerVar[ext], linewidths=2, s=s)
+                        ax1.errorbar(x[condition], y[condition], yerr=yerr[condition], color=color, fmt= ' ', marker='')
+                        plottedYs.extend(y[condition])
+            
+            if fittingOverDifferentEdges is False:
+                fitCondition =  [np.array_equal(t,variable) for variable in markerShapeVariable]
+                xToPlot=np.linspace(np.nanmin(x[fitCondition]), np.nanmax(x[fitCondition]), 100)
+                if len(np.unique(x[fitCondition]))>2:
+                    if 'linear' in fitTypes:
+                        popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x[fitCondition], y[fitCondition])
+                        c = popt[0]
+                        m= popt[1]
+                        mErr = np.sqrt(pcov[1,1])
+                        plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color=color)
+                        plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color=color)
+                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
+                        plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
+                        fitResult= m, c, mErr
+                        
+                    if 'quadratic' in fitTypes:
+                        popt, pcov = curve_fit(lambda x, c, a:  c+(x*x*a), x[fitCondition], y[fitCondition])
+                        c = popt[0]
+                        a= popt[1]
+                        mErr =np.sqrt(pcov[1,1])
+                        plt.plot([], [], label=r'c+aT^{2}', linestyle='--', marker=marker, color=color)
+                        plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color=color)
+                        plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
+                        fitResult= m, c, mErr
+                        
+        if fittingOverDifferentEdges is True and fittingOverDifferentShapes is False:
+            fitCondition =  [np.array_equal(t,variable) for variable in markerShapeVariable]
+            xToPlot=np.linspace(np.nanmin(x[fitCondition]), np.nanmax(x[fitCondition]), 100)
+            if len(np.unique(x[fitCondition]))>2:
+                if 'linear' in fitTypes:
+                    popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x[fitCondition], y[fitCondition])
+                    c = popt[0]
+                    m= popt[1]
+                    mErr = np.sqrt(pcov[1,1])
+                    plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color='grey')
+                    plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color='grey')
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
+                    plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
+                    fitResult= m, c, mErr
+                if 'quadratic' in fitTypes:
+                    popt, pcov = curve_fit(lambda x, c, a:  c+(x*x*a), x[fitCondition], y[fitCondition])
+                    c = popt[0]
+                    a= popt[1]
+                    mErr = np.sqrt(pcov[1,1])
+                    plt.plot([], [], label=r'c+aT^{2}', linestyle='--', marker=marker, color='grey')
+                    plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color='grey')
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
+                    fitResult= m, c, mErr
 
-                # marker unused = marker della shape "inf" (se esiste) altrimenti fallback
-                # NB: shape_to_marker è definito sopra nella sezione "Shapes"
-                mkr_unused = '.'
+                    
+    if fittingOverDifferentShapes is True:
+        xToPlot=np.linspace(np.nanmin(x), np.nanmax(x), 100)
+        if len(np.unique(x))>1:
+            if 'expo' in fitTypes:
+                    popt, pcov = curve_fit(lambda x, c, m,s:  c*(1.-np.exp(-(x-s)*m)), x, y,p0=[y[-1],(y[1]-y[0])/(x[1]-x[0])/y[-1],0], maxfev=100000)
+                    c = popt[0]
+                    m= popt[1] 
+                    s= popt[2] 
+                    mErr = np.sqrt(pcov[1,1])
+                    #s =popt[2]
+                    plt.plot(xToPlot, c*(1.-np.exp(-(xToPlot-s)*m)), linestyle='--', marker='', color='grey')
+                    plt.plot([], [], label=f'exp0', linestyle='--', marker=marker, color='grey')
+                    plt.plot([], [], label=f's={s:.3g} ' +f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
+                    plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
+                    fitResult= m, c, mErr
+            if 'linear' in fitTypes:
+                    popt, pcov = curve_fit(lambda x, c, m:  c+(x*m), x, y)
+                    c = popt[0]
+                    m= popt[1]
+                    mErr = np.sqrt(pcov[1,1])
+                    plt.plot(xToPlot, m*xToPlot+c, linestyle='--', marker='', color='grey')
+                    plt.plot([], [], label=f'c+mT', linestyle='--', marker=marker, color='grey')
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={m:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
+                    plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
+                    fitResult= m, c, mErr
+            if 'expo2' in fitTypes:
+                def model(x, ty, delta,s):
+                    xt = ty / delta**2
+                    return xt/(xt - ty) + (xt*ty)/(ty - xt)*(x-s) + (xt/(ty - xt))*np.exp(-(x-s)*ty)
+                def model2(x, a, b,c,delta):
+                    d = c / delta**2
+                    return a+b(xToPlot)+c*np.exp(-(xToPlot)*d)
+                p0=[(y[-1]-y[-2])/(x[-1]-x[-2]),(y[-1]-y[-2])/(x[-1]-x[-2]),(y[-1]-y[-2])/(x[-1]-x[-2]),5]
+                popt, pcov = curve_fit(lambda x, a, b,c,delta:  model2(x,a,b,c,delta), x, y,p0=p0, maxfev=5000000, bounds=([0.,1.01,0],[np.inf,np.inf,10]))
+                a = popt[0]
+                ty = popt[0]
+                b= popt[1] 
+                c=popt[2]
+                delta=popt[3]
+                d= c/(delta*delta) 
+                mErr = np.sqrt(pcov[1,1])
+                plt.plot(xToPlot, model2(xToPlot,a,b,c,delta), linestyle='--', marker='x', color='grey')
+                plt.plot([], [], label=f'exp02', linestyle='--', marker=marker, color='grey')
+                plt.plot([], [], label=f's={s:.3g} ' +f'ty={c:.3g} ' + r'xt'+f'={xt:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
+                plt.plot([], [], label=f' ', linestyle=' ', marker=' ')
+                fitResult= m, c, mErr
+            if 'quadratic' in fitTypes:
+                    popt, pcov = curve_fit(lambda x, c,a:  c+(a*x**2.), x, y)
+                    c = popt[0]
+                    a= popt[1]
+                    mErr = np.sqrt(pcov[1,1])
+                    plt.plot([], [], label=r'$c+aT^{2}$', linestyle='--', marker=marker, color='grey')
+                    plt.plot(xToPlot, a*xToPlot**2.+c, linestyle='--', marker='', color='grey')
+                    plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color='grey')
+                    fitResult= a, c, mErr
+            if 'mix' in fitTypes:
+                def mix(x, k1p,k2p):
+                    return (k1p/(k2p-k1p))*(np.exp(-k2p*x)-1.+k2p*x)
+                k1Test=(y[-1]-y[-2])/(x[-1]-x[-2])
+                popt, pcov = curve_fit(mix, x, y,p0=[k1Test,k1Test*100.],method='trf' , max_nfev=10000)
+                c=0.
+                k1= popt[0]
+                k2= popt[1]
+                k1Err = np.sqrt(pcov[1,1])
+                plt.plot(xToPlot, mix(xToPlot,k1,k2), linestyle='--', marker='', color='grey')
+                plt.plot([], [], label=f'c={c:.3g} '+f'k1={k1:.3g} ' + r'k2'+f'={k2:.3g}', linestyle='--', marker=marker, color='grey')
+                fitResult= m, c, mErr
+ 
+    if additionalMarkerTypes_Unused is not None:
+        for additionalMarkerType in additionalMarkerTypes_Unused:
+            additional_X = np.asarray(additionalMarkerType[0])
+            additional_Y = np.asarray(additionalMarkerType[1])
+            additional_correspBetaOfExAndQif = np.transpose(np.asarray(additionalMarkerType[2]))
+            if len(additional_correspBetaOfExAndQif)==0:
+                continue
+            additional_correspBetaOfExAndQif[1]=additional_correspBetaOfExAndQif[1].astype(np.float64)
+            additionalXSort = np.argsort(additional_X)
 
-                common_kwargs = dict(
-                    marker=mkr_unused, s=markerSize*0.75, alpha=0.18,
-                    edgecolors='none', linewidths=0.0, zorder=0.5
-                )
+            additional_X = additional_X[additionalXSort]
+            additional_Y = additional_Y[additionalXSort]
+            additional_correspBetaOfExAndQif =additional_correspBetaOfExAndQif[additionalXSort]
 
-                # ordina per x per tracce ordinate (coerente col resto)
-                add_sort = np.argsort(addX)
-                addX = addX[add_sort]; addY = addY[add_sort]
-                spec_and_color = spec_and_color[add_sort]
+            marker = "."
+            for BetaOfExAndQif in additional_correspBetaOfExAndQif:
+                    if BetaOfExAndQif[0] is None:
+                        continue
+                    BetaOfExAndQif[0] = str(BetaOfExAndQif[0])
+                    condition = np.all(additional_correspBetaOfExAndQif == BetaOfExAndQif, axis=1)
+                    if len(additional_X[condition]) == 0:
+                        continue
+                    if keyIsNan:
+                        BetaOfExAndQif[0]='nan'
 
-                spec_arr  = np.asarray(spec_and_color[:,0]).astype(str)
-                color_arr = np.asarray(spec_and_color[:,1], dtype=float)
+                    color = cmaps[str(BetaOfExAndQif[0])](norm(BetaOfExAndQif[1]))
+                    ax1.scatter(additional_X[condition], additional_Y[condition], color=color, marker=marker, s=40, alpha=0.01)
 
+    plottedYs = np.asarray(plottedYs)
+    if yscale!='' and len(plottedYs[plottedYs>0])>0:
+        #print(name, len(plottedYs[plottedYs>0]))
+        plt.yscale(yscale)
+    if xscale!='' and len(x[x>0])>0:
+         plt.xscale(xscale)
 
-                if suppress_all_cbar:
-                    face = fallbackPointColor or plt.rcParams['axes.prop_cycle'].by_key().get('color', ['C0'])[0]
-                    ax.scatter(addX, addY, color=face, **common_kwargs)
-                else:
-                    rgba = np.empty((addX.size, 4))
-                    for i in range(addX.size):
-                        sp = spec_arr[i] if spec_arr[i] in cmaps else uniq_spec[0]
-                        nm = Normalize(*cbar_ranges[sp])
-                        rgba[i] = cmaps[sp](nm(color_arr[i]))
-                    ax.scatter(addX, addY, c=rgba, **common_kwargs)
+    if theoreticalX is not None:
+        plt.plot([],[], label=f"          ", marker=None, color="None")
+        if "betTentative" in name:
+            f= theoreticalX<=1
+            theoreticalX = theoreticalX[f]
+            theoreticalY = theoreticalY[f] 
+        plt.plot(theoreticalX, theoreticalY, linestyle='--', marker=' ', label='Theory')
+    
+    if linesAtXValueAndName is not None:
+        plt.plot([],[], label=f"          ", marker=None, color="None")
+        for l in linesAtXValueAndName :
+            l_Value, l_Name, l_color = l
+            plt.axvline(l_Value, color=l_color, linestyle='dashed', marker=' ', linewidth=1)
+            plt.plot([],[], label=f"{l_Name}", linestyle='dashed', marker=' ', color=l_color)
+    
+    if linesAtYValueAndName is not None:
+        plt.plot([],[], label=f"          ", marker=None, color="None")
+        for l in linesAtYValueAndName :
+            l_Value, l_Name, l_color = l
+            plt.axhline(l_Value, color=l_color, linestyle='dashed', marker=' ', linewidth=1)
+            plt.plot([],[], label=f"{l_Name}", linestyle='dashed', marker=' ', color=l_color)
+    
+    handles, labels = ax1.get_legend_handles_labels()
+    """
+    fig.legend(handles, labels,
+        bbox_to_anchor=(1.05, 1.0),
+        loc='upper left',
+        borderaxespad=0.,
+        bbox_transform=ax1.transAxes)
+    """
 
-        # ------------------ CURVE CONTINUE / TEORIA ------------------
-        if theoreticalX is not None and theoreticalY is not None:
-            tx = np.asarray(theoreticalX); ty = np.asarray(theoreticalY)
-            ax.plot(tx, ty, linestyle='--', marker=' ', label='Theory', color='0.3', zorder=1)
+    theory_handles_labels = [(h, l) for h, l in zip(handles, labels) if l == 'Theory']
+    if theory_handles_labels:
+        handles, labels = zip(*theory_handles_labels)
+        ax1.legend(handles, labels, loc='upper left')
+    
+    sm = ['']*nColorbars
+    uniqueColorMapsSpecifiers=[]
+    for i, thisColorMapSpecifier in enumerate(uniqueColorMapsSpecifiers):
+        # Crea l'asse per la colorbar (non serve l'asse extra ax_cb, se non lo usi per altro)
+        ax_colorbar = fig.add_subplot(gs[2 + 2 * i, 0])
+        
+        # Seleziona la mappa per questo gruppo
+        subset = arrayForColorCoordinate[colorMapSpecifier == thisColorMapSpecifier]
+        norm = Normalize(vmin=np.min(subset), vmax=np.max(subset))
+        sm[i] = ScalarMappable(cmap=cmaps[thisColorMapSpecifier], norm=norm)
+        sm[i].set_array(subset)
+        
+        # Crea la colorbar orizzontale sull'asse dedicato
+        cbar = plt.colorbar(sm[i], orientation='horizontal', cax=ax_colorbar, pad=0.0)
 
-        if functionsToPlotContinuously is not None:
-            funs, masks = functionsToPlotContinuously
-            for f_fun, gmask in zip(funs, masks):
-                sel = np.asarray(gmask, dtype=bool)
-                if sel.shape != x.shape or not np.any(sel):
-                    continue
-                xx = np.linspace(float(np.nanmin(x[sel])), float(np.nanmax(x[sel])), 512)
-                yy = np.array([f_fun(v) for v in xx])
-                ax.plot(xx, yy, color='0.2', linewidth=1.1, marker=' ', zorder=1)
-
-        if linesAtXValueAndName is not None:
-            for val, lab, col in linesAtXValueAndName:
-                ax.axvline(float(val), color=col, linestyle='dashed', linewidth=1.0, zorder=0)
-        if linesAtYValueAndName is not None:
-            for val, lab, col in linesAtYValueAndName:
-                ax.axhline(float(val), color=col, linestyle='dashed', linewidth=1.0, zorder=0)
-
-        # ------------------ COLORBAR ------------------
-        fmt = ScalarFormatter(useMathText=True); fmt.set_powerlimits((-2,2)); fmt.set_useOffset(False)
-        cb_var_label = colorCoordinateVariableName.strip() if isinstance(colorCoordinateVariableName, str) else ""
-        if not cb_var_label:
-            cb_var_label = "color"
-            warnings.append("colorCoordinateVariableName empty; using fallback label 'color'.")
-
-        if n_cb_shown:
-            if cb_layout["type"] == "fullwidth":
-                row_i = 1
-                for sp in uniq_spec:
-                    ax_cb = fig.add_subplot(gs[row_i + 1, 0]); row_i += 2
-                    vmin, vmax = cbar_ranges[sp]
-                    cm = cmaps[sp]; norm = Normalize(vmin=vmin, vmax=vmax)
-                    sm = ScalarMappable(cmap=cm, norm=norm); sm.set_array([])
-                    label = cb_var_label
-                    cbar = fig.colorbar(sm, cax=ax_cb, orientation='horizontal')
-                    cbar.ax.xaxis.set_ticks_position('top')
-                    cbar.ax.tick_params(axis='x', length=2.5, width=0.8, pad=0.6)
-                    cbar.outline.set_linewidth(0.6)
-                    if label:
-                        cbar.set_label(label, labelpad=2.0)
-                        cbar.ax.xaxis.set_label_position('bottom')
-                    cbar.formatter = fmt
-                    if dynamicalTicksForColorbars:
-                        vals = arrayForColorCoordinate[spec_key == sp]
-                        u = np.unique(vals[np.isfinite(vals)])
-                        cbar.set_ticks(u if (u.size and u.size <= 8) else np.linspace(vmin, vmax, 5))
-                    else:
-                        cbar.set_ticks(np.linspace(vmin, vmax, 5))
-                    dec = _cb_decimals(vmin, vmax)
-                    cbar.formatter = FormatStrFormatter(f"%.{dec}f")
-                    cbar.update_ticks()
-                    cbar.ax.xaxis.get_offset_text().set_visible(False)
+        if dynamicalTicksForColorbars:
+            currentTicks = np.sort(np.unique(subset))
+            desired_ticks = np.array([float(f'{tick}') for j, tick in enumerate(currentTicks) if j == 0 or np.abs(tick - currentTicks[j-1]) > np.mean(np.diff(currentTicks))/6.])
+            cbar.set_ticks(desired_ticks)
+            cbar.ax.xaxis.set_major_formatter(ScalarFormatter())
+        # Imposta le etichette dei tick (solo per l'asse che gestiremo)
+        #cbar.ax.set_xticklabels([f"{tick}" for tick in desired_ticks])
+        
+        # Forza la posizione dei tick: solo in alto
+        cbar.ax.xaxis.set_ticks_position('top')
+        cbar.ax.xaxis.set_label_position('top')
+        cbar.ax.tick_params(axis='x', which='both', bottom=False, top=True,
+                            labelbottom=False, labeltop=True)
+        
+        # Disattiva ogni tick e ticklabel sugli assi verticali (sinistra/destra)
+        cbar.ax.tick_params(axis='y', which='both', left=False, right=False,
+                            labelleft=False, labelright=False)
+        
+        # Se per caso appaiono ancora ticklabel "extra" (ad esempio sul fondo),
+        # forzali invisibili:
+        for label in cbar.ax.get_xticklabels():
+            # Se il centro del label (y) è al di sotto di 0.5 (la metà dell'asse normalizzato),
+            # lo nascondiamo (questo è un hack; di solito labelbottom=False è sufficiente)
+            if label.get_position()[1] < 0.5:
+                label.set_visible(False)
+        
+        # Imposta il label della colorbar
+        if i+1 != nColorbars:
+            cbar.set_label(colorMapSpecifierName + '=' + f"{thisColorMapSpecifier}", labelpad=6)
+        else:
+            if nColorbars == 1 and (str(thisColorMapSpecifier) == 'nan' or thisColorMapSpecifier is None):
+                cbar.set_label(colorCoordinateVariableName, labelpad=6)
             else:
-                cols = cb_layout["cols"]
-                gs_cb = GridSpecFromSubplotSpec(
-                    2*n_cb_rows, cols, subplot_spec=gs[1:, 0],
-                    height_ratios=sum(([H_SP, H_CB] for _ in range(n_cb_rows)), [])
-                )
-                i = 0
-                for sp in uniq_spec:
-                    r, c = divmod(i, cols)
-                    ax_cb = fig.add_subplot(gs_cb[2*r + 1, c]); i += 1
-                    vmin, vmax = cbar_ranges[sp]
-                    cm = cmaps[sp]; norm = Normalize(vmin=vmin, vmax=vmax)
-                    sm = ScalarMappable(cmap=cm, norm=norm); sm.set_array([])
-                    parts = [cb_var_label]
-                    if colorMapSpecifierName: parts.append(f"{colorMapSpecifierName}={sp}")
-                    label = ", ".join(parts)
-                    cbar = fig.colorbar(sm, cax=ax_cb, orientation='horizontal')
-                    cbar.ax.xaxis.set_ticks_position('top')
-                    cbar.ax.tick_params(axis='x', length=2.5, width=0.8, pad=0.6)
-                    cbar.outline.set_linewidth(0.6)
-                    if label:
-                        cbar.set_label(label, labelpad=2.0)
-                        cbar.ax.xaxis.set_label_position('bottom')
-                    cbar.formatter = fmt
-                    if dynamicalTicksForColorbars:
-                        vals = arrayForColorCoordinate[spec_key == sp]
-                        u = np.unique(vals[np.isfinite(vals)])
-                        cbar.set_ticks(u if (u.size and u.size <= 8) else np.linspace(vmin, vmax, 5))
-                    else:
-                        cbar.set_ticks(np.linspace(vmin, vmax, 5))
-                    dec = _cb_decimals(vmin, vmax)
-                    cbar.formatter = FormatStrFormatter(f"%.{dec}f")
-                    cbar.update_ticks()
-                    cbar.ax.xaxis.get_offset_text().set_visible(False)
+                cbar.set_label(colorCoordinateVariableName + ', ' + colorMapSpecifierName + '=' + f"{thisColorMapSpecifier}", labelpad=6)
+        
+        # Posiziona manualmente il label in basso (modifica il valore di y se serve)
+        cbar.ax.xaxis.set_label_coords(0.5, -1.)
 
-        # ------------------ INFO-LINE ------------------
-        infos = []
-        if suppress_all_cbar:
-            fin = np.isfinite(arrayForColorCoordinate)
-            if np.any(fin):
-                v0 = float(arrayForColorCoordinate[fin][0])
-                infos.append(f"At {cb_var_label}={v0:g}")
-            if showSpecInInfoWhenNoCbar and colorMapSpecifierName and (uniq_spec.size == 1):
-                infos.append(f"{colorMapSpecifierName}={uniq_spec[0]}")
-        if len(uniq_edge_vals) == 1:
-            infos.append(f"{edgeColorVariableName}: {_edge_label(uniq_edge_vals[0])}")
-        if (n_cb_shown == 1) and colorMapSpecifierName and (uniq_spec.size == 1):
-            infos.append(f"{colorMapSpecifierName}: {uniq_spec[0]}")
-        if infos:
-            fs = max(6.0, float(base_fs) - 3.0)
-            info_y = 1.0 - (TOP_PAD / H_total) * 0.85
-            fig.text(0.02, info_y, f"{' | '.join(infos)}",
-                     ha='left', va='center', fontsize=fs, style='italic', color='0.25', alpha=0.9)
-
-        # ------------------ SEZIONE "Fits:" REALE ------------------
-        if fitTypes and len(fits_meta):
-            h, l = _section("Fits:"); handles.append(h); labels.append(l)
-            ORDER = {"linear":("m","c"), "quadratic":("a","c"), "expo":("m","c","s")}
-            for fm in fits_meta:
-                eq_line = fm["eq"]
-                ign = fm.get("ignoring", [])
-                #if ign: eq_line += f"(ignoring {DELIM.join(ign)})"
-                #handles.append(Line2D([0,1],[0,0], linestyle='--', color='0.25')); labels.append(eq_line)
-                ps, se = fm["params"], fm["stderr"]
-                for k in ORDER.get(fm["fit"], ps.keys()):
-                    v = ps.get(k, np.nan); e = se.get(k, np.nan)
-                    handles.append(Line2D([], [], linestyle='None')); labels.append(f"{k}={_fmt_pm(v, e)}")
-            h, l = _sep(); handles.append(h); labels.append(l)
-
-        # ------------------ SEZIONE "Summary:" ------------------
-        if countUniqueOf:
-            parts = []
-            for nm in countUniqueOf:
-                arr = seriesByName.get(nm)
-                if arr is None:
-                    warnings.append(f"countUniqueOf: '{nm}' not provided in seriesByName.")
-                    continue
-                u = np.unique(arr[plotted_mask])
-                parts.append(f"#{nm}={u.size}")
-            if parts:
-                h, l = _section("Summary:"); handles.append(h); labels.append(l)
-                handles.append(Line2D([], [], linestyle='None')); labels.append(", ".join(parts))
-                h, l = _sep(); handles.append(h); labels.append(l)
-
-        while labels and labels[-1].strip() == "":
-            labels.pop(); handles.pop()
-
-        if handles:
-            leg = ax_leg.legend(
-                handles, labels, loc='upper left',
-                frameon=True, fancybox=True, framealpha=1.0,
-                borderpad=0.35, labelspacing=0.20,
-                handlelength=1.2, handletextpad=0.5,
-                ncol=max(1, ncol_est), columnspacing=0.8,
-                prop={'size': leg_fs}
-            )
-            leg.get_frame().set_edgecolor('0.7'); leg.get_frame().set_linewidth(0.8)
-
-        # ------------------ META ------------------
-        if x.size < 3:
-            return None, None, {"empty": True}
-
-        meta = {
-            "n_colorbars": int(n_cb_shown),
-            "n_colorbar_rows": int(n_cb_rows),
-            "colorbar_layout": cb_layout,
-            "suppress_all_cbar": bool(suppress_all_cbar),
-            "cmap_names": {str(sp): (getattr(cmaps[sp], "name", "ListedColormap")) for sp in uniq_spec},
-            "cbar_ranges": {str(sp): cbar_ranges[sp] for sp in uniq_spec},
-            "single_edge_value": None if len(uniq_edge_vals) != 1 else str(_edge_label(uniq_edge_vals[0])),
-            "constants": {"W_MAIN": W_MAIN, "H_MAIN": H_MAIN, "H_CB": H_CB,
-                          "H_SP": H_SP, "TOP_PAD": TOP_PAD_BASE, "LEG_W": LEG_W},
-            "legend_outside": True,
-            "legend_ncol": int(ncol_est),
-            "xlim": tuple(ax.get_xlim()), "ylim": tuple(ax.get_ylim()),
-            "xscale": xscale or "linear", "yscale": yscale or "linear",
-            "x_stats": {"min": float(np.nanmin(x)), "max": float(np.nanmax(x)), "ptp": float(np.ptp(x)), "unique": int(ux.size)},
-            "fits": fits_meta,
-            "fitGroupBy": fitGroupBy,
-            "warnings": warnings,
-            "nGraphs": nGraphs,
-        }
-        return fig, ax, meta
+    if nGraphs is not None:
+        x_min, x_max = ax1.get_xlim()
+        y_min, y_max = ax1.get_ylim()
+        text_x = x_max + 0.00 * (x_max - x_min)
+        if yscale =='log' and (y_min >= 0 and y_max >= 0):
+            text_y = y_max * 10 ** (0.04 * (np.log10(y_max) - np.log10(y_min)))
+        else:
+            text_y = y_max + 0.04 * (y_max - y_min)  
+        ax1.text(text_x, text_y,  f"Different graphs: {nGraphs}", fontsize=11, color='black', ha='right', va='top')
+    plt.subplots_adjust(left=0.1, right=0.9, top=0.95, bottom=0.1, hspace=0.3)
+    return ax1, fitResult

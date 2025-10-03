@@ -1287,7 +1287,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     plt.ylabel(r'e')
     a = meanAndSigmaForParametricPlot(M, energy)
     plt.errorbar(a[0],a[1],a[2], label='mean')
-    plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
+    plt.scatter(a[0],a[3], color='darkorange', s=18, label='median',zorder=50)
     if M_RedLine is not None:
         plt.axvline(M_RedLine[0], color='red', linestyle='dashed', linewidth=1, label=M_RedLine[1])
     #plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
@@ -1300,7 +1300,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         plt.ylabel(r'$energy$')
         a = meanAndSigmaForParametricPlot(q_in, energy)
         plt.errorbar(a[0],a[1],a[2], label='mean')
-        plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
+        plt.scatter(a[0],a[3], color='darkorange', s=18, label='median',zorder=50)
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
         addInfoLines()
 
@@ -1310,7 +1310,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
         plt.ylabel(r'$energy$')
         a = meanAndSigmaForParametricPlot(q_out, energy)
         plt.errorbar(a[0],a[1],a[2], label='mean')
-        plt.scatter(a[0],a[3], color='darkorange', s=25, label='median')
+        plt.scatter(a[0],a[3], color='darkorange', s=18, label='median',zorder=50)
         plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left')
         plt.axvline(Qstar, color='red', linestyle='dashed', linewidth=1, label=r'Q*')
         addInfoLines()
