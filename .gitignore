@@ -1,5 +1,7 @@
 *.exe
 *.log
+*.json
+*.parquet
 *.dat
 *.png
 *.pdf
