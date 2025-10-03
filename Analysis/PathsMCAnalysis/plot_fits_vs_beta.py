@@ -80,7 +80,8 @@ def _subset_desc(rec: dict) -> str:
 
 def _subset_folder_name(label: str, subset_id: str) -> str:
     safe_lab = label.replace('>','gt').replace('<','lt').replace('=','eq').replace(' ','_').replace('/','-')
-    short_id = subset_id[:8] if isinstance(subset_id, str) else 'unknown'
+    #short_id = subset_id[:8] if isinstance(subset_id, str) else 'unknown'
+    short_id = subset_id
     return f"{safe_lab}__{short_id}"
 
 # ---------------- Physical signature (split folders) ----------------

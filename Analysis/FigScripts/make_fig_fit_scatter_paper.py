@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-r"""
+"""
 make_fig_fit_scatter_paper.py — plot “paper” dei fit -ln k vs N (UN plot per voce in PLOTS).
 
 - Lista PLOTS in testa (una voce => un plot), con beta fissata (raw o rescaled).
 - Import MyBasePlots con sys.path.append('../') e senza fallback (REQUIRE_MYBASEPLOTS=True).
 - NESSUNA legenda/titolo nel grafico (solo assi).
 - Opzione colorbar per rescaled: mostra $\tilde{\beta}$ pre-binning (cioè PRIMA dell'arrotondamento/binning).
+- Opzione edge-by-init: bordo punto colorato in funzione di 'trajInit' (se presente in ti_points).
 - PNG+PDF e JSON metadati accanto alle figure.
 """
 
@@ -19,7 +20,7 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+edge_by_init_default = True
 FIG_ID    = "F3"
 SLUG      = "fit_scatter"
 FIGSIZE   = (3.0, 2.2)
@@ -36,9 +37,9 @@ YMODE = "minuslnk"  # 'minuslnk' | 'logk' | 'k'
 PLOTS: List[Dict[str, Any]] = [
     # Esempi — sostituisci con i tuoi
      {"id":"raw_ER_Ngt30_beta0p65", "model":"ER","subset_id":"07018d22622d32a8","subset_label":"N>30", "beta_kind":"raw", "kcol":"kFromChi", "beta":0.65,
-      "include_unused": True},
+      "include_unused": True, "edge_by_init": True},
      {"id":"raw_ER_Ngt30_beta0p65", "model":"ER","subset_id":"07018d22622d32a8","subset_label":"N>30", "beta_kind":"rescaled", "anchor":"M", "kcol":"kFromChi", "beta_rescaled_bin":0.65,
-      "include_unused": True, "colorbar": True},
+      "include_unused": True, "colorbar": True, "edge_by_init": True},
      {"id":"raw_ER_Ngt30_beta1", "model":"ER","subset_id":"07018d22622d32a8","subset_label":"N>30", "beta_kind":"raw", "kcol":"kFromChi", "beta":1.,
       "include_unused": True},
      {"id":"raw_ER_Ngt30_beta1", "model":"ER","subset_id":"07018d22622d32a8","subset_label":"N>30", "beta_kind":"rescaled", "anchor":"M", "kcol":"kFromChi", "beta_rescaled_bin":1.,
@@ -241,6 +242,8 @@ def _plot_one(spec: Dict[str, Any]) -> Optional[Path]:
 
     # base = members ⨝ points
     need_pts = ["TIcurve_id","run_uid","beta",kcol,"chi_chi2"]
+    if "trajInit" in pts.columns:
+        need_pts.append("trajInit")
     for c in need_pts:
         if c not in pts.columns:
             raise ValueError(f"[ti_points] manca colonna: {c}")
@@ -283,7 +286,7 @@ def _plot_one(spec: Dict[str, Any]) -> Optional[Path]:
     ok = finite & (chi <= chi2_thr)
 
     if kcol.endswith("_Scaled"):
-        # Se scale2/valid non ci sono, NON mostro punti (coerente con policy conservative).
+        # Se scale2/valid non ci sono, NON mostro punti (conservativo).
         if "scale2" in base.columns and "scale2_valid" in base.columns:
             s2 = base["scale2"].astype(float).to_numpy()
             s2v = base["scale2_valid"].astype(bool).to_numpy()
@@ -345,6 +348,8 @@ def _plot_one(spec: Dict[str, Any]) -> Optional[Path]:
             "N": df["N"].astype(float).to_numpy(),
             "k": df[kcol].astype(float).to_numpy()
         })
+        if "trajInit" in df.columns:
+            out["trajInit"] = df["trajInit"].to_numpy()
         out["y"] = _y_from_k(out["k"].to_numpy(), YMODE)
         # pre-bin beta rescaled, se presente
         if "beta_rescaled" in df.columns:
@@ -393,18 +398,46 @@ def _plot_one(spec: Dict[str, Any]) -> Optional[Path]:
         else:
             cb_enabled = False
 
-    # scatter (senza titolo/legenda)
+    # mapping edge color per init (optional)
+    edge_by_init = bool(spec.get("edge_by_init", edge_by_init_default))
+    edge_lw = float(spec.get("edge_lw", 0.6))
+    edge_palette = spec.get("edge_palette", {740:"red", 74:"orange", 73:"orange", 72:"purple", 71:"black", 70:"lightgreen", 0:"None", -2:"black"})  # e.g., {740:"red", 74:"orange", 73:"orange", 72:"purple", 71:"black", 70:"lightgreen", 0:"None", -2:"black"}
+
+    def _edge_colors(df):
+        if (not edge_by_init) or df.empty:
+            return None
+        if "trajInit" not in df.columns:
+            return None
+        vals = df["trajInit"].to_numpy()
+        if edge_palette and isinstance(edge_palette, dict):
+            def map_color(v):
+                # accetta chiavi int o str
+                return edge_palette.get(int(v), edge_palette.get(str(v), "k"))
+            return [map_color(v) for v in vals]
+        # default: mapping deterministico su palette base
+        u = pd.unique(vals)
+        base_colors = ["C3","C1","C4","C5","C6","C7","C8","C9","C0","k"]
+        lut = {u[i]: base_colors[i % len(base_colors)] for i in range(len(u))}
+        return [lut[v] for v in vals]
+
     import matplotlib.cm as cm
     cmap = cm.get_cmap('viridis')
 
     def sc(ax, df, size, alpha, marker, color=None):
         if df.empty: return None
+        edges = _edge_colors(df)
+        kw = dict(s=size, alpha=alpha, marker=marker)
+        if edges is not None:
+            kw["edgecolors"] = edges
+            kw["linewidths"] = edge_lw
         if cb_enabled and ("beta_prebin" in df.columns):
-            return ax.scatter(df["N"], df["y"], s=size, alpha=alpha, marker=marker,
-                              c=df["beta_prebin"].to_numpy(), vmin=vmin, vmax=vmax, cmap=cmap)
+            return ax.scatter(df["N"], df["y"], c=df["beta_prebin"].to_numpy(), vmin=vmin, vmax=vmax, cmap=cmap, **kw)
         else:
-            return ax.scatter(df["N"], df["y"], s=size, alpha=alpha, marker=marker, color=color)
+            if color is not None and edges is None:
+                kw["color"] = color
+            return ax.scatter(df["N"], df["y"], **kw)
 
+    # draw
     if not un_p.empty:
         s = sc(ax, un_p, 14, 0.25, "o")
         sc_main = sc_main or s
@@ -428,9 +461,6 @@ def _plot_one(spec: Dict[str, Any]) -> Optional[Path]:
     if cb_enabled and (sc_main is not None):
         cbar = plt.colorbar(sc_main, ax=ax)
         cbar.set_label(r"$\tilde{\beta}$ (pre-bin)")
-        cb_meta = {"colorbar": True, "colorbar_range": [vmin, vmax]}
-    else:
-        cb_meta = {"colorbar": False}
 
     # assi
     ax.set_xlabel("N")
@@ -469,10 +499,17 @@ def _plot_one(spec: Dict[str, Any]) -> Optional[Path]:
         "ref_stat": (ref_stat if beta_kind=="rescaled" else None),
         "filters": (filters or {}),
         "ymode": YMODE,
-        "quality_thresholds": {
-            "chi2": chi2_thr,
-            "scale2": (scale_thr if kcol.endswith("_Scaled") else None)
+        "fit": {
+            "slope": float(slope),
+            "intercept": float(intercept),
+            "r2": float(fit_row.get("r2")) if "r2" in fit_row.index else None,
+            "n_points": int(fit_row.get("n_points")) if "n_points" in fit_row.index else None,
+            "n_unique_N": int(fit_row.get("n_unique_N")) if "n_unique_N" in fit_row.index else None,
+            "N_min": float(fit_row.get("N_min")) if "N_min" in fit_row.index else None,
+            "N_max": float(fit_row.get("N_max")) if "N_max" in fit_row.index else None
         },
+        "edge_by_init": bool(spec.get("edge_by_init", edge_by_init)),
+        "edge_lw": float(spec.get("edge_lw", 0.6)),
         "phys_signature_parts": phys_parts,
         "paths": {
             "out_png": str(out_base)+".png",
@@ -491,7 +528,7 @@ def _plot_one(spec: Dict[str, Any]) -> Optional[Path]:
         }
     }
     with open(str(out_base) + "_meta.json", "w", encoding="utf-8") as f:
-        json.dump(meta | cb_meta, f, ensure_ascii=False, indent=2)
+        json.dump(meta, f, ensure_ascii=False, indent=2)
 
     plt.close(fig)
     if VERBOSE:

@@ -1,0 +1,19 @@
+# MyBasePlots/styles/paper_thesis_overlay.mplstyle
+# Overlay for thesis/dissertation (legible on screen; slightly stronger lines).
+
+font.size           : 10.0
+axes.labelsize      : 10.0
+axes.titlesize      : 11.0
+xtick.labelsize     : 9.0
+ytick.labelsize     : 9.0
+legend.fontsize     : 9.0
+
+xtick.major.size    : 4.0
+xtick.major.width   : 0.9
+ytick.major.size    : 4.0
+ytick.major.width   : 0.9
+
+lines.linewidth     : 1.2
+axes.linewidth      : 0.9
+
+legend.frameon      : True

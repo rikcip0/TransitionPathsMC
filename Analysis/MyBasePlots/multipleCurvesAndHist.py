@@ -14,10 +14,8 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 from matplotlib.ticker import ScalarFormatter, LogLocator, LogFormatterSciNotation, FixedLocator, MaxNLocator
-from contextlib import nullcontext
 from cycler import cycler, Cycler
 
-from MyBasePlots.utils import paper_style
 
 
 ArrayLike = Union[np.ndarray, Sequence[float], List[float]]
@@ -35,8 +33,8 @@ def multipleCurvesAndHist(
     *,
     # --- curve selection/labels ---
     nameForCurve: str = 'traj',
-    curvesIndeces: Optional[Sequence[int]] = None,  # legacy spelling kept
-    curvesIndices: Optional[Sequence[int]] = None,  # alias accepted
+    curvesIndeces: Optional[Sequence[int]] = None,
+    curvesIndices: Optional[Sequence[int]] = None,  # legacy spelling kept
     namesForCurves: Optional[Sequence[str]] = None,
 
     # --- histogram toggles & layout ---
@@ -86,15 +84,13 @@ def multipleCurvesAndHist(
 
     # legend
     legend: bool = True,
+    reserve_legend_space: bool = True,
+    manage_style: bool = False,
+    figsize: Optional[Tuple[float, float]] = None,
     guide_labels: str = 'legend',   # 'legend' | 'axes' | 'none'
-
-    reserve_legend_space: bool = False,
 
     # palette
     palette: Union[str, Sequence[str], Cycler] = "cb_safe",
-
-    # style management
-    manage_style: bool = True,
 
     # --- NEW: fine control without touching global rc ---
     hist_tick_scale: float = 0.88,   # histogram & CDF-twin tick label size = scale * main tick size
@@ -114,7 +110,7 @@ def multipleCurvesAndHist(
     """Draw multiple curves with optional side histograms keeping the main panel physically constant.
     The main axis is the single source of style; all auxiliary axes copy linewidths and font sizes from it.
     """
-    with (paper_style() if manage_style else nullcontext()):
+    if True:
         # --------------------
         # CONSTANT GEOMETRY
         # --------------------
@@ -260,9 +256,7 @@ def multipleCurvesAndHist(
         if len(Xs) == 1 and n_raw > 1: Xs = [Xs[0] for _ in range(n_raw)]
         if len(Ys) == 1 and n_raw > 1: Ys = [Ys[0] for _ in range(n_raw)]
 
-
-        # alias fix: accept both spellings
-        if curvesIndeces is None and curvesIndices is not None:
+        if (curvesIndices is not None) and (curvesIndeces is None):
             curvesIndeces = curvesIndices
         if curvesIndeces is not None and len(curvesIndeces) > 0:
             idx_list = [i for i in curvesIndeces if 0 <= i < n_raw]
@@ -389,15 +383,23 @@ def multipleCurvesAndHist(
                 for g in yGuides:
                     if len(g) >= 2 and g[1] is not None:
                         prelim_leg_labels.append(str(g[1]))
-        LEG_W = _estimate_legend_width_in(prelim_leg_labels) if (legend or reserve_legend_space) else 0.0
+        LEG_W = _estimate_legend_width_in(prelim_leg_labels) if legend else 0.0
 
-        n_title_lines = (title.count('\n') + 1) if title else 0
-        TOP_PAD = 0.0 if not title else (TOP_PAD_BASE + max(0, n_title_lines - 1) * TOP_PAD_PER_EX)
+        # Reserve legend space even if legend=False
+        if reserve_legend_space and LEG_W <= 0.0:
+            LEG_W = max(LEG_W_MIN, LEG_W)
+
+
+        n_title_lines = int(max(1, title.count('\n') + (1 if title else 0)))
+        TOP_PAD = TOP_PAD_BASE + (max(0, n_title_lines - 1)) * TOP_PAD_PER_EX
 
         fig_w = W_MAIN \
               + ((GAP_W + n_cols_histY*W_HCOL) if n_cols_histY > 0 else 0.0) \
-              + (((LEG_PAD_W_CDF if ((legend or reserve_legend_space) and (LEG_W > 0) and y_cdf) else LEG_PAD_W) + LEG_W) if ((legend or reserve_legend_space) and LEG_W > 0) else 0.0)
+              + (((LEG_PAD_W_CDF if (legend and (LEG_W > 0) and y_cdf) else LEG_PAD_W) + LEG_W) if (legend and LEG_W > 0) else 0.0)
         fig_h = TOP_PAD + H_MAIN + ((GAP_H + n_rows_histX*H_HROW) if n_rows_histX > 0 else 0.0)
+        if figsize is not None:
+            fig_w, fig_h = float(figsize[0]), float(figsize[1])
+
 
         # apply outer pads to overall figure size
         fig_w += RIGHT_OUTER_PAD
@@ -408,7 +410,7 @@ def multipleCurvesAndHist(
         width_ratios  = [W_MAIN] \
                       + ([GAP_W] if n_cols_histY > 0 else []) \
                       + ([W_HCOL] * n_cols_histY) \
-                      + ([(LEG_PAD_W_CDF if ((legend or reserve_legend_space) and y_cdf) else LEG_PAD_W), LEG_W] if ((legend or reserve_legend_space) and LEG_W > 0) else [])+ [RIGHT_OUTER_PAD]
+                      + ([(LEG_PAD_W_CDF if ((legend or reserve_legend_space) and y_cdf) else LEG_PAD_W), LEG_W] if ((legend and LEG_W > 0) or reserve_legend_space) else [])+ [RIGHT_OUTER_PAD]
         if n_rows_histX > 0 and (xhist_position or 'top').lower() == 'top':
             height_ratios = [TOP_OUTER_PAD] + ([H_HROW] * n_rows_histX) + [GAP_H] + [H_MAIN]
         else:

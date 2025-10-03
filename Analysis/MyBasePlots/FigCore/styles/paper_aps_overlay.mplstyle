@@ -1,0 +1,23 @@
+# MyBasePlots/styles/paper_aps_overlay.mplstyle
+# Overlay for APS (Physical Review) figures.
+
+font.family         : serif
+font.serif          : Times, TeX Gyre Termes, Times New Roman
+font.size           : 10.0
+axes.labelsize      : 10.0
+axes.titlesize      : 11.0
+xtick.labelsize     : 9.0
+ytick.labelsize     : 9.0
+legend.fontsize     : 9.0
+
+xtick.major.size    : 4.0
+xtick.major.width   : 0.9
+ytick.major.size    : 4.0
+ytick.major.width   : 0.9
+xtick.direction     : in
+ytick.direction     : in
+
+lines.linewidth     : 1.1
+axes.linewidth      : 0.9
+
+legend.frameon      : True

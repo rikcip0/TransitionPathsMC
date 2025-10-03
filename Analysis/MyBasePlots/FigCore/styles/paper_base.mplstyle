@@ -1,0 +1,45 @@
+# MyBasePlots/styles/paper_base.mplstyle
+# Base style for paper-ready figures (neutral, vector-safe, no LaTeX).
+# Keep minimal; overlays add journal-specific tweaks.
+
+# ---- Fonts & text (non-TeX) ----
+font.family         : sans-serif
+font.sans-serif     : DejaVu Sans, Arial, Helvetica
+mathtext.fontset    : dejavusans
+axes.unicode_minus  : True
+
+# Sizes chosen to be >=~6 pt at single-column width after typical downscale
+font.size: 9.5
+axes.labelsize: 12.0
+xtick.labelsize: 9.5
+ytick.labelsize: 9.5
+legend.fontsize     : 8.0
+
+# ---- Lines & axes ----
+lines.linewidth     : 2.6
+axes.linewidth      : 0.8
+xtick.major.size    : 3.5
+xtick.major.width   : 0.8
+ytick.major.size    : 3.5
+ytick.major.width   : 0.8
+xtick.direction     : out
+ytick.direction     : out
+
+# ---- Legends ----
+legend.frameon      : False
+legend.handlelength : 1.6
+legend.handletextpad: 0.6
+legend.borderaxespad: 0.6
+
+# ---- Output backends ----
+pdf.fonttype        : 42     # embed TrueType; avoid Type 3
+ps.fonttype         : 42
+svg.fonttype        : none   # keep text as text
+
+# ---- Color cycle (set via separate palette overlay if needed) ----
+# axes.prop_cycle     : cycler('color', ('#0072B2','#D55E00','#CC79A7','#E69F00','#56B4E9','#009E73','#000000'))
+
+# ---- Saving defaults (no tight bbox by default; managed in code) ----
+savefig.dpi         : 300
+savefig.bbox        : standard
+savefig.pad_inches  : 0.02

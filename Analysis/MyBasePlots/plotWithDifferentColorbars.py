@@ -36,7 +36,8 @@ def plotWithDifferentColorbars(
     from matplotlib.lines import Line2D
     from matplotlib.gridspec import GridSpecFromSubplotSpec
     from scipy.optimize import curve_fit
-    from MyBasePlots.utils import paper_style
+    from MyBasePlots.FigCore.utils_style import auto_style
+
     from matplotlib.collections import LineCollection
     
     DELIM = " | "
@@ -138,7 +139,7 @@ def plotWithDifferentColorbars(
     FITTERS = {"linear":_fit_linear, "quadratic":_fit_quadratic, "expo":_fit_expo}
 
     # ------------------ PREPROCESS ------------------
-    with paper_style():
+    with auto_style():
         x = np.asarray(x, dtype=float)
         y = np.asarray(y, dtype=float)
         if x.shape != y.shape:
@@ -221,7 +222,8 @@ def plotWithDifferentColorbars(
                         m = np.ones_like(x, dtype=bool)
                 masks_norm.append(m)
             functionsToPlotContinuously = (funs, masks_norm)
-            
+        
+        markerEdgeVariable  = markerEdgeVariable.astype(str)
         uniq_edge_vals = np.unique(markerEdgeVariable)
         uniq_edge_vals = uniq_edge_vals[np.argsort(_as_str_key(uniq_edge_vals))]
         uniq_shapes = np.unique(shape_key)
@@ -780,7 +782,7 @@ def plotWithDifferentColorbars(
                         plt.plot([], [], label=f'c={c:.3g} ' + r'm'+f'={a:.3g}'+'±'+f'{mErr:.3g}', linestyle='--', marker=marker, color=color)
                         fitResult= m, c, mErr
                         
-        if fittingOverDifferentEdges is True and fittingOverDifferentShapes is False:
+        if fittingOverDifferentEdges is True:
             fitCondition =  [np.array_equal(t,variable) for variable in markerShapeVariable]
             xToPlot=np.linspace(np.nanmin(x[fitCondition]), np.nanmax(x[fitCondition]), 100)
             if len(np.unique(x[fitCondition]))>2:

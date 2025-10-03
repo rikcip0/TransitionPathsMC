@@ -19,19 +19,13 @@ from moviepy.editor import VideoClip
 from moviepy.video.io.bindings import mplfig_to_npimage
 import networkx as nx
 
-from MyBasePlots.utils_style import use_paper_style           # applica myStyle/myLatexStyle con decorator
-from MyBasePlots.myTemplates import (
-    create_standard_figure,
-    create_figure_with_colorbar,
-    create_figure_with_side_hist,   # se serve in futuro
-)
-from MyBasePlots.utils_plot import (
-    exportFigure,
+from MyBasePlots.FigCore.utils_style import auto_style           # applica myStyle/myLatexStyle con decorator
+
+from MyBasePlots.FigCore.utils_plot import (
     standardize_ticks,
-    place_legend_outside,
     exportAllOpenFigures,
 )
-from MyBasePlots.myColors import apply_cycle, get_cmap
+from MyBasePlots.FigCore.myEncodings import apply_cycle
 
 doAdditional2dHist=False
 simulationCode_version = None
@@ -1431,6 +1425,7 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
     palette='bw'
     )
     
+    
     figure, mainPlot, _ = multipleCurvesAndHist(
     name='eVsM',
     title='Energy vs Magnetization',
@@ -1542,7 +1537,8 @@ def singlePathMCAnalysis(run_Path, configurationsInfo, goFast=False, redoIfDone=
             yHistLogDensity=(histScale == 'log') if isinstance(histScale, str) else bool(histScale)
         )
         addInfoLines(figure)
-
+    plt.savefig(os.path.join(theseFiguresSubFolder, 'someTrajs_all.png'), dpi=300, bbox_inches='tight')
+    print("Saved figure: ", os.path.join(theseFiguresSubFolder, 'someTrajs_all.png'))
     exportAllOpenFigures(theseFiguresSubFolder, to_pdf=toPdf)
     #Plots considering only some trajs: END
     #ANALYSIS OF SAMPLED TRAJS: END 
@@ -2069,7 +2065,7 @@ def singleStandardMCAnalysis(run_Path, configurationInfo, goFast=False):
     simData['results']=results
     writeJsonResult(simData, os.path.join(resultsFolder,'runData.json'))
 
-@use_paper_style
+
 def singleRunAnalysis(run_Path,redoIfDone=False,threeFitS=None, toPdf=False):
 
     standardMCSimIDs = [15]

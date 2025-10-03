@@ -11,6 +11,7 @@ Requisiti implementati
 - Output sotto Analysis/FigScripts/_figs/TI/F2_fit_vs_beta/… (cartelle per model/anchor/firma_fisica/subset/id).
 - Nessun fallback: se MyBasePlots non è importabile → errore; se manca un file richiesto → errore esplicito.
 - Overlay teorico opzionale per-plot con `theory_txt` (2 colonne: β, β·δf), tracciato sullo stesso asse y.
+- Salvataggio metadati: JSON con stesso basename delle figure + `_meta.json`.
 """
 
 from __future__ import annotations
@@ -21,42 +22,23 @@ from typing import Dict, Any, List, Optional
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
-# ==================== CONFIG "PAPER" (EDITA QUI) ====================
+import json
 
 FIG_ID    = "F2"
 SLUG      = "fit_vs_beta"
-FIGSIZE   = (3.0, 2.2)  # singolo pannello
+FIGSIZE   = (3.0, 2.2)
 DPI       = 300
-REQUIRE_MYBASEPLOTS = True  # niente fallback: se manca -> errore
-
-# Root Data: se None prende ../../Data rispetto a questo file (…/TransitionPathsMC/Data)
+REQUIRE_MYBASEPLOTS = True
 DATA_ROOT: Optional[str] = None
-
-# Diagnostica
 VERBOSE = True
 
-# Ogni voce genera UN plot.
-# Campi supportati per voce:
-# - id:            string per cartella/nome file
-# - model:         "ER" | "RRG" | "REAL"
-# - subset_id      (oppure subset_label se vuoi risoluzione automatica: se multipli -> errore)
-# - beta_kind:     "raw" | "rescaled"
-# - kcol:          "kFromChi" | "kFromChi_InBetween" | "kFromChi_InBetween_Scaled"
-# - anchor:        "M" | "G" (richiesto se beta_kind == "rescaled")
-# - ref_stat:      "mean" | "median" (solo per rescaled; default "mean")
-# - filters:       opzionale dict: {"xmin":..., "xmax":..., "ymin":..., "ymax":...} (filtri applicati a x_col e slope)
-# - xlim/ylim:     limiti assi (solo estetica)
-# - theory_txt:    opzionale path (abs/rel al presente script) a TXT a 2 colonne (β, β·δf). Se set, DEVE esistere.
 PLOTS: List[Dict[str, Any]] = [
-    # Esempi (sostituisci con i tuoi case reali):
     {"id":"raw_ER_all_07018d", "model":"ER",  "subset_id":"07018d22622d32a8", "beta_kind":"raw",      "kcol":"kFromChi"},
     {"id":"M_ER_all_07018d",   "model":"ER",  "subset_id":"07018d22622d32a8", "beta_kind":"rescaled", "anchor":"M", "kcol":"kFromChi_InBetween",  "filters":{"xmin":0.5,"xmax":1.0}},
      {"id":"raw_RRG_all_xxx", "model":"RRG", "subset_id":"2354bcad23a43145", "beta_kind":"raw", "kcol":"kFromChi_InBetween_Scaled",
       "theory_txt":"./data.txt", "filters":{"xmin":0.5,"xmax":1.0}},
 ]
 
-# ==================== MyBasePlots (richiesto) ====================
 sys.path.append('../')
 try:
     from MyBasePlots.FigCore import utils_style as ustyle
@@ -67,11 +49,9 @@ except Exception as e:
         print(f"[warn] MyBasePlots non disponibile ({e}).", file=sys.stderr)
         ustyle = None
 
-# ==================== PATH HELPERS ====================
 def _data_base_dir(data_root: Optional[str]) -> Path:
     if data_root is not None:
         return Path(data_root)
-    # Script in Analysis/FigScripts -> risalgo a .../TransitionPathsMC/Data
     return Path(__file__).resolve().parents[2] / "Data"
 
 def _ti_dir(model: str, data_root: Optional[str]) -> Path:
@@ -89,7 +69,6 @@ def _read_parquet(p: Path, tag: str) -> pd.DataFrame:
         raise FileNotFoundError(f"[{tag}] non trovato: {p}")
     return pd.read_parquet(p)
 
-# ==================== UTIL DI FORMAT ====================
 def _sanitize(s: str) -> str:
     s = "" if s is None else str(s)
     for a,b in [('>','gt'),('<','lt'),('=','eq'),(' ','_'),('/','-'),(';','__'),(':',''),(',','_')]:
@@ -108,7 +87,6 @@ def _subset_folder_name(label: str, subset_id: str) -> str:
     safe_lab = (label or "subset").replace('>','gt').replace('<','lt').replace('=','eq').replace(' ','_').replace('/','-')
     return f"{safe_lab}__{subset_id[:8]}"
 
-# ==================== PHYS SIGNATURE ====================
 def _families_for_subset(df_plot: pd.DataFrame, members: pd.DataFrame, subset_id: str) -> List[str]:
     fams: List[str] = []
     if "family_id" in df_plot.columns:
@@ -137,7 +115,6 @@ def _phys_signature_parts(df_plot: pd.DataFrame, families_df: pd.DataFrame, memb
     parts.append(_sanitize(f"Hin_{_fmt_val(r.get('Hin'))}__Hout_{_fmt_val(r.get('Hout'))}__nQstar_{_fmt_val(nq)}__{fid[:8]}"))
     return parts
 
-# ==================== SELEZIONE & FILTRI ====================
 def _apply_filters(df: pd.DataFrame, x_col: str, y_col: str, flt: Optional[Dict[str,float]]) -> pd.DataFrame:
     if not flt: return df
     m = np.ones(len(df), dtype=bool)
@@ -147,7 +124,6 @@ def _apply_filters(df: pd.DataFrame, x_col: str, y_col: str, flt: Optional[Dict[
     if "ymax" in flt: m &= df[y_col].to_numpy() <= float(flt["ymax"])
     return df.loc[m]
 
-# ==================== THEORY (per-plot) ====================
 def _load_theory_txt(txt_path: Path) -> np.ndarray:
     if not txt_path.exists():
         raise FileNotFoundError(f"[theory] file non trovato: {txt_path}")
@@ -159,9 +135,7 @@ def _load_theory_txt(txt_path: Path) -> np.ndarray:
         raise ValueError(f"[theory] attese 2 colonne (beta, beta_delta_f); trovate {arr.shape[1]}")
     return arr
 
-# ==================== MAIN ====================
 def main():
-    # Stile: MyBasePlots richiesto
     try:
         ustyle.auto_style(mode="latex", base="paper_base.mplstyle", overlay="overlay_latex.mplstyle")
     except Exception as e:
@@ -197,7 +171,6 @@ def main():
         if VERBOSE:
             print(f"[ti_dir:{model}]", ti_dir)
 
-        # Risolvi subset_label -> subset_id se necessario (conservativo)
         if subset_id is None and subset_lb is not None:
             ids = subsets.loc[subsets["subset_label"]==str(subset_lb), "subset_id"].drop_duplicates().astype(str).tolist()
             if len(ids)==0:
@@ -209,7 +182,6 @@ def main():
         if subset_id is None:
             raise ValueError(f"[{spec_id}] va specificato subset_id o subset_label")
 
-        # Selezione dati
         if kcol not in fits["kcol"].unique().tolist():
             raise ValueError(f"[{spec_id}] kcol='{kcol}' non presente in ti_linear_fits ({model})")
 
@@ -236,10 +208,8 @@ def main():
         if df.empty:
             raise ValueError(f"[{spec_id}] nessun dato selezionato per (model={model}, subset_id={subset_id}, beta_kind={beta_kind}, kcol={kcol})")
 
-        # ===== Filtri semplici: applicati ESATTAMENTE a ciò che si mostra (x_col, slope) =====
         df = _apply_filters(df, x_col, "slope", filters)
 
-        # Plot
         fig, ax = plt.subplots(figsize=FIGSIZE, dpi=DPI)
         x = df[x_col].astype(float).to_numpy()
         y = df["slope"].astype(float).to_numpy()
@@ -250,12 +220,11 @@ def main():
         else:
             ax.plot(x, y, "-o")
 
-        # Overlay teorico se specificato
         if "theory_txt" in spec and spec["theory_txt"]:
             tpath = Path(spec["theory_txt"])
             if not tpath.is_absolute():
                 tpath = (Path(__file__).resolve().parent / tpath).resolve()
-            arr = _load_theory_txt(tpath)  # (β,β·δf)
+            arr = _load_theory_txt(tpath)
             xmin, xmax = float(np.nanmin(x)), float(np.nanmax(x))
             m = np.isfinite(arr[:,0]) & np.isfinite(arr[:,1]) & (arr[:,0]>=xmin) & (arr[:,0]<=xmax)
             if not np.any(m):
@@ -271,7 +240,6 @@ def main():
         if xlim: ax.set_xlim(*xlim)
         if ylim: ax.set_ylim(*ylim)
 
-        # Firma fisica per path
         try:
             families = _read_parquet(_ti_dir(model, DATA_ROOT) / "ti_families.parquet", "ti_families")
         except Exception:
@@ -310,7 +278,6 @@ def main():
         except Exception:
             phys_parts = ["noFamily"]
 
-        # subset label
         try:
             subsets = _read_parquet(_ti_dir(model, DATA_ROOT) / "ti_family_subsets.parquet", "ti_family_subsets")
             row = subsets.loc[subsets["subset_id"]==str(subset_id)]
@@ -324,6 +291,67 @@ def main():
         out_base = out_dir / f"{FIG_ID}_{SLUG}__{model}__{_sanitize(str(sub_label))}__{spec_id}__{kcol}"
         fig.savefig(str(out_base)+".png", dpi=DPI, bbox_inches="tight")
         fig.savefig(str(out_base)+".pdf", dpi=DPI, bbox_inches="tight")
+
+        # --- write metadata JSON ---
+        meta = {
+            "fig_id": FIG_ID,
+            "slug": SLUG,
+            "model": model,
+            "subset_id": str(subset_id),
+            "subset_label": str(sub_label),
+            "beta_kind": beta_kind,
+            "kcol": kcol,
+            "anchor": (anchor if beta_kind=="rescaled" else None),
+            "ref_stat": (ref_stat if beta_kind=="rescaled" else None),
+            "filters": (filters or {}),
+            "x_col": x_col,
+            "data": {
+                "n_points": int(len(df)),
+                "x_min": (float(np.nanmin(x)) if len(df) else None),
+                "x_max": (float(np.nanmax(x)) if len(df) else None),
+                "y_min": (float(np.nanmin(y)) if len(df) else None),
+                "y_max": (float(np.nanmax(y)) if len(df) else None)
+            },
+            "axes": {
+                "xlim": list(ax.get_xlim()),
+                "ylim": list(ax.get_ylim())
+            },
+            "phys_signature_parts": phys_parts,
+            "paths": {
+                "out_png": str(out_base)+".png",
+                "out_pdf": str(out_base)+".pdf"
+            },
+            "sources": {
+                "ti_dir": str(ti_dir),
+                "parquets": {
+                    "fits": str(fits_path),
+                    "subsets": str(subsets_path),
+                    "members": str(members_path),
+                    "families": str(families_path)
+                }
+            }
+        }
+        def _to_jsonable(o):
+            import numpy as _np
+            from pathlib import Path as _Path
+            if isinstance(o, (str, int, float, bool)) or o is None:
+                return o
+            if isinstance(o, (list, tuple)):
+                return [_to_jsonable(x) for x in o]
+            if isinstance(o, dict):
+                return {str(k): _to_jsonable(v) for k,v in o.items()}
+            if isinstance(o, _Path):
+                return str(o)
+            if isinstance(o, (_np.integer,)):
+                return int(o)
+            if isinstance(o, (_np.floating,)):
+                return float(o)
+            if isinstance(o, (_np.ndarray,)):
+                return [_to_jsonable(x) for x in o.tolist()]
+            return str(o)
+        with open(str(out_base) + "_meta.json", "w", encoding="utf-8") as f:
+            json.dump(_to_jsonable(meta), f, ensure_ascii=False, indent=2)
+
         plt.close(fig)
         if VERBOSE:
             print("[out]", out_base)

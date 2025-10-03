@@ -1,0 +1,8 @@
+# MyBasePlots/styles/overlay_latex.mplstyle
+# Overlay enabling LaTeX text rendering with Times-like fonts (newtxtext/newtxmath recommended).
+
+font.family: serif
+font.serif: Computer Modern Roman
+axes.unicode_minus: False
+# If you control the LaTeX preamble in your environment, ensure newtxtext/newtxmath are loaded.
+# text.latex.preamble : \usepackage{newtxtext}\usepackage{newtxmath}\usepackage{siunitx}

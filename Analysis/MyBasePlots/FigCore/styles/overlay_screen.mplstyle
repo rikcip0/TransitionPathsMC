@@ -1,0 +1,13 @@
+# MyBasePlots/styles/overlay_screen.mplstyle
+# Overlay for screen/interactive use: LaTeX OFF, slightly larger fonts, higher DPI.
+
+text.usetex         : False
+font.family         : sans-serif
+font.sans-serif     : DejaVu Sans, Arial, Helvetica
+font.size           : 10.5
+axes.labelsize      : 10.5
+axes.titlesize      : 11.5
+xtick.labelsize     : 9.5
+ytick.labelsize     : 9.5
+legend.fontsize     : 9.5
+figure.dpi          : 120

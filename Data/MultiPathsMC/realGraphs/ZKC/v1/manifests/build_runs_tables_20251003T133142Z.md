@@ -8,10 +8,10 @@
 
                 ## Per-model stats
                 - model: realGraphs/ZKC
-                - paths_runs:        169
+                - paths_runs:        182
                 - std_runs:          46
-                - params_rows:       164
-                - results_rows:      164
+                - params_rows:       177
+                - results_rows:      177
                 - stdmcs_rows:       46
                 - skipped_no_results:5
 
