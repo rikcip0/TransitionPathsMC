@@ -504,6 +504,7 @@ def scan_and_build(model: str, includes: List[str], outdir: Path, graphs_root: P
 
     # PathsMCs
     for i, run in enumerate(paths_runs, 1):
+        print(run)
         data = load_run_json(run)
         if not data:
             continue
@@ -530,6 +531,7 @@ def scan_and_build(model: str, includes: List[str], outdir: Path, graphs_root: P
 
     # stdMCs
     for i, run in enumerate(std_runs, 1):
+        print(run)
         data = load_run_json(run)
         if not data:
             continue

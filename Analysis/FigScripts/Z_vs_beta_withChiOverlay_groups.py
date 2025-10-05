@@ -8,7 +8,7 @@ specs = [
     {
         "model": "realGraphs/ZKC",
         "runs": [
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run6952",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run2620",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.9_0_inf_20_inf_run6950",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.9_0_inf_20_inf_run7081",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.9_0_inf_20_inf_run7079",
@@ -31,7 +31,7 @@ specs = [
     {
         "model": "realGraphs/ZKC",
         "runs": [
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.55_0_inf_20_inf_run9959",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.55_0_inf_20_inf_run2634",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.55_0_inf_20_inf_run8308",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.55_0_inf_20_inf_run9935",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.55_0_inf_20_inf_run42",
@@ -54,7 +54,7 @@ specs = [
     {
         "model": "realGraphs/ZKC",
         "runs": [
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run6952",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run2620",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.9_0_inf_20_inf_run6950",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.9_0_inf_20_inf_run7081",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.9_0_inf_20_inf_run7079",
@@ -77,7 +77,7 @@ specs = [
     {
         "model": "realGraphs/ZKC",
         "runs": [
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.55_0_inf_20_inf_run9959",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.55_0_inf_20_inf_run2634",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.55_0_inf_20_inf_run8308",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.55_0_inf_20_inf_run9935",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.55_0_inf_20_inf_run42",
@@ -100,7 +100,7 @@ specs = [
     {
         "model": "realGraphs/ZKC",
         "runs": [
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.35_0_inf_20_inf_run9951",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.35_0_inf_20_inf_run2642",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.35_0_inf_20_inf_run5103",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.35_0_inf_20_inf_run9927",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.35_0_inf_20_inf_run34",
@@ -145,7 +145,7 @@ specs = [
     },
 ]
 
-import os, sys, json, hashlib, math, numpy as np
+import os, sys, json, hashlib, numpy as np
 from pathlib import Path
 from typing import List, Dict
 import matplotlib
@@ -161,23 +161,28 @@ sys.path.append('../')
 from MyBasePlots.FigCore import utils_style as ustyle
 from MyBasePlots.FigCore import utils_plot  as uplot
 
+# === colonne χ in av*.dat
 CHI_COL = 4
 CHI_ERR_COL = 5
 EPS = 1e-12
-TMIN_CHI = 1.5
-# Se True, TMIN_CHI funge ANCHE da bound inferiore per tau nei fit su chi(t)
+TMIN_CHI = 0.0
+# Se True, TMIN_CHI funge ANCHE da bound inferiore per tau nei fit su χ(t)
 ENFORCE_TMIN_CHI_ON_TAU = True
 
+# === politica per sigma(Z): 'from_table' | 'binomial' | 'uniform'
 Z_SIGMA_POLICY = "from_table"
 Z_SIGMA_COLS_ORDER = ["ZFromTIBetaStd","ZFromTIBeta_sigma","Z_sigma","sigma_Z","err_Z","ZFromTIBetaErr"]
 
+# === colori
 COL_Z_POINTS = "black"
 COL_CHI_CURVE = "blue"
 COL_FIT = "red"
 COL_TAU = "0.6"
 
+# === forza shift prima del primo T (per includere tutti i punti in Z-fit)
 FORCE_SHIFT_BEFORE_FIRST = True
 
+# ----------------- helpers path -----------------
 def _norm_path(p: str) -> str:
     if p is None: return p
     q = p.replace('\\\\', '\\').replace('\\', '/')
@@ -207,6 +212,7 @@ def _make_run_uid(run_dir: Path, graphs_root: Path) -> str:
     except Exception: rel = str(run_dir.resolve())
     return hashlib.sha1(rel.encode("utf-8")).hexdigest()[:16]
 
+# ----------------- carico tabelle -----------------
 def _load_ti_points_for_runs(model: str, runs: List[str], graphs_root_override: str = None):
     if not runs: raise ValueError("Lista 'runs' vuota.")
     graphs_root = _find_graphs_root_from_run(_norm_path(runs[0]), graphs_root_override)
@@ -315,7 +321,43 @@ def model_cinematic_chi(t, r, k, tau, C):
     t = np.asarray(t, float); tt = t - tau
     return (r/(2.0*r+1.0)) - 0.5*np.exp(-k*tt) + (1.0/(2.0*(2.0*r+1.0)))*np.exp(-k*(2.0*r+1.0)*tt) + C
 
-# ============================== FITS (logica invariata; uso i modelli) ==============================
+# ============================== UTIL: p0 robusti ==============================
+def _wls_slope_intercept(x, y, sigma):
+    w = 1.0 / np.clip(sigma, 1e-9, np.inf)**2
+    X = np.vstack([x, np.ones_like(x)]).T
+    WX = X * w[:,None]
+    Wy = y * w
+    beta, *_ = np.linalg.lstsq(WX, Wy, rcond=None)
+    slope, intercept = float(beta[0]), float(beta[1])
+    return slope, intercept
+
+def _guess_tau_from_rise(t, y):
+    # trova il primo t in cui y ha superato il 2% della dinamica
+    y0, y1 = float(np.min(y)), float(np.max(y))
+    span = max(y1 - y0, 1e-12)
+    thr = y0 + 0.02 * span
+    idx = np.argmax(y >= thr)
+    tau0 = float(np.clip(t[idx], t.min(), t.max()))
+    return tau0
+
+def _guess_k_from_tail_decay(t, y, plateau):
+    # stima k su coda: log(plateau - y) ~ -k*t + const
+    resid = plateau - y
+    mask = (resid > 1e-12)
+    print(t)
+    if np.sum(mask) < 5: 
+        return 1.0 / max(t[-1]-t[0], 1.0)
+    xt = t[mask]
+    yt = np.log(resid[mask])
+    # usa ultimi 30% dei punti se possibile
+    m2 = np.arange(xt.size) >= int(0.7 * xt.size)
+    if np.sum(m2) >= 5:
+        xt, yt = xt[m2], yt[m2]
+    slope, _ = _wls_slope_intercept(xt, yt, np.ones_like(yt))
+    k = max(-slope, 1e-12)
+    return k
+
+# ============================== FITS (logica invariata; p0 migliorati) ==============================
 def _stderr_from_jac(res, dof):
     try:
         J = res.jac
@@ -329,11 +371,15 @@ def _stderr_from_jac(res, dof):
 
 def do_fit_quadratic_chi(time_fit, avChi_fit, avChiErr_fit):
     w_all = 1.0 / avChiErr_fit**2
-    yspan = (time_fit.max() - time_fit.min())
-    tau0  = time_fit.min()
-    log_a0 = np.log((avChi_fit.max() - avChi_fit.min()) / ((time_fit.max() - tau0)**2 + 1e-12))
+    # tau0 dal "punto di risalita"
+    tau0 = max(_guess_tau_from_rise(time_fit, avChi_fit), TMIN_CHI if ENFORCE_TMIN_CHI_ON_TAU else -np.inf)
+    # a0 dalla dinamica complessiva
+    span_t = max(time_fit.max() - tau0, 1e-6)
+    a0 = max((avChi_fit.max() - avChi_fit.min()) / (span_t**2), 1e-12)
+    log_a0 = np.log(a0)
     p0_q   = np.array([log_a0, tau0])
-    tau_min = time_fit.min() - yspan
+    # bounds
+    tau_min = time_fit.min() - (time_fit.max() - time_fit.min())
     if ENFORCE_TMIN_CHI_ON_TAU:
         tau_min = max(tau_min, TMIN_CHI)
     tau_max = time_fit.max()
@@ -364,7 +410,7 @@ def do_fit_quadratic_chi(time_fit, avChi_fit, avChiErr_fit):
     if se_vec is not None:
         se_log_a, se_tau = float(se_vec[0]), float(se_vec[1])
         stderr_map = {
-            "a": abs(a_fit)*se_log_a,   # delta method: da log_a a a
+            "a": abs(a_fit)*se_log_a,
             "tau": se_tau,
             "C": (1.0/np.sqrt(np.sum(w_all[m]))) if np.isfinite(np.sum(w_all[m])) and np.sum(w_all[m])>0 else None,
         }
@@ -373,10 +419,12 @@ def do_fit_quadratic_chi(time_fit, avChi_fit, avChiErr_fit):
 
 def do_fit_cinematic_chi(time_fit, avChi_fit, avChiErr_fit):
     w_all = 1.0 / avChiErr_fit**2
+    # plateau ~ media degli ultimi punti
     y_tail = np.mean(avChi_fit[-min(20, len(avChi_fit)):])
-    r0  = max(y_tail / (1 - 2 * y_tail), 2.0)
-    k0  = 1.0 / (time_fit[-1] - time_fit[0])
-    tau0 = time_fit.min()
+    r0  = max(y_tail / max(1 - 2 * y_tail, 1e-6), 2.0)
+    # k0 dalla coda
+    k0  = _guess_k_from_tail_decay(time_fit, avChi_fit, plateau=y_tail)
+    tau0 = max(_guess_tau_from_rise(time_fit, avChi_fit), TMIN_CHI if ENFORCE_TMIN_CHI_ON_TAU else -np.inf)
     tau_min = time_fit.min() - (time_fit.max() - time_fit.min())
     if ENFORCE_TMIN_CHI_ON_TAU:
         tau_min = max(tau_min, TMIN_CHI)
@@ -424,9 +472,10 @@ def do_fit_cinematic_chi(time_fit, avChi_fit, avChiErr_fit):
 def do_fit_linear_Z(time_ti, Z_ti, sigma_ti):
     chiErr_ti = np.array(sigma_ti, float)
     chiErr_ti[~np.isfinite(chiErr_ti) | (chiErr_ti<=0)] = 1.0
-    w_ti = 1.0 / chiErr_ti**2
-    k0  = 1.0 / (time_ti[-1] - time_ti[0])
-    tau0 = time_ti.min()
+    # p0: slope da WLS, tau0 appena prima del primo T
+    k_wls, b_wls = _wls_slope_intercept(time_ti, Z_ti, chiErr_ti)
+    k0 = max(abs(k_wls), 1e-12)  # positivo; il segno è assorbito da C durante il fit con maschera
+    tau0 = time_ti.min() - max(1e-3, 0.02 * (time_ti.ptp()))
     def residuals(p):
         log_k, tau = p
         k  = np.exp(log_k)
@@ -434,8 +483,7 @@ def do_fit_linear_Z(time_ti, Z_ti, sigma_ti):
         tt = time_ti - tau
         m  = tt > 0
         if m.sum() < 2: return np.full(time_ti.size, 1e6)
-        base_m = pred[m]
-        C = np.sum(w_ti[m] * (Z_ti[m] - base_m)) / np.sum(w_ti[m])
+        C = np.sum((Z_ti[m] - pred[m]) / (chiErr_ti[m]**2)) / np.sum(1.0/(chiErr_ti[m]**2))
         res = (pred + C - Z_ti) / chiErr_ti
         res[~m] = 0.0
         return res
@@ -444,13 +492,13 @@ def do_fit_linear_Z(time_ti, Z_ti, sigma_ti):
     if FORCE_SHIFT_BEFORE_FIRST:
         upper[1] = min(upper[1], time_ti.min()-1e-9)
         tau0 = min(tau0, time_ti.min()-1e-3)
-    p0    = np.array([np.log(max(k0,1e-10)), tau0])
+    p0    = np.array([np.log(k0), tau0])
     res = least_squares(residuals, p0, bounds=(lower, upper), max_nfev=3_000_000)
     log_k_fit, tau_fit = res.x
     k_fit = float(np.exp(log_k_fit))
     tt = time_ti - tau_fit; m = tt > 0
     base = model_linear_Z(time_ti, k_fit, tau_fit, 0.0)
-    C_fit = float(np.sum(w_ti[m] * (Z_ti[m] - base[m])) / np.sum(w_ti[m]))
+    C_fit = float(np.sum((Z_ti[m] - base[m]) / (chiErr_ti[m]**2)) / np.sum(1.0/(chiErr_ti[m]**2)))
     dof = max(1, m.sum() - 2)
     chi2r = float(2*res.cost / dof)
     se_vec, cov = _stderr_from_jac(res, dof)
@@ -460,7 +508,7 @@ def do_fit_linear_Z(time_ti, Z_ti, sigma_ti):
         stderr_map = {
             "k": abs(k_fit)*se_log_k,
             "tau": se_tau,
-            "C": (1.0/np.sqrt(np.sum(w_ti[m]))) if np.isfinite(np.sum(w_ti[m])) and np.sum(w_ti[m])>0 else None,
+            "C": (1.0/np.sqrt(np.sum(1.0/(chiErr_ti[m]**2)))) if np.isfinite(np.sum(1.0/(chiErr_ti[m]**2))) and np.sum(1.0/(chiErr_ti[m]**2))>0 else None,
         }
     return {"model":"linear_Z","tau": float(tau_fit),"k":k_fit,"C":C_fit,"chi2r": chi2r,
             "stderr_params": stderr_map, "cov": cov.tolist() if cov is not None else None}
@@ -468,14 +516,19 @@ def do_fit_linear_Z(time_ti, Z_ti, sigma_ti):
 def do_fit_saturation_Z(time_ti, Z_ti, sigma_ti):
     chiErr_ti = np.array(sigma_ti, float)
     chiErr_ti[~np.isfinite(chiErr_ti) | (chiErr_ti<=0)] = 1.0
-    k0  = 1.0 / (time_ti[-1] - time_ti[0])
-    s0 = time_ti.min()
+    # c0 ~ max(Z), m0 ~ slope iniziale / c0, s0 appena prima del primo T
+    c0 = max(np.max(Z_ti), 1e-6)
+    # slope iniziale WLS su primi ~30% punti
+    n0 = max(2, int(0.3*len(time_ti)))
+    k_init, _ = _wls_slope_intercept(time_ti[:n0], Z_ti[:n0], chiErr_ti[:n0])
+    m0 = max(abs(k_init)/max(c0, 1e-6), 1e-6)
+    s0 = time_ti.min() - max(1e-3, 0.02 * (time_ti.ptp()))
     def residuals(p):
         log_c, log_m, s = p
         c, m = np.exp(log_c), np.exp(log_m)
         pred = model_saturation_Z(time_ti, c, m, s)
         return (pred - Z_ti) / chiErr_ti
-    p0   = np.array([np.log(max(Z_ti[-1],1e-6)), np.log(max(k0,1e-6)), s0])
+    p0   = np.array([np.log(c0), np.log(m0), s0])
     lower = np.array([np.log(1e-6), np.log(1e-6), time_ti.min()-time_ti.ptp()])
     upper = np.array([np.log(1.0),  np.log(1e-1), time_ti.max()])
     if FORCE_SHIFT_BEFORE_FIRST:
@@ -561,27 +614,27 @@ def _plot_same_axes_with_fit(model, runs, df_ti, graphs_root, outfile, overlay_c
             fit_res = do_fit_linear_Z(T_arr, Z_arr, Z_sig)
             tau,k,C = fit_res["tau"], fit_res["k"], fit_res["C"]
             tx = np.linspace(max(tau, T_arr.min()), T_arr.max(), 600)
-            ax.plot(tx, model_linear_Z(tx, k, tau, C), color=COL_FIT, linestyle="--", lw=1.2)
+            ax.plot(tx, model_linear_Z(tx, k, tau, C), color=COL_FIT, lw=1.2)
             tau_char = (tau - C/k) if (k != 0) else None
         elif fit_model == "saturation_Z":
             fit_res = do_fit_saturation_Z(T_arr, Z_arr, Z_sig)
             c,m,s = fit_res["c"], fit_res["m"], fit_res["s"]
             tx = np.linspace(max(s, T_arr.min()), T_arr.max(), 600)
-            ax.plot(tx, model_saturation_Z(tx, c, m, s), color=COL_FIT, linestyle="--", lw=1.2)
+            ax.plot(tx, model_saturation_Z(tx, c, m, s), color=COL_FIT, lw=1.2)
             tau_char = s
         elif fit_model == "quad_chi":
             if chi_t is None or chi_y is None or chi_s is None: raise RuntimeError("Serve χ(t) per 'quad_chi'.")
             fit_res = do_fit_quadratic_chi(chi_t, chi_y, chi_s)
             tau,a,C = fit_res["tau"], fit_res["a"], fit_res["C"]
             tx = np.linspace(max(tau, chi_t.min()), chi_t.max(), 600)
-            ax.plot(tx, model_quad_chi(tx, a, tau, C), color=COL_FIT, linestyle="--", lw=1.2)
+            ax.plot(tx, model_quad_chi(tx, a, tau, C), color=COL_FIT, lw=1.2)
             tau_char = tau
         elif fit_model == "cinematic_chi":
             if chi_t is None or chi_y is None or chi_s is None: raise RuntimeError("Serve χ(t) per 'cinematic_chi'.")
             fit_res = do_fit_cinematic_chi(chi_t, chi_y, chi_s)
             tau,r,k,C = fit_res["tau"], fit_res["r"], fit_res["k"], fit_res["C"]
             tx = np.linspace(max(tau, chi_t.min()), chi_t.max(), 600)
-            ax.plot(tx, model_cinematic_chi(tx, r, k, tau, C), color=COL_FIT, linestyle="--", lw=1.2)
+            ax.plot(tx, model_cinematic_chi(tx, r, k, tau, C), color=COL_FIT, lw=1.2)
             tau_char = tau
 
         if plot_tau_vertical and (tau_char is not None) and np.isfinite(tau_char):

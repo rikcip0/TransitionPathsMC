@@ -119,7 +119,7 @@ def _phys_signature_parts(families_df: pd.DataFrame, members: pd.DataFrame, subs
     return parts
 
 def _fig_dir(model: str, anchor_tag: str, phys_parts: List[str], subset_folder: str, spec_id: str) -> Path:
-    base = Path(__file__).resolve().parent / "_figs" / "TI" / f"{FIG_ID}_{SLUG}" / model / anchor_tag
+    base = Path(__file__).resolve().parent / "__figs" / "TI" / f"{FIG_ID}_{SLUG}" / model / anchor_tag
     for p in phys_parts: base = base / p
     base = base / subset_folder / spec_id
     base.mkdir(parents=True, exist_ok=True)

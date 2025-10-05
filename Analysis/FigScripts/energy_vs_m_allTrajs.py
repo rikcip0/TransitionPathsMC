@@ -37,7 +37,7 @@ PLOTS: List[Dict[str, Any]] = [
       "figsize": [6.0, 4.2],
       "x_label": "m", "y_label": "e",       # labels for paper
       "xGuides": [[0.5, "m*", "red"]],       # optional vertical guide(s)
-      "outfile": "fig/EnergyVsM_allTrajs/ZKC40_0p9",
+      "outfile": "__figs/EnergyVsM_allTrajs/ZKC40_0p9",
       "formats": ["pdf","png"],
       "dpi": 300
     },

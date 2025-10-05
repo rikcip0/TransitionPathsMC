@@ -25,6 +25,21 @@ PLOTS: List[Dict[str, Any]] = [
     # Esempio
     {
        "name": "Fig01_M_vs_t/ZKC40_0p9",
+       "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run6952",
+       "y_key": "M",
+       "N": 34,                              # obbligatorio con M/energy
+       "curvesIndices": [0, 14, 132], # NON consecutivi OK
+       "x_label": "t", "y_label": "m",
+       "show_yhist": True, "y_cdf": True,
+       "yGuides": [[20./34., "m*", "red"]],
+       "cdf_ref_probs_y": [1/3, 2/3],
+       "y_log_density":True,
+       "legend": False, "reserve_legend_space": True,
+       "figsize": [6.0, 4.2],
+       "outfile": "__figs/Fig01_m_vs_t/ZKC40_0p9",
+     },
+    {
+       "name": "Fig01_M_vs_t/ZKC40_0p9b",
        "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run2620",
        "y_key": "M",
        "N": 34,                              # obbligatorio con M/energy
@@ -33,13 +48,14 @@ PLOTS: List[Dict[str, Any]] = [
        "show_yhist": True, "y_cdf": True,
        "yGuides": [[20./34., "m*", "red"]],
        "cdf_ref_probs_y": [1/3, 2/3],
+       "y_log_density":False,
        "legend": False, "reserve_legend_space": True,
        "figsize": [6.0, 4.2],
-       "outfile": "_figs/Fig01_m_vs_t/ZKC40_0p9b",
+       "outfile": "__figs/Fig01_m_vs_t/ZKC40_0p9b",
      },
     {
-       "name": "Fig01_M_vs_t/ZKC40_0p9",
-       "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.8_0_inf_20_inf_run2620",
+       "name": "Fig01_M_vs_t/ZKC40_0p8",
+       "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.8_0_inf_20_inf_run2624",
        "y_key": "M",
        "N": 34,                              # obbligatorio con M/energy
        "curvesIndices": [0, 3, 10, 25, 130], # NON consecutivi OK
@@ -49,7 +65,7 @@ PLOTS: List[Dict[str, Any]] = [
        "cdf_ref_probs_y": [1/3, 2/3],
        "legend": False, "reserve_legend_space": True,
        "figsize": [6.0, 4.2],
-       "outfile": "_figs/Fig01_m_vs_t/ZKC40_0p8",
+       "outfile": "__figs/Fig01_m_vs_t/ZKC40_0p8",
      },
 ]
 
@@ -164,6 +180,7 @@ def run_from_specs(specs: List[Dict[str, Any]]) -> None:
             run_path = _normalize_run_path(raw_path)
 
             if not run_path.exists():
+                print(run_path)
                 bases = "\\n  - " + "\\n  - ".join(str(b) for b in _CANDIDATE_BASES)
                 raise FileNotFoundError(f"Cartella run non trovata:\\n  {raw_path}\\nNormalizzato a:\\n  {run_path}\\nCercati anche i prefissi:\\n{bases}")
 
@@ -211,9 +228,7 @@ def run_from_specs(specs: List[Dict[str, Any]]) -> None:
                 density=bool(spec.get("density", True)),
                 y_log_density=bool(spec.get("y_log_density", False)),
                 x_log_density=bool(spec.get("x_log_density", False)),
-                bins_within_visible_window=bool(spec.get("bins_within_visible_window", True)),
-                use_max_bins=bool(spec.get("use_max_bins", False)),
-                y_bins=spec.get("y_bins", "auto"),
+                y_bins='magnetizationComplete',
                 x_bins=spec.get("x_bins", "auto"),
                 legend=bool(spec.get("legend", False)),
                 reserve_legend_space=bool(spec.get("reserve_legend_space", True)),

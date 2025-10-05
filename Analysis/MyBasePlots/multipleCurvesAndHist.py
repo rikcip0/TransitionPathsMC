@@ -147,10 +147,91 @@ def multipleCurvesAndHist(
                 return [np.asarray(arr, dtype=float)]
             return [np.asarray(a, dtype=float) for a in ls]
 
+        def _bin_edges_magnetization_complete(data: np.ndarray) -> np.ndarray:
+            """Edges from min to max with step = min positive diff among unique values (e.g., multiples of 2/N)."""
+            arr = np.asarray(data, dtype=float)
+            arr = arr[np.isfinite(arr)]
+            vals = np.sort(np.unique(arr))
+            if vals.size <= 1:
+                return np.array([vals[0]-0.5, vals[0]+0.5]) if vals.size == 1 else np.array([0.0, 1.0])
+            diffs = np.diff(vals)
+            pos = diffs[diffs > 0]
+            step = float(np.min(pos)) if pos.size else float(diffs[0])
+            lo = float(vals[0]) - 0.5*step
+            hi = float(vals[-1]) + 0.5*step
+            eps = 1e-12 * max(1.0, abs(hi - lo))  # ensure rightmost inclusion
+            return np.arange(lo - eps, hi + step + eps, step, dtype=float)
+
         def _stack_finite(seq: Sequence[np.ndarray]) -> np.ndarray:
             if not seq:
                 return np.array([], dtype=float)
             return np.concatenate([_finite(np.asarray(a, dtype=float)) for a in seq]) if len(seq) else np.array([], dtype=float)
+
+        def _bins_from_arg_strict(data: np.ndarray,
+                                arg: Union[str, int, Sequence[float]],
+                                within_limits: Optional[Tuple[float, float]] = None) -> np.ndarray:
+            """Return histogram edges.
+            - If 'arg' is a 1D sequence (explicit edges) => return sorted(unique(edges)) and DO NOT clip/modify.
+            - If 'arg' is 'magnetizationComplete' => compute edges by min positive spacing; DO NOT clip/modify.
+            - Else: build with numpy/auto; only here apply optional 'within_limits' clipping.
+            """
+            data = np.asarray(data, dtype=float)
+            data = data[np.isfinite(data)]
+            # explicit edges
+            if isinstance(arg, (list, tuple, np.ndarray)) and np.asarray(arg).ndim == 1:
+                e = np.array(sorted(np.unique(np.asarray(arg, dtype=float))), dtype=float)
+                if e.size < 2:
+                    lo = float(np.min(data)) if data.size else 0.0
+                    hi = float(np.max(data)) if data.size else 1.0
+                    e = np.array([lo, hi], dtype=float)
+                return e
+
+            # named modes
+            if isinstance(arg, str):
+                a = arg.lower()
+                if a in ("magnetizationcomplete", "magnetization_complete", "m_complete"):
+                    return _bin_edges_magnetization_complete(data)
+                if a in ("auto", "fd", "scott", "sturges", "sqrt", "max"):
+                    if a == "max":
+                        if data.size == 0:
+                            e = np.array([0.0, 1.0], dtype=float)
+                        else:
+                            vals = np.sort(np.unique(data))
+                            if vals.size == 1:
+                                e = np.array([vals[0]-0.5, vals[0]+0.5], dtype=float)
+                            else:
+                                mids = (vals[1:] + vals[:-1]) * 0.5
+                                e = np.concatenate([[vals[0] - (mids[0]-vals[0])], mids,
+                                                    [vals[-1] + (vals[-1]-mids[-1])]]).astype(float)
+                    else:
+                        e = np.histogram_bin_edges(data, bins=a).astype(float)
+                else:
+                    raise ValueError(f"Unsupported bins spec: {arg!r}")
+            elif isinstance(arg, int):
+                e = np.histogram_bin_edges(data, bins=arg).astype(float)
+            else:
+                e = np.histogram_bin_edges(data, bins=arg).astype(float)
+
+            # optional clipping only for auto/max/int modes
+            if within_limits is not None:
+                lo, hi = map(float, within_limits)
+                ee = np.asarray(e, dtype=float)
+                ee = ee[(ee >= lo) & (ee <= hi)]
+                if ee.size < 2:
+                    ee = np.array([lo, hi], dtype=float)
+                # include exact lo/hi if missing
+                if ee[0] > lo:
+                    ee = np.concatenate([[lo], ee])
+                if ee[-1] < hi:
+                    ee = np.concatenate([ee, [hi]])
+                e = ee
+
+            e = np.array(sorted(np.unique(e)), dtype=float)
+            if e.size < 2:
+                lo = float(np.min(data)) if data.size else 0.0
+                hi = float(np.max(data)) if data.size else 1.0
+                e = np.array([lo, hi], dtype=float)
+            return e
 
         def _bins_from_arg(data: np.ndarray, arg: Union[str, int, Sequence[float]], within_limits: Optional[Tuple[float, float]] = None) -> np.ndarray:
             data = _finite(np.asarray(data, dtype=float))
@@ -352,11 +433,19 @@ def multipleCurvesAndHist(
         x_visible = (float(np.min(x_all)) if x_all.size else 0.0, float(np.max(x_all)) if x_all.size else 1.0)
         y_visible = (float(np.min(y_all)) if y_all.size else 0.0, float(np.max(y_all)) if y_all.size else 1.0)
 
+        def _is_explicit_edges(v) -> bool:
+            return isinstance(v, (list, tuple, np.ndarray)) and np.asarray(v).ndim == 1
+
         _x_bins = 'max' if use_max_bins else x_bins
         _y_bins = 'max' if use_max_bins else y_bins
-        x_bins_final = _bins_from_arg(x_all, _x_bins, within_limits=(x_visible if bins_within_visible_window else None))
-        y_bins_final = _bins_from_arg(y_all, _y_bins, within_limits=(y_visible if bins_within_visible_window else None))
 
+        _x_within = (x_visible if (bins_within_visible_window and not (_is_explicit_edges(_x_bins) or
+                (isinstance(_x_bins, str) and _x_bins.lower() in ('magnetizationcomplete','magnetization_complete','m_complete')))) else None)
+        _y_within = (y_visible if (bins_within_visible_window and not (_is_explicit_edges(_y_bins) or
+                (isinstance(_y_bins, str) and _y_bins.lower() in ('magnetizationcomplete','magnetization_complete','m_complete')))) else None)
+
+        x_bins_final = _bins_from_arg_strict(x_all, _x_bins, within_limits=_x_within)
+        y_bins_final = _bins_from_arg_strict(y_all, _y_bins, within_limits=_y_within)
         # --------------------
         # FIGURE / GRID
         # --------------------
@@ -672,7 +761,8 @@ def multipleCurvesAndHist(
                         twin.tick_params(axis='x', which='both', bottom=True, labelbottom=True)
                         if 'bottom' in twin.spines: twin.spines['bottom'].set_linewidth(_LW_AXES)
 
-                    edges, cdf = _cdf_from_hist(y_all if axy is yhist_axes[0] else _finite(np.asarray(extraY[yhist_axes.index(axy)-1].get('data', []))), y_bins_final)
+                    edges, cdf = _cdf_from_hist(y_all, bins=y_bins_final)
+
                     twin.set_xlim(0.0, 1.0)
                     twin.set_ylim(axy.get_ylim())
                     ln, = twin.plot(cdf, edges, color='0.25', zorder=4); ln.set_linewidth(_LW_CDF)
@@ -804,7 +894,7 @@ def multipleCurvesAndHist(
 
                     twin.set_ylim(0.0, 1.0)
                     dat = x_all if axx is xhist_axes[0] else _finite(np.asarray(extraX[xhist_axes.index(axx)-1].get('data', [])))
-                    edges, cdf = _cdf_from_hist(dat, x_bins_final)
+                    edges, cdf = _cdf_from_hist(x_all, bins=x_bins_final)
                     ln, = twin.plot(edges, cdf, color='0.25', zorder=4); ln.set_linewidth(_LW_CDF)
 
                     # reference probabilities (horizontals at y=p)

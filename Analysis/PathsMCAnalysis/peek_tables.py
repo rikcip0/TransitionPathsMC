@@ -8,6 +8,7 @@ Quickly inspect model tables under MultiPathsMC:
 - stdmcs
 - ti_curves
 - ti_points
+- ti_membership
 - ti_families                 (NEW)
 - ti_family_subsets           (NEW)
 - ti_subset_members           (NEW)
@@ -35,6 +36,7 @@ ALL_TABLES: List[str] = DEFAULT_TABLES + [
     "ti_curves",
     "ti_points",
     # NEW familying-first artifacts
+    "ti_membership",
     "ti_families",
     "ti_family_subsets",
     "ti_subset_members",
@@ -91,6 +93,8 @@ def _path_for_table(base_v1: Path, table: str) -> Path:
     if table == "ti_points":
         return base_v1 / "ti" / "ti_points.parquet"
     # NEW tables
+    if table == "ti_membership":
+        return base_v1 / "ti" / "ti_membership.parquet"
     if table == "ti_families":
         return base_v1 / "ti" / "ti_families.parquet"
     if table == "ti_family_subsets":

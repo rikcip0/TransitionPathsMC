@@ -265,26 +265,6 @@ def _col_any(df: pd.DataFrame, names, default=np.nan, as_str=False):
             return arr
     return np.full(n, default)
 
-
-def _safe_seq(x, n_expected):
-    """Ensure a sequence of length n_expected; error on mismatch."""
-    import pandas as _pd
-    if x is None:
-        return [None] * n_expected
-    try:
-        xs = list(_pd.Series(x).tolist())
-    except Exception:
-        xs = [x]
-    if len(xs) == n_expected:
-        return xs
-    if len(xs) == 1:
-        return xs * n_expected
-    raise ValueError(f"[TI stdMC] run_uid length mismatch: got {len(xs)} != expected {n_expected}")
-
-from datetime import datetime as _dt2, UTC as _UTC
-def _now_utc_iso():
-    return _dt2.now(_UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-
 def _ensure_tables(outdir: Path, model: str):
     base = outdir / model / "v1"
     p_path = base / "runs_params" / "runs_params.parquet"
@@ -310,7 +290,7 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
     global lastMeasureMC,MCprint,trajsJumpsInitID,trajsExtremesInitID,runPath,simulationType,ID
     global TIbeta,TIQstar, chi_m, chi_m2, scale2, chi_chi2, chi_chi
     global stMC_Hext,stMC_fieldType,stMC_fieldSigma,stMC_fieldRealization,stMC_N,stMC_beta
-    global stMC_Hout,stMC_Qstar,stMC_nQstar,stMC_graphID,stMC_betaOfExtraction,stMC_configurationIndex,stMC_fieldMean,stMC_MC,stMC_TIbeta,stMC_run_uid
+    global stMC_Hout,stMC_Qstar,stMC_nQstar,stMC_graphID,stMC_betaOfExtraction,stMC_configurationIndex,stMC_fieldMean,stMC_MC,stMC_TIbeta
     global normalizedQstar
 
     base = _ensure_tables(outdir, model)
@@ -393,9 +373,6 @@ def load_tables_as_arrays(model: str, graphs_root: Path, outdir: Path, includes:
         stMC_N              = _col_any(std, ["N","stMC_N"])        
         stMC_beta           = _col_any(std, ["beta","stMC_beta"]) 
 
-        stMC_run_uid_raw   = _col_any(std, ["run_uid","stMC_run_uid"], as_str=False)
-        stMC_run_uid       = _safe_seq(stMC_run_uid_raw, len(stMC_beta))
-        globals()['stMC_run_uid'] = stMC_run_uid
         # Hout could be named h_out or Hout
         stMC_Hout           = _col_any(std, ["Hout","h_out","stMC_Hout","stMC_h_out"]) 
         stMC_Qstar          = _col_any(std, ["Qstar","stMC_Qstar"]) 
@@ -573,38 +550,6 @@ def make_TIcurve_id(model_type, N, graphID, fieldType, fieldSigma, fieldRealizat
     ]
     key = "|".join(parts).encode("utf-8")
     return _hashlib.blake2b(key, digest_size=8).hexdigest()
-
-def write_ti_curves_points(outdir: Path, model: str, curves_rows: list, points_rows: list, verbose: bool=False):
-    base = outdir / model / "v1" / "ti"
-    base.mkdir(parents=True, exist_ok=True)
-    import pandas as _pd
-    dfc = _pd.DataFrame(curves_rows)
-    dfp = _pd.DataFrame(points_rows)
-    # overwrite atomically
-    (base / "ti_curves.parquet").unlink(missing_ok=True)
-    (base / "ti_points.parquet").unlink(missing_ok=True)
-    curves_path = base / "ti_curves.parquet"
-    points_path = base / "ti_points.parquet"
-    dfc.to_parquet(curves_path, index=False)
-    dfp.to_parquet(points_path, index=False)
-    # membership table (TIcurve_id, run_uid, runType, used_in_curve)
-    try:
-        cols = ["TIcurve_id","run_uid","runType","used_in_curve"]
-        missing = [c for c in cols if c not in dfp.columns]
-        if missing:
-            raise KeyError(f"[TI] ti_points missing columns for membership: {missing}")
-        dfm = dfp[cols].drop_duplicates().copy()
-        (base / "ti_membership.parquet").unlink(missing_ok=True)
-        membership_path = base / "ti_membership.parquet"
-        dfm.to_parquet(membership_path, index=False)
-        if verbose:
-            print(f"[ti] wrote ti_curves.parquet: {len(dfc)} rows")
-            print(f"[ti] wrote ti_points.parquet: {len(dfp)} rows")
-            print(f"[ti] wrote ti_membership.parquet: {len(dfm)} rows -> {membership_path}")
-    except Exception as _e:
-        print("[warn] failed writing ti_membership.parquet:", _e)
-    # keep original API: return the two main parquet paths
-    return str(curves_path), str(points_path)
 def thermodynamicIntegration(filt, analysis_path):
     # -- diagnostics placeholders to avoid NameError --
     max_value = np.nan
@@ -951,7 +896,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                     Z_knots_beta=Z_knots_beta, Z_knots=Z_knots,
                                     TI_U_knots_beta=TI_U_knots_beta, TI_U_knots=TI_U_knots,
                                     n_paths_used=n_paths_used, n_stdmc_used=n_stdmc_used,
-                                    computed_at=_now_utc_iso(),
+                                    computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                     analysis_rev="unversioned"
                                 ))
                             except Exception as _e:
@@ -974,7 +919,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                     betaG2b=_json_num(betaG2b), betaG2c=_json_num(betaG2c), betaL=_json_num(betaL),
                                     Zmax=_json_num(Zfunction(betaMax) if isinstance(betaMax,(int,float)) else float('nan')),
                                     figures=[fn for fn in saved_figs],
-                                    computed_at=_now_utc_iso(),
+                                    computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                     analysis_rev="unversioned"
                                 )
                                 meta_path = os.path.join(TIPlotsFolder, f"{_prefix}_meta.json")
@@ -1012,7 +957,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                         scale2_valid=bool(i_idx < len(scale2) and np.isfinite(scale2[i_idx]) and (scale2[i_idx] > 0.0)),
                                         chi_chi=(float(chi_chi[i_idx]) if (i_idx < len(chi_chi) and not np.isnan(chi_chi[i_idx])) else np.nan),
                                         chi_chi2=(float(chi_chi2[i_idx]) if (i_idx < len(chi_chi2) and not np.isnan(chi_chi2[i_idx])) else np.nan),
-                                        computed_at=_now_utc_iso(),
+                                        computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                         analysis_rev="unversioned"
                                     ))
 
@@ -1035,7 +980,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                         scale2_valid=bool(j_idx < len(scale2) and np.isfinite(scale2[j_idx]) and (scale2[j_idx] > 0.0)),
                                         chi_chi=(float(chi_chi[j_idx]) if (j_idx < len(chi_chi) and not np.isnan(chi_chi[j_idx])) else np.nan),
                                         chi_chi2=(float(chi_chi2[j_idx]) if (j_idx < len(chi_chi2) and not np.isnan(chi_chi2[j_idx])) else np.nan),
-                                        computed_at=_now_utc_iso(),
+                                        computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                         analysis_rev="unversioned"
                                     ))
 
@@ -1047,7 +992,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                         TIcurve_id=TIcurve_id,
                                         runType='stdMC',
                                         used_in_curve=True,
-                                        run_uid=str(stMC_run_uid[k]) if (stMC_run_uid[k] is not None and str(stMC_run_uid[k]) not in ('','None','nan')) else None,
+                                        run_uid=None,
                                         beta=float(_b) if isinstance(_b, (int,float)) else float(_b),
                                         ZFromTIBeta=float(Zfunction(_b)),
                                         kFromChi=np.nan,
@@ -1059,7 +1004,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                         scale2_valid=False,
                                         chi_chi=np.nan,
                                         chi_chi2=np.nan,
-                                        computed_at=_now_utc_iso(),
+                                        computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                         analysis_rev="unversioned"
                                     ))
 
@@ -1071,7 +1016,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                         TIcurve_id=TIcurve_id,
                                         runType='stdMC',
                                         used_in_curve=False,
-                                        run_uid=str(stMC_run_uid[k]) if (stMC_run_uid[k] is not None and str(stMC_run_uid[k]) not in ('','None','nan')) else None,
+                                        run_uid=None,
                                         beta=float(_b) if isinstance(_b, (int,float)) else float(_b),
                                         ZFromTIBeta=float(Zfunction(_b)),
                                         kFromChi=np.nan,
@@ -1083,7 +1028,7 @@ def thermodynamicIntegration(filt, analysis_path):
                                         scale2_valid=False,
                                         chi_chi=np.nan,
                                         chi_chi2=np.nan,
-                                        computed_at=_now_utc_iso(),
+                                        computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                         analysis_rev="unversioned"
                                     ))
 
@@ -1112,23 +1057,6 @@ def _unique_combos_report():
     top = cnt.most_common(10)
     return {"rows": n, "groups": len(cnt), "top": top}
 
-def _write_manifest(manifest_path: Path, stats: dict, ti_rows: int, elapsed_s: float, out_parquet):
-    lines = []
-    lines.append("# thermodynamicIntegration run manifest\n")
-    lines.append("- rows loaded: {}\n".format(stats.get("rows", 0)))
-    lines.append("- unique groups (C,Hext,fieldType,fieldSigma): {}\n".format(stats.get("groups", 0)))
-    lines.append("- top groups (count):\n")
-    for (Cval, HextVal, ftype, fsig), c in stats.get("top", []):
-        lines.append("  - C={} Hext={} fieldType='{}' fieldSigma={} -> {}\n".format(Cval, HextVal, ftype, fsig, c))
-    lines.append("- TI produced rows: {}\n".format(ti_rows))
-    lines.append("- elapsed seconds: {:.3f}\n".format(elapsed_s))
-    if isinstance(out_parquet, (list, tuple)) and len(out_parquet) >= 2:
-        lines.append(f"- output parquet (curves): {out_parquet[0]}\n")
-        lines.append(f"- output parquet (points): {out_parquet[1]}\n")
-    else:
-        lines.append(f"- output parquet: {out_parquet}\n")
-    manifest_path.write_text("".join(lines), encoding="utf-8")
-
 # ---------- CLI ----------
 
 
@@ -1147,46 +1075,139 @@ def parse_args() -> argparse.ArgumentParser:
     p.add_argument("--verbose","-v", action="store_true")
     return p
 
-def main():
-    ns = parse_args().parse_args()
-    graphs_root = discover_graphs_root(ns.graphs_root)
-    outdir = default_outdir_for(graphs_root) if ns.outdir is None else ns.outdir.resolve()
-    analysis_path = (graphs_root.parent / "MultiRun" / ns.model) if ns.analysis_path is None else ns.analysis_path
 
-    print("[roots] graphs_root={}".format(graphs_root))
-    print("[roots] outdir     ={}".format(outdir))
-    print("[paths] analysis   ={}".format(analysis_path))
 
+# =========================
+# SPECS + Runner (members)
+# =========================
+from contextlib import contextmanager
+
+specs = [
+    {
+        "model": "realGraphs/ZKC",
+        "TIcurve_id": "fca42615fa58e46b",   # or use "run_uids": ["<uid1>", "<uid2>", ...]
+        # "run_uids": [],
+        # "graphs_root": None,              # optional override
+        "outfile_dir": "_figs/TI_fromMembers/ZKC_curve"  # destination folder for figures
+    },
+    {
+        "model": "realGraphs/ZKC",
+        "TIcurve_id": "756db9235b604e3e",   # or use "run_uids": ["<uid1>", "<uid2>", ...]
+        # "run_uids": [],
+        # "graphs_root": None,              # optional override
+        "outfile_dir": "_figs/TI_fromMembers/ER"  # destination folder for figures
+    },
+]
+
+def _load_members_from_ti(outdir: Path, model: str, curve_id: str):
+    """
+    Prefer ti_membership.parquet → paths members (run_uid) + std members if present;
+    fallback to ti_points.parquet if membership missing.
+    """
+    base = outdir / model / "v1" / "ti"
+    mem = base / "ti_membership.parquet"
+    pts = base / "ti_points.parquet"
+    paths_members, std_betas = set(), set()
+    if mem.exists():
+        dfm = pd.read_parquet(mem)
+        dfm = dfm.loc[dfm["TIcurve_id"].astype(str) == str(curve_id)].copy()
+        if not dfm.empty and "run_uid" in dfm.columns and "runType" in dfm.columns:
+            paths_members = set(dfm.loc[dfm["runType"]=="pathsMC", "run_uid"].dropna().astype(str).tolist())
+    elif pts.exists():
+        dfp = pd.read_parquet(pts)
+        dfp = dfp.loc[dfp["TIcurve_id"].astype(str) == str(curve_id)].copy()
+        if not dfp.empty:
+            psel = dfp.loc[dfp["runType"] == "pathsMC"]
+            if "run_uid" in psel.columns:
+                paths_members = set(psel["run_uid"].dropna().astype(str).tolist())
+            ssel = dfp.loc[dfp["runType"] == "stdMC"]
+            if "beta" in ssel.columns:
+                try:
+                    std_betas = set(pd.to_numeric(ssel["beta"], errors="coerce").dropna().astype(float).tolist())
+                except Exception:
+                    std_betas = set()
+    else:
+        raise FileNotFoundError(f"Missing TI membership under {base}")
+    if not paths_members and not std_betas:
+        raise RuntimeError(f"No members found for TIcurve_id={curve_id}")
+    return paths_members, std_betas
+
+@contextmanager
+def _filter_read_parquet(paths_uids: set, std_betas: set|None):
+    """
+    Patch pandas.read_parquet so TI loads only selected members.
+    - runs_params/runs_results: keep run_uid in paths_uids
+    - stdmcs: keep rows whose beta-like column ∈ std_betas (if provided)
+    """
+    _orig = pd.read_parquet
+    def patched(path, *args, **kwargs):
+        df = _orig(path, *args, **kwargs)
+        name = Path(path).name.lower()
+        if name == "runs_params.parquet" or name == "runs_results.parquet":
+            if "run_uid" not in df.columns:
+                raise RuntimeError(f"{name} missing 'run_uid'")
+            return df[df["run_uid"].astype(str).isin(paths_uids)].copy()
+        if name == "stdmcs.parquet" and std_betas and len(std_betas) > 0 and not df.empty:
+            cand_cols = [c for c in ["beta", "stMC_beta", "TIbeta", "stMC_TIbeta"] if c in df.columns]
+            if cand_cols:
+                col = cand_cols[0]
+                vals = pd.to_numeric(df[col], errors="coerce")
+                return df[vals.astype(float).isin(std_betas)].copy()
+        return df
+    pd.read_parquet = patched
     try:
-        globals()['cli_model_label'] = ns.model
-        nrows = load_tables_as_arrays(ns.model, graphs_root, outdir, ns.include, verbose=ns.verbose)
-    except FileNotFoundError as e:
-        print("\n[ERROR] {}".format(e), file=sys.stderr)
-        print("\nSuggerimento: controlla l'argomento --model. Esempi validi che ho trovato:", file=sys.stderr)
-        for m in _list_available_models(outdir):
-            print("  - {}".format(m), file=sys.stderr)
-        sys.exit(2)
+        yield
+    finally:
+        pd.read_parquet = _orig
 
-    sanitize_globals(verbose=ns.verbose)
+def _prepare_outdir(d: str|Path):
+    p = Path(d).expanduser().resolve()
+    p.mkdir(parents=True, exist_ok=True)
+    return p
 
-    filt = np.ones(nrows, dtype=bool)
+def _run_one_spec(spec: dict):
+    model = spec["model"]
+    graphs_root = discover_graphs_root(Path(spec["graphs_root"])) if spec.get("graphs_root") else discover_graphs_root(None)
+    outdir = default_outdir_for(graphs_root)
+    outfile_dir = _prepare_outdir(spec["outfile_dir"])
 
-    t0 = time.perf_counter()
-    thermodynamicIntegration(filt, str(analysis_path))
-    elapsed = time.perf_counter() - t0
+    # Determine membership
+    paths_uids = set()
+    std_betas = set()
+    if "TIcurve_id" in spec and spec["TIcurve_id"]:
+        paths_uids, std_betas = _load_members_from_ti(outdir, model, str(spec["TIcurve_id"]))
+    elif "run_uids" in spec and spec["run_uids"]:
+        paths_uids = set([str(u) for u in spec["run_uids"]])
+        std_betas = set()
+    else:
+        raise RuntimeError("Provide either 'TIcurve_id' or 'run_uids' in spec.")
 
+    # Execute TI with filtering (NO parquet writes anywhere)
+    with _filter_read_parquet(paths_uids, std_betas):
+        nrows = load_tables_as_arrays(model, graphs_root, outdir, includes=None, verbose=False)
+        sanitize_globals(False)
+        filt = np.ones(nrows, dtype=bool)
+        thermodynamicIntegration(filt, str(outfile_dir))
 
-    out_curves, out_points = write_ti_curves_points(outdir, ns.model, curves_rows, points_rows, verbose=ns.verbose)
+    # Minimal meta
+    meta = dict(
+        model=model,
+        graphs_root=str(graphs_root),
+        outdir=str(outdir),
+        outfile_dir=str(outfile_dir),
+        selection=dict(
+            TIcurve_id=str(spec.get("TIcurve_id")) if spec.get("TIcurve_id") else None,
+            run_uids_paths=sorted(list(paths_uids)),
+            std_betas=sorted(list(std_betas)) if std_betas else []
+        ),
+        figures_written=True
+    )
+    (outfile_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    print(f"[OK] TI members for model={model} → figs in {outfile_dir}")
 
-    stats = _unique_combos_report()
-    manifest_dir = (outdir / ns.model / "v1" / "ti"); manifest_dir.mkdir(parents=True, exist_ok=True)
-    manifest = manifest_dir / "ti_manifest.md"
-    _write_manifest(manifest, stats, len(curves_rows), elapsed, (out_curves, out_points))
-
-    print("[done] ti: curves={} points={}".format(out_curves, out_points))
-    if ns.verbose:
-        print("[diag] groups={} rows={} elapsed_s={}".format(stats.get("groups"), stats.get("rows"), round(elapsed,3)))
-        print("[diag] manifest: {}".format(manifest))
+def run_all_specs():
+    for sp in specs:
+        _run_one_spec(sp)
 
 if __name__ == "__main__":
-    main()
+    run_all_specs()

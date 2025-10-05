@@ -7,7 +7,7 @@
 specs = [
     {
         "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\RRG\p2C3\N120\structure194235\fPosJ1.00\graph4245\DataForPathsMC\PathsMCs\70_1_0_inf_72_inf_run5798",
-        "outfile": "fig/ChiVsT_allTrajs/RRG_ref",
+        "outfile": "__figs/ChiVsT_allTrajs/RRG_ref",
         "only_end": True,
         "figsize": (4.0, 3.0),
         "dpi": 300,
@@ -20,7 +20,7 @@ specs = [
     },
     {
         "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\ER\p2C3\N160\structure998785\fPosJ1.00\graph8797\DataForPathsMC\PathsMCs\45_1_0_inf_96_inf_run8927",
-        "outfile": "fig/ChiVsT_allTrajs/ER_ref",
+        "outfile": "__figs/ChiVsT_allTrajs/ER_ref",
         "only_end": True,
         "figsize": (4.0, 3.0),
         "dpi": 300,
@@ -33,7 +33,7 @@ specs = [
     },
     {
         "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\ER\p2C3\N140\structure655712\fPosJ1.00\graph5735\DataForPathsMC\PathsMCs\70_1_0_inf_84_inf_run6751",
-        "outfile": "fig/ChiVsT_allTrajs/ER_ref2",
+        "outfile": "__figs/ChiVsT_allTrajs/ER_ref2",
         "only_end": True,
         "figsize": (4.0, 3.0),
         "dpi": 300,
@@ -297,7 +297,7 @@ def run_from_specs(_specs):
             if bool(s.get("grid", False)):
                 ax.grid(True, which="both", linestyle=":", linewidth=0.5, alpha=0.5)
 
-            out_base = s.get("outfile", "fig/ChiVsT_allTrajs/output")
+            out_base = s.get("outfile", "__figs/ChiVsT_allTrajs/output")
             out_base = Path(out_base)
             out_base.parent.mkdir(parents=True, exist_ok=True)
 
