@@ -16,6 +16,52 @@ specs = [
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\15_0.9_0_inf_20_inf_run7083",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\10_0.9_0_inf_20_inf_run7085",
         ],
+        "outfile": "_figs/Z_withChiCurves/ZKC_ZandChi_bet0p9_3States",
+        "overlay_chi": "tmax",              # "tmax" | "all" | "none"
+        "fit_model": "cinematic_chi",            # "linear_Z" | "saturation_Z" | "quad_chi" | "cinematic_chi" | "none"
+        "chi_scale": "Z",                   # "Z" | "none"
+        "figsize": (4.2, 3.2),
+        "dpi": 300,
+        "formats": ["pdf", "png"],
+        "grid": False,
+        "x_label": r"$t$  (punti a $T$)",
+        "y_label": r"$Z(T)$  e  $Z\cdot\chi(t)$",
+        "plot_tau_vertical": True,          # NEW: disegna la linea verticale a tau*
+    },
+    {
+        "model": "realGraphs/ZKC",
+        "runs": [
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.55_0_inf_20_inf_run9959",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.55_0_inf_20_inf_run8308",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.55_0_inf_20_inf_run9935",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.55_0_inf_20_inf_run42",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\20_0.55_0_inf_20_inf_run9742",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\15_0.55_0_inf_20_inf_run8772",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\10_0.55_0_inf_20_inf_run4146",
+        ],
+        "outfile": "_figs/Z_withChiCurves/ZKC_ZandChi_bet0p55_Quadratic",
+        "overlay_chi": "tmax",
+        "fit_model": "quad_chi",
+        "chi_scale": "Z",
+        "figsize": (4.2, 3.2),
+        "dpi": 300,
+        "formats": ["pdf", "png"],
+        "grid": False,
+        "x_label": r"$t$  (punti a $T$)",
+        "y_label": r"$Z(T)$  e  $Z\cdot\chi(t)$",
+        "plot_tau_vertical": True,          # NEW
+    },
+    {
+        "model": "realGraphs/ZKC",
+        "runs": [
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run6952",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.9_0_inf_20_inf_run6950",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.9_0_inf_20_inf_run7081",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.9_0_inf_20_inf_run7079",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\20_0.9_0_inf_20_inf_run7077",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\15_0.9_0_inf_20_inf_run7083",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\10_0.9_0_inf_20_inf_run7085",
+        ],
         "outfile": "_figs/Z_withChiCurves/ZKC_ZandChi_bet0p9",
         "overlay_chi": "tmax",              # "tmax" | "all" | "none"
         "fit_model": "quad_chi",            # "linear_Z" | "saturation_Z" | "quad_chi" | "cinematic_chi" | "none"
@@ -101,7 +147,7 @@ specs = [
 
 import os, sys, json, hashlib, math, numpy as np
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -115,26 +161,23 @@ sys.path.append('../')
 from MyBasePlots.FigCore import utils_style as ustyle
 from MyBasePlots.FigCore import utils_plot  as uplot
 
-# === colonne χ in av*.dat
 CHI_COL = 4
 CHI_ERR_COL = 5
 EPS = 1e-12
-TMIN_CHI = 3.0  # t>3 per i fit su χ(t)
+TMIN_CHI = 1.5
+# Se True, TMIN_CHI funge ANCHE da bound inferiore per tau nei fit su chi(t)
+ENFORCE_TMIN_CHI_ON_TAU = True
 
-# === politica per sigma(Z): 'from_table' | 'binomial' | 'uniform'
 Z_SIGMA_POLICY = "from_table"
 Z_SIGMA_COLS_ORDER = ["ZFromTIBetaStd","ZFromTIBeta_sigma","Z_sigma","sigma_Z","err_Z","ZFromTIBetaErr"]
 
-# === colori
 COL_Z_POINTS = "black"
 COL_CHI_CURVE = "blue"
 COL_FIT = "red"
-COL_TAU = "0.6"  # grigio per la linea verticale di tau
+COL_TAU = "0.6"
 
-# === forza shift prima del primo T (per includere tutti i punti in Z-fit)
 FORCE_SHIFT_BEFORE_FIRST = True
 
-# ----------------- helpers path -----------------
 def _norm_path(p: str) -> str:
     if p is None: return p
     q = p.replace('\\\\', '\\').replace('\\', '/')
@@ -164,7 +207,6 @@ def _make_run_uid(run_dir: Path, graphs_root: Path) -> str:
     except Exception: rel = str(run_dir.resolve())
     return hashlib.sha1(rel.encode("utf-8")).hexdigest()[:16]
 
-# ----------------- carico tabelle -----------------
 def _load_ti_points_for_runs(model: str, runs: List[str], graphs_root_override: str = None):
     if not runs: raise ValueError("Lista 'runs' vuota.")
     graphs_root = _find_graphs_root_from_run(_norm_path(runs[0]), graphs_root_override)
@@ -239,19 +281,41 @@ def _load_av_series_with_err(run_path: str):
     return t, chi, chi_err, str(av_file)
 
 def _sigma_from_prob_or_given(y, yerr):
-    if yerr is not None:
-        s = np.array(yerr, float)
-        s[~np.isfinite(s) | (s<=0)] = np.nan
-        if np.any(np.isfinite(s)):
-            out = np.where(np.isfinite(s), s, np.sqrt(np.clip(y, EPS, 1.0-EPS)*(1.0-np.clip(y, EPS, 1.0-EPS))))
-            return np.clip(out, 1e-9, np.inf)
     return np.clip(
-                    np.sqrt(np.clip(y, EPS, 1.0 - EPS) * (1.0 - np.clip(y, EPS, 1.0 - EPS))),
-                    1e-9,
-                    np.inf,
-                )
+        np.sqrt(np.clip(y, EPS, 1.0 - EPS) * (1.0 - np.clip(y, EPS, 1.0 - EPS))),
+        1e-9,
+        np.inf,
+    ) if yerr is None else np.clip(
+        np.where(
+            np.isfinite(yerr) & (yerr > 0),
+            yerr,
+            np.sqrt(np.clip(y, EPS, 1.0 - EPS) * (1.0 - np.clip(y, EPS, 1.0 - EPS)))
+        ),
+        1e-9,
+        np.inf,
+    )
 
-# ============================== FITS (logica invariata; aggiungo stderr mappati) ==============================
+# ============================== MODELLI (una sola volta) ==============================
+def model_linear_Z(t, k, tau, C):
+    t = np.asarray(t, float); return k * (t - tau) + C
+
+def model_saturation_Z(t, c, m, s):
+    t = np.asarray(t, float)
+    out = np.zeros_like(t)
+    tt = t - s
+    mask = tt > 0
+    out[mask] = c * (1.0 - np.exp(-m * tt[mask]))
+    return out
+
+def model_quad_chi(t, a, tau, C):
+    t = np.asarray(t, float); tt = t - tau
+    return a * tt**2 + C
+
+def model_cinematic_chi(t, r, k, tau, C):
+    t = np.asarray(t, float); tt = t - tau
+    return (r/(2.0*r+1.0)) - 0.5*np.exp(-k*tt) + (1.0/(2.0*(2.0*r+1.0)))*np.exp(-k*(2.0*r+1.0)*tt) + C
+
+# ============================== FITS (logica invariata; uso i modelli) ==============================
 def _stderr_from_jac(res, dof):
     try:
         J = res.jac
@@ -270,37 +334,38 @@ def do_fit_quadratic_chi(time_fit, avChi_fit, avChiErr_fit):
     log_a0 = np.log((avChi_fit.max() - avChi_fit.min()) / ((time_fit.max() - tau0)**2 + 1e-12))
     p0_q   = np.array([log_a0, tau0])
     tau_min = time_fit.min() - yspan
+    if ENFORCE_TMIN_CHI_ON_TAU:
+        tau_min = max(tau_min, TMIN_CHI)
     tau_max = time_fit.max()
     lower_q = np.array([-40.0, tau_min])
     upper_q = np.array([ 40.0, tau_max])
     def residuals(p):
         log_a, tau = p
         a = np.exp(log_a)
+        pred = model_quad_chi(time_fit, a, tau, 0.0)
         tt = time_fit - tau
         m  = tt > 0
         if m.sum() < 2: return np.full(time_fit.size, 1e6)
-        base = a * tt**2
-        C = np.sum(w_all[m] * (avChi_fit[m] - base[m])) / np.sum(w_all[m])
-        res = (base + C - avChi_fit) / avChiErr_fit
+        base_m = pred[m]
+        C = np.sum(w_all[m] * (avChi_fit[m] - base_m)) / np.sum(w_all[m])
+        res = (pred + C - avChi_fit) / avChiErr_fit
         res[~m] = 0.0
         return res
     res = least_squares(residuals, p0_q, bounds=(lower_q, upper_q), max_nfev=3_000_000)
     log_a_fit, tau_fit = res.x
     a_fit = float(np.exp(log_a_fit))
     tt = time_fit - tau_fit; m = tt > 0
-    base = a_fit * tt**2
+    base = model_quad_chi(time_fit, a_fit, tau_fit, 0.0)
     C_fit = float(np.sum(w_all[m] * (avChi_fit[m] - base[m])) / np.sum(w_all[m]))
     dof = max(1, m.sum() - 2)
     chi2r = float(2*res.cost / dof)
     se_vec, cov = _stderr_from_jac(res, dof)
     stderr_map = {}
     if se_vec is not None:
-        # params order: [log_a, tau]
         se_log_a, se_tau = float(se_vec[0]), float(se_vec[1])
         stderr_map = {
             "a": abs(a_fit)*se_log_a,   # delta method: da log_a a a
             "tau": se_tau,
-            # C è stimato come media pesata: var(C)=1/sum(w_m)
             "C": (1.0/np.sqrt(np.sum(w_all[m]))) if np.isfinite(np.sum(w_all[m])) and np.sum(w_all[m])>0 else None,
         }
     return {"model":"quad_chi","tau": float(tau_fit),"a":a_fit,"C":C_fit,"chi2r": chi2r,
@@ -313,19 +378,19 @@ def do_fit_cinematic_chi(time_fit, avChi_fit, avChiErr_fit):
     k0  = 1.0 / (time_fit[-1] - time_fit[0])
     tau0 = time_fit.min()
     tau_min = time_fit.min() - (time_fit.max() - time_fit.min())
+    if ENFORCE_TMIN_CHI_ON_TAU:
+        tau_min = max(tau_min, TMIN_CHI)
     tau_max = time_fit.max()
-    def base_shifted(t, r, k, tau):
-        tt = t - tau
-        return (r/(2*r+1) - 0.5*np.exp(-k*tt) + 1.0/(2*(2*r+1))*np.exp(-k*(2*r+1)*tt))
     def residuals(p):
         log_r, log_k, tau = p
         r = np.exp(log_r); k = np.exp(log_k)
+        pred = model_cinematic_chi(time_fit, r, k, tau, 0.0)
         tt = time_fit - tau
         m  = tt > 0
         if m.sum() < 3: return np.full(time_fit.size, 1e6)
-        base = base_shifted(time_fit, r, k, tau)
-        C = np.sum(w_all[m] * (avChi_fit[m] - base[m])) / np.sum(w_all[m])
-        res = (base + C - avChi_fit) / avChiErr_fit
+        base_m = pred[m]
+        C = np.sum(w_all[m] * (avChi_fit[m] - base_m)) / np.sum(w_all[m])
+        res = (pred + C - avChi_fit) / avChiErr_fit
         res[~m] = 0.0
         return res
     log_r_min, log_r_max = 0.8, 80.0
@@ -339,7 +404,7 @@ def do_fit_cinematic_chi(time_fit, avChi_fit, avChiErr_fit):
     log_r_fit, log_k_fit, tau_fit = res.x
     r_fit, k_fit = float(np.exp(log_r_fit)), float(np.exp(log_k_fit))
     tt = time_fit - tau_fit; m = tt > 0
-    base = (r_fit/(2*r_fit+1.0)) - 0.5*np.exp(-k_fit*tt) + (1.0/(2.0*(2.0*r_fit+1.0)))*np.exp(-k_fit*(2.0*r_fit+1.0)*tt)
+    base = model_cinematic_chi(time_fit, r_fit, k_fit, tau_fit, 0.0)
     C_fit = float(np.sum(w_all[m] * (avChi_fit[m] - base[m])) / np.sum(w_all[m]))
     dof = max(1, m.sum() - 3)
     chi2r = float(2*res.cost / dof)
@@ -365,12 +430,13 @@ def do_fit_linear_Z(time_ti, Z_ti, sigma_ti):
     def residuals(p):
         log_k, tau = p
         k  = np.exp(log_k)
+        pred = model_linear_Z(time_ti, k, tau, 0.0)
         tt = time_ti - tau
         m  = tt > 0
         if m.sum() < 2: return np.full(time_ti.size, 1e6)
-        base = k * tt
-        C = np.sum(w_ti[m] * (Z_ti[m] - base[m])) / np.sum(w_ti[m])
-        res = (base + C - Z_ti) / chiErr_ti
+        base_m = pred[m]
+        C = np.sum(w_ti[m] * (Z_ti[m] - base_m)) / np.sum(w_ti[m])
+        res = (pred + C - Z_ti) / chiErr_ti
         res[~m] = 0.0
         return res
     lower = np.array([np.log(1e-12), time_ti.min()-time_ti.ptp()])
@@ -383,7 +449,7 @@ def do_fit_linear_Z(time_ti, Z_ti, sigma_ti):
     log_k_fit, tau_fit = res.x
     k_fit = float(np.exp(log_k_fit))
     tt = time_ti - tau_fit; m = tt > 0
-    base = k_fit * tt
+    base = model_linear_Z(time_ti, k_fit, tau_fit, 0.0)
     C_fit = float(np.sum(w_ti[m] * (Z_ti[m] - base[m])) / np.sum(w_ti[m]))
     dof = max(1, m.sum() - 2)
     chi2r = float(2*res.cost / dof)
@@ -404,15 +470,11 @@ def do_fit_saturation_Z(time_ti, Z_ti, sigma_ti):
     chiErr_ti[~np.isfinite(chiErr_ti) | (chiErr_ti<=0)] = 1.0
     k0  = 1.0 / (time_ti[-1] - time_ti[0])
     s0 = time_ti.min()
-    def base_sat(t, c, m, s):
-        tt = t - s
-        out = np.zeros_like(t); mask = tt > 0
-        out[mask] = c * (1.0 - np.exp(-m * tt[mask]))
-        return out
     def residuals(p):
         log_c, log_m, s = p
         c, m = np.exp(log_c), np.exp(log_m)
-        return (base_sat(time_ti, c, m, s) - Z_ti) / chiErr_ti
+        pred = model_saturation_Z(time_ti, c, m, s)
+        return (pred - Z_ti) / chiErr_ti
     p0   = np.array([np.log(max(Z_ti[-1],1e-6)), np.log(max(k0,1e-6)), s0])
     lower = np.array([np.log(1e-6), np.log(1e-6), time_ti.min()-time_ti.ptp()])
     upper = np.array([np.log(1.0),  np.log(1e-1), time_ti.max()])
@@ -436,7 +498,7 @@ def do_fit_saturation_Z(time_ti, Z_ti, sigma_ti):
     return {"model":"saturation_Z","c":c_fit,"m":m_fit,"s": float(s_fit),"chi2r": chi2r,
             "stderr_params": stderr_map, "cov": cov.tolist() if cov is not None else None}
 
-# ----------------- Plotter (logica invariata; aggiunta solo linea tau) -----------------
+# ----------------- Plotter (usa i modelli) -----------------
 def _plot_same_axes_with_fit(model, runs, df_ti, graphs_root, outfile, overlay_chi, chi_scale, fit_model,
                              figsize=(4.2,3.2), dpi=300, grid=False, x_label="", y_label="",
                              plot_tau_vertical=True):
@@ -447,14 +509,14 @@ def _plot_same_axes_with_fit(model, runs, df_ti, graphs_root, outfile, overlay_c
     T_map = dict(zip(dfT["run_uid"].astype(str), dfT["T"].astype(float)))
     T_arr = np.array([T_map[str(uid)] for uid in uids], float)
 
-    Zs, Zsig, Zsig_src = [], [], []
+    Zs, Zsig = [], []
     for uid in uids:
-        z, zs, src = _Z_at_beta_max_and_sigma(df_ti, uid)
+        z, zs, _ = _Z_at_beta_max_and_sigma(df_ti, uid)
         if Z_SIGMA_POLICY == "binomial":
-            p = np.clip(z, EPS, 1.0-EPS); zs = float(np.sqrt(p*(1.0-p))); src = "binomial"
+            p = np.clip(z, EPS, 1.0-EPS); zs = float(np.sqrt(p*(1.0-p)))
         elif Z_SIGMA_POLICY == "uniform":
-            zs = 1.0; src = "uniform"
-        Zs.append(z); Zsig.append(zs); Zsig_src.append(src)
+            zs = 1.0
+        Zs.append(z); Zsig.append(zs)
     Z_arr = np.array(Zs, float); Z_sig = np.array(Zsig, float)
 
     order = np.argsort(T_arr)
@@ -493,39 +555,35 @@ def _plot_same_axes_with_fit(model, runs, df_ti, graphs_root, outfile, overlay_c
                 if chi_scale.lower() == "z": chi = chi * float(Z_arr[i])
                 ax.plot(t, chi, color=COL_CHI_CURVE, lw=0.9, alpha=0.55)
 
-        # Fit (logica invariata)
         fit_res = None
         tau_char = None
         if fit_model == "linear_Z":
             fit_res = do_fit_linear_Z(T_arr, Z_arr, Z_sig)
             tau,k,C = fit_res["tau"], fit_res["k"], fit_res["C"]
             tx = np.linspace(max(tau, T_arr.min()), T_arr.max(), 600)
-            ax.plot(tx, k*(tx - tau) + C, color=COL_FIT, lw=1.2)
+            ax.plot(tx, model_linear_Z(tx, k, tau, C), color=COL_FIT, linestyle="--", lw=1.2)
             tau_char = (tau - C/k) if (k != 0) else None
         elif fit_model == "saturation_Z":
             fit_res = do_fit_saturation_Z(T_arr, Z_arr, Z_sig)
             c,m,s = fit_res["c"], fit_res["m"], fit_res["s"]
-            tt = tx = np.linspace(max(s, T_arr.min()), T_arr.max(), 600)
-            yhat = c * (1.0 - np.exp(-m*(tt - s)))
-            ax.plot(tx, yhat, color=COL_FIT, lw=1.2)
+            tx = np.linspace(max(s, T_arr.min()), T_arr.max(), 600)
+            ax.plot(tx, model_saturation_Z(tx, c, m, s), color=COL_FIT, linestyle="--", lw=1.2)
             tau_char = s
         elif fit_model == "quad_chi":
             if chi_t is None or chi_y is None or chi_s is None: raise RuntimeError("Serve χ(t) per 'quad_chi'.")
             fit_res = do_fit_quadratic_chi(chi_t, chi_y, chi_s)
             tau,a,C = fit_res["tau"], fit_res["a"], fit_res["C"]
             tx = np.linspace(max(tau, chi_t.min()), chi_t.max(), 600)
-            ax.plot(tx, a*(tx - tau)**2 + C, color=COL_FIT, lw=1.2)
+            ax.plot(tx, model_quad_chi(tx, a, tau, C), color=COL_FIT, linestyle="--", lw=1.2)
             tau_char = tau
         elif fit_model == "cinematic_chi":
             if chi_t is None or chi_y is None or chi_s is None: raise RuntimeError("Serve χ(t) per 'cinematic_chi'.")
             fit_res = do_fit_cinematic_chi(chi_t, chi_y, chi_s)
             tau,r,k,C = fit_res["tau"], fit_res["r"], fit_res["k"], fit_res["C"]
             tx = np.linspace(max(tau, chi_t.min()), chi_t.max(), 600)
-            yhat = (r/(2.0*r+1.0)) - 0.5*np.exp(-k*(tx - tau)) + (1.0/(2.0*(2.0*r+1.0)))*np.exp(-k*(2.0*r+1.0)*(tx - tau))
-            ax.plot(tx, yhat + C, color=COL_FIT, lw=1.2)
+            ax.plot(tx, model_cinematic_chi(tx, r, k, tau, C), color=COL_FIT, linestyle="--", lw=1.2)
             tau_char = tau
 
-        # --- linea verticale a tau* (opzionale) ---
         if plot_tau_vertical and (tau_char is not None) and np.isfinite(tau_char):
             ax.axvline(tau_char, linestyle="--", linewidth=0.9, color=COL_TAU)
 
@@ -539,7 +597,6 @@ def _plot_same_axes_with_fit(model, runs, df_ti, graphs_root, outfile, overlay_c
             if ext in fmts: uplot.export_figure_strict(fig, str(out_base), formats=(ext,), dpi=dpi)
         plt.close(fig)
 
-    # --- meta ---
     meta = {
         "model": model, "runs_sorted": run_ord, "graphs_root": str(graphs_root),
         "tables": {
