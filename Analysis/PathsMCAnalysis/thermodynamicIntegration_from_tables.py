@@ -958,6 +958,8 @@ def thermodynamicIntegration(filt, analysis_path):
                                 for i_idx in used_idx:
                                     points_rows.append(dict(
                                         TIcurve_id=TIcurve_id,
+                                        runType='pathsMC',
+                                        used_in_curve=True,
                                         run_uid=str(run_uid[i_idx]) if i_idx < len(run_uid) else None,
                                         beta=float(beta[i_idx]),
                                         ZFromTIBeta=float(ZFromTIBeta[i_idx]) if not np.isnan(ZFromTIBeta[i_idx]) else np.nan,
@@ -970,6 +972,77 @@ def thermodynamicIntegration(filt, analysis_path):
                                         scale2_valid=bool(i_idx < len(scale2) and np.isfinite(scale2[i_idx]) and (scale2[i_idx] > 0.0)),
                                         chi_chi=(float(chi_chi[i_idx]) if (i_idx < len(chi_chi) and not np.isnan(chi_chi[i_idx])) else np.nan),
                                         chi_chi2=(float(chi_chi2[i_idx]) if (i_idx < len(chi_chi2) and not np.isnan(chi_chi2[i_idx])) else np.nan),
+                                        computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                        analysis_rev="unversioned"
+                                    ))
+
+                                # --- also collect UNUSED pathsMC points for this curve ---
+                                unused_idx = np.where(pathsMC_filtForThisTAndInit_unused)[0]
+                                for j_idx in unused_idx:
+                                    points_rows.append(dict(
+                                        TIcurve_id=TIcurve_id,
+                                        runType='pathsMC',
+                                        used_in_curve=False,
+                                        run_uid=str(run_uid[j_idx]) if j_idx < len(run_uid) else None,
+                                        beta=float(beta[j_idx]),
+                                        ZFromTIBeta=float(Zfunction(beta[j_idx])) if isinstance(beta[j_idx], (int,float)) else np.nan,
+                                        kFromChi=(float(chi_m[j_idx]) * float(Zfunction(beta[j_idx]))) if (j_idx < len(chi_m) and not np.isnan(chi_m[j_idx])) else np.nan,
+                                        kFromChi_InBetween=(float(chi_m2[j_idx]) * float(Zfunction(beta[j_idx]))) if (j_idx < len(chi_m2) and not np.isnan(chi_m2[j_idx])) else np.nan,
+                                        kFromChi_InBetween_Scaled=np.nan,
+                                        T=float(T[j_idx]) if not np.isnan(T[j_idx]) else np.nan,
+                                        trajInit=str(trajsExtremesInitID[j_idx]) if j_idx < len(trajsExtremesInitID) else 'nan',
+                                        scale2=(float(scale2[j_idx]) if (j_idx < len(scale2) and np.isfinite(scale2[j_idx])) else np.nan),
+                                        scale2_valid=bool(j_idx < len(scale2) and np.isfinite(scale2[j_idx]) and (scale2[j_idx] > 0.0)),
+                                        chi_chi=(float(chi_chi[j_idx]) if (j_idx < len(chi_chi) and not np.isnan(chi_chi[j_idx])) else np.nan),
+                                        chi_chi2=(float(chi_chi2[j_idx]) if (j_idx < len(chi_chi2) and not np.isnan(chi_chi2[j_idx])) else np.nan),
+                                        computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                        analysis_rev="unversioned"
+                                    ))
+
+                                # --- collect STDMC points (used) ---
+                                std_used_idx = np.where(stdMC_filtForThisTAndInit_used)[0]
+                                for k in std_used_idx:
+                                    _b = stMC_beta[k]
+                                    points_rows.append(dict(
+                                        TIcurve_id=TIcurve_id,
+                                        runType='stdMC',
+                                        used_in_curve=True,
+                                        run_uid=None,
+                                        beta=float(_b) if isinstance(_b, (int,float)) else float(_b),
+                                        ZFromTIBeta=float(Zfunction(_b)),
+                                        kFromChi=np.nan,
+                                        kFromChi_InBetween=np.nan,
+                                        kFromChi_InBetween_Scaled=np.nan,
+                                        T=float('inf'),
+                                        trajInit='stdMC',
+                                        scale2=np.nan,
+                                        scale2_valid=False,
+                                        chi_chi=np.nan,
+                                        chi_chi2=np.nan,
+                                        computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                        analysis_rev="unversioned"
+                                    ))
+
+                                # --- collect STDMC points (unused) ---
+                                std_unused_idx = np.where(stdMC_filtForThisTAndInit_unused)[0]
+                                for k in std_unused_idx:
+                                    _b = stMC_beta[k]
+                                    points_rows.append(dict(
+                                        TIcurve_id=TIcurve_id,
+                                        runType='stdMC',
+                                        used_in_curve=False,
+                                        run_uid=None,
+                                        beta=float(_b) if isinstance(_b, (int,float)) else float(_b),
+                                        ZFromTIBeta=float(Zfunction(_b)),
+                                        kFromChi=np.nan,
+                                        kFromChi_InBetween=np.nan,
+                                        kFromChi_InBetween_Scaled=np.nan,
+                                        T=float('inf'),
+                                        trajInit='stdMC',
+                                        scale2=np.nan,
+                                        scale2_valid=False,
+                                        chi_chi=np.nan,
+                                        chi_chi2=np.nan,
                                         computed_at=_dt.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                                         analysis_rev="unversioned"
                                     ))
