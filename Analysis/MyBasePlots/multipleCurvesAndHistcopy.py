@@ -88,6 +88,12 @@ def multipleCurvesAndHist(
     reserve_legend_space: bool = True,
     manage_style: bool = False,
     figsize: Optional[Tuple[float, float]] = None,
+    # --- external layout / axes injection (opt-in) ---
+    external_layout: bool = False,
+    fig: Optional[Figure] = None,
+    ax_main: Optional[Axes] = None,
+    ax_yhist: Optional[Axes] = None,
+
     guide_labels: str = 'legend',   # 'legend' | 'axes' | 'none'
 
     # palette
@@ -291,38 +297,60 @@ def multipleCurvesAndHist(
             fmt = ScalarFormatter(useMathText=True)
             fmt.set_powerlimits((-2, 2))
             fmt.set_useOffset(False)
-            if axis == 'x': ax.xaxis.set_major_formatter(fmt)
+            if not external_layout:
+
+                if axis == 'x': ax.xaxis.set_major_formatter(fmt)
             else:           ax.yaxis.set_major_formatter(fmt)
 
         def _apply_log_formatter(ax: Axes, axis: str = 'x') -> None:
             locator = LogLocator(base=10.0, numticks=8)
             formatter = LogFormatterSciNotation(base=10.0)
             if axis == 'x':
-                ax.xaxis.set_major_locator(locator)
-                ax.xaxis.set_major_formatter(formatter)
+                if not external_layout:
+
+                    ax.xaxis.set_major_locator(locator)
+                if not external_layout:
+
+                    ax.xaxis.set_major_formatter(formatter)
             else:
-                ax.yaxis.set_major_locator(locator)
-                ax.yaxis.set_major_formatter(formatter)
+                if not external_layout:
+
+                    ax.yaxis.set_major_locator(locator)
+                if not external_layout:
+
+                    ax.yaxis.set_major_formatter(formatter)
 
         def _hide_all_ticks(ax: Axes, axis: str) -> None:
             if axis == 'x':
-                ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=False)
+                if not external_layout:
+
+                    ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=False)
             else:
-                ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False, labelright=False)
+                if not external_layout:
+
+                    ax.tick_params(axis='y', which='both', left=False, right=False, labelleft=False, labelright=False)
 
         def _ticks_top(ax: Axes) -> None:
             ax.xaxis.set_ticks_position('top')
-            ax.tick_params(axis='x', which='both', top=True, labeltop=True, bottom=False, labelbottom=False)
+            if not external_layout:
+
+                ax.tick_params(axis='x', which='both', top=True, labeltop=True, bottom=False, labelbottom=False)
 
         def _ticks_bottom(ax: Axes) -> None:
             ax.xaxis.set_ticks_position('bottom')
-            ax.tick_params(axis='x', which='both', bottom=True, labelbottom=True, top=False, labeltop=False)
+            if not external_layout:
+
+                ax.tick_params(axis='x', which='both', bottom=True, labelbottom=True, top=False, labeltop=False)
 
         def _ticks_right(ax: Axes) -> None:
             ax.yaxis.set_ticks_position('right')
-            ax.tick_params(axis='y', which='both', right=True, labelright=True, left=False, labelleft=False)
+            if not external_layout:
+
+                ax.tick_params(axis='y', which='both', right=True, labelright=True, left=False, labelleft=False)
             if 'left' in ax.spines:  ax.spines['left'].set_visible(False)
-            if 'right' in ax.spines: ax.spines['right'].set_linewidth(_LW_AXES)
+            if not external_layout:
+
+                if 'right' in ax.spines: ax.spines['right'].set_linewidth(_LW_AXES)
 
         def _unpack_guide(t: Tuple[Any, ...]) -> Tuple[float, Optional[str], str]:
             if len(t) == 1: return float(t[0]), None, '0.25'
@@ -495,7 +523,13 @@ def multipleCurvesAndHist(
         fig_w += RIGHT_OUTER_PAD
         fig_h += TOP_OUTER_PAD
 
-        fig: Figure = plt.figure(name, figsize=(fig_w, fig_h), constrained_layout=False, clear=True)
+        # [paper-clean] figure creation guarded
+
+
+        if not (external_layout and (fig is not None or ax_main is not None)):
+
+
+            fig: Figure = plt.figure(name, figsize=(fig_w, fig_h), constrained_layout=False, clear=True)
 
         width_ratios  = [W_MAIN] \
                       + ([GAP_W] if n_cols_histY > 0 else []) \
@@ -516,9 +550,15 @@ def multipleCurvesAndHist(
         # MAIN AXES
         # --------------------
         _main_row = (len(height_ratios) - 1) if (n_rows_histX > 0 and (xhist_position or 'top').lower() == 'top') else 1
-        ax_main: Axes = fig.add_subplot(gs[_main_row, 0])
+        # [paper-clean] main axis creation guarded
+
+        if not (external_layout and (ax_main is not None)):
+
+            ax_main: Axes = fig.add_subplot(gs[_main_row, 0])
         if grid_main:
-            ax_main.grid(True, which='both', alpha=0.25)
+            if not external_layout:
+
+                ax_main.grid(True, which='both', alpha=0.25)
 
         # label/ticks basic (style will be later propagated)
         ax_main.set_xlabel(x_label)
@@ -527,8 +567,16 @@ def multipleCurvesAndHist(
         _apply_scalar_formatter(ax_main, 'y')
 
         if title:
-            fig.suptitle(title, y=1.0 - (TOP_PAD/fig_h)*0.25)
-        fig.subplots_adjust(top=1.0 - (TOP_PAD/fig_h), bottom=0.18, left=LEFT_FRAC, right=RIGHT_FRAC)
+            # [paper-clean] skip suptitle when external_layout
+
+            if not external_layout:
+
+                fig.suptitle(title, y=1.0 - (TOP_PAD/fig_h)*0.25)
+        # [paper-clean] skip subplots_adjust when external_layout
+
+        if not external_layout:
+
+            fig.subplots_adjust(top=1.0 - (TOP_PAD/fig_h), bottom=0.18, left=LEFT_FRAC, right=RIGHT_FRAC)
 
         # --------------------
         # DRAW CURVES
@@ -628,8 +676,12 @@ def multipleCurvesAndHist(
         def _apply_axes_style(ax: Axes, tick_size: float) -> None:
             for side in ('left','right','bottom','top'):
                 sp = ax.spines.get(side, None)
-                if sp is not None: sp.set_linewidth(_LW_AXES)
-            ax.tick_params(axis='both', which='both', labelsize=tick_size, width=_W_TICK_MAJOR)
+                if not external_layout:
+
+                    if sp is not None: sp.set_linewidth(_LW_AXES)
+            if not external_layout:
+
+                ax.tick_params(axis='both', which='both', labelsize=tick_size, width=_W_TICK_MAJOR)
             ax.tick_params(axis='both', which='minor', width=_W_TICK_MINOR)
 
         # apply sampled style to main
@@ -638,38 +690,55 @@ def multipleCurvesAndHist(
         # Thicken main spines and tick widths (main only)
         for _sp in ax_main.spines.values():
             try:
-                _sp.set_linewidth(max(_sp.get_linewidth(), 1.6))
+                if not external_layout:
+
+                    _sp.set_linewidth(max(_sp.get_linewidth(), 1.6))
             except Exception:
                 pass
         try:
-            ax_main.tick_params(which='major', width=1.2)
+            if not external_layout:
+
+                ax_main.tick_params(which='major', width=1.2)
             ax_main.tick_params(which='minor', width=1.0)
         except Exception:
             pass
         ax_main.xaxis.label.set_size(_FS_LABEL)
         ax_main.yaxis.label.set_size(_FS_LABEL)
         for ln in lines_main:
-            ln.set_linewidth(_LW_LINE)
-        for ln in guide_lines:
-            ln.set_linewidth(_LW_GUIDE)
+            if not external_layout:
 
-# --------------------
+                ln.set_linewidth(_LW_LINE)
+        for ln in guide_lines:
+            if not external_layout:
+
+                ln.set_linewidth(_LW_GUIDE)
+
+
+        # [paper-clean] external layout: reuse provided ax_yhist instead of creating new axes
+        yhist_axes: List[Axes] = []
+        _use_ext_yhist = external_layout and (ax_yhist is not None)
+        if _use_ext_yhist:
+            yhist_axes = [ax_yhist]   # usa SOLO l’axes esterno
+
+        # --------------------
         # HISTOGRAMS (Y RIGHT)
         # --------------------
-        yhist_axes: List[Axes] = []
         if show_yhist and ((1 if yhist_overlay else (1 + len(extraY))) > 0):
-            col0 = 2  # [0=main, 1=gap, 2=first-hist]
-            n_cols_histY_eff = (1 if yhist_overlay else (1 + len(extraY)))
-            if yhist_overlay:
-                axy = fig.add_subplot(gs[_main_row, col0])
-                yhist_axes.append(axy)
-            else:
-                for j in range(n_cols_histY_eff):
-                    axy = fig.add_subplot(gs[_main_row, col0 + j])
-                    yhist_axes.append(axy)
-
+            if not _use_ext_yhist:
+                col0 = 2  # [0=main, 1=gap, 2=first-hist]
+                n_cols_histY_eff = (1 if yhist_overlay else (1 + len(extraY)))
+                if yhist_overlay:
+                    axy = fig.add_subplot(gs[_main_row, col0])
+                    yhist_axes = [axy]
+                else:
+                    yhist_axes = []
+                    for j in range(n_cols_histY_eff):
+                        axy = fig.add_subplot(gs[_main_row, col0 + j])
+                        yhist_axes.append(axy)
             for axy in yhist_axes:
-                if grid_hist: axy.grid(True, which='major', alpha=0.25)
+                if not external_layout:
+
+                    if grid_hist: axy.grid(True, which='major', alpha=0.25)
                 _apply_axes_style(axy, tick_size=_FS_TICK_HIST)
 
             def _hist_y(ax: Axes, dat: np.ndarray, color: str='0.6', alpha: float=0.9) -> None:
@@ -710,9 +779,13 @@ def multipleCurvesAndHist(
                     sig = float(np.std(y_all, ddof=0))
                 else:
                     mu = 0.0; sig = 0.0
-                ln = yhist_axes[0].axhline(mu, color='0.1',  ls='--', zorder=3); ln.set_linewidth(_LW_MU)
+                if not external_layout:
+
+                    ln = yhist_axes[0].axhline(mu, color='0.1',  ls='--', zorder=3); ln.set_linewidth(_LW_MU)
                 if 'sigma' in showYStats and sig > 0:
-                    ln = yhist_axes[0].axhline(mu - sig, color='0.35', ls='--', zorder=3); ln.set_linewidth(_LW_SIG)
+                    if not external_layout:
+
+                        ln = yhist_axes[0].axhline(mu - sig, color='0.35', ls='--', zorder=3); ln.set_linewidth(_LW_SIG)
                     ln = yhist_axes[0].axhline(mu + sig, color='0.35', ls='--', zorder=3); ln.set_linewidth(_LW_SIG)
 
             # long axis (y) ticks policy
@@ -733,16 +806,27 @@ def multipleCurvesAndHist(
                 short_opt = 'bottom' if short_opt == 'top' else 'top'
             for axy in yhist_axes:
                 # disable both then enable only chosen side with consistent size
-                axy.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=False, width=_W_TICK_MAJOR)
+                if not external_layout:
+
+                    axy.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False, labeltop=False, width=_W_TICK_MAJOR)
                 if short_opt == 'bottom':
                     _ticks_bottom(axy)
-                    axy.tick_params(axis='x', which='both', labelsize=_FS_TICK_HIST, width=_W_TICK_MAJOR)
+                    if not external_layout:
+
+                        axy.tick_params(axis='x', which='both', labelsize=_FS_TICK_HIST, width=_W_TICK_MAJOR)
                 else:
                     _ticks_top(axy)
-                    axy.tick_params(axis='x', which='both', labelsize=_FS_TICK_HIST, width=_W_TICK_MAJOR)
+                    if not external_layout:
 
-                axy.xaxis.set_major_locator(FixedLocator([0, 2]))
-                axy.xaxis.set_major_formatter(FormatStrFormatter('%d'))
+                        axy.tick_params(axis='x', which='both', labelsize=_FS_TICK_HIST, width=_W_TICK_MAJOR)
+
+                if not external_layout:
+
+
+                    axy.xaxis.set_major_locator(FixedLocator([0, 2]))
+                if not external_layout:
+
+                    axy.xaxis.set_major_formatter(FormatStrFormatter('%d'))
             # CDF twin on short axis (x)
             if y_cdf:
                 for axy in yhist_axes:
@@ -753,24 +837,38 @@ def multipleCurvesAndHist(
                     except Exception:
                         pass
                     twin.set_xscale('linear'); twin.set_yscale('linear')
-                    twin.tick_params(axis='x', which='both', labelsize=_FS_TICK_HIST, width=_W_TICK_MAJOR)
+                    if not external_layout:
+
+                        twin.tick_params(axis='x', which='both', labelsize=_FS_TICK_HIST, width=_W_TICK_MAJOR)
                     twin.tick_params(axis='x', which='minor', width=_W_TICK_MINOR)
                     tick_mode = _cdf_side_y
-                    twin.tick_params(axis='x', which='both', top=False, bottom=False, labeltop=False, labelbottom=False, width=_W_TICK_MAJOR)
+                    if not external_layout:
+
+                        twin.tick_params(axis='x', which='both', top=False, bottom=False, labeltop=False, labelbottom=False, width=_W_TICK_MAJOR)
                     if tick_mode == 'top':
                         twin.xaxis.set_ticks_position('top')
-                        twin.tick_params(axis='x', which='both', top=True, labeltop=True)
-                        if 'top' in twin.spines: twin.spines['top'].set_linewidth(_LW_AXES)
+                        if not external_layout:
+
+                            twin.tick_params(axis='x', which='both', top=True, labeltop=True)
+                        if not external_layout:
+
+                            if 'top' in twin.spines: twin.spines['top'].set_linewidth(_LW_AXES)
                     elif tick_mode == 'bottom':
                         twin.xaxis.set_ticks_position('bottom')
-                        twin.tick_params(axis='x', which='both', bottom=True, labelbottom=True)
-                        if 'bottom' in twin.spines: twin.spines['bottom'].set_linewidth(_LW_AXES)
+                        if not external_layout:
+
+                            twin.tick_params(axis='x', which='both', bottom=True, labelbottom=True)
+                        if not external_layout:
+
+                            if 'bottom' in twin.spines: twin.spines['bottom'].set_linewidth(_LW_AXES)
 
                     edges, cdf = _cdf_from_hist(y_all, bins=y_bins_final)
 
                     twin.set_xlim(0.0, 1.0)
                     twin.set_ylim(axy.get_ylim())
-                    ln, = twin.plot(cdf, edges, color='0.25', zorder=4); ln.set_linewidth(_LW_CDF)
+                    if not external_layout:
+
+                        ln, = twin.plot(cdf, edges, color='0.25', zorder=4); ln.set_linewidth(_LW_CDF)
 
                     # reference probabilities (verticals at x=p)
                     if cdf_ref_probs_y:
@@ -778,7 +876,9 @@ def multipleCurvesAndHist(
                         for j, p in enumerate(cdf_ref_probs_y):
                             col = (cols[j % len(cols)] if cols else '0.35')
                             lref = twin.axvline(float(p), ls=(0,(2,2)), color=col, zorder=4)
-                            lref.set_linewidth(_LW_GUIDE)
+                            if not external_layout:
+
+                                lref.set_linewidth(_LW_GUIDE)
                             if cdf_ref_labels and cdf_ref_fmt is not None:
                                 twin.text(float(p), axy.get_ylim()[1], str(cdf_ref_fmt(float(p))), ha='center', va='bottom')
 
@@ -790,7 +890,9 @@ def multipleCurvesAndHist(
                             setattr(axy, '_cdf_twin_x', twin)
                         except Exception:
                             pass
-                        twin.xaxis.set_major_locator(FixedLocator([0.0, 0.5, 1.0]))
+                        if not external_layout:
+
+                            twin.xaxis.set_major_locator(FixedLocator([0.0, 0.5, 1.0]))
 
         # --------------------
         # HISTOGRAMS (X TOP/BOTTOM)
@@ -811,7 +913,9 @@ def multipleCurvesAndHist(
                     xhist_axes.append(axx)
 
             for axx in xhist_axes:
-                if grid_hist: axx.grid(True, which='major', alpha=0.25)
+                if not external_layout:
+
+                    if grid_hist: axx.grid(True, which='major', alpha=0.25)
                 _apply_axes_style(axx, tick_size=_FS_TICK_HIST)
 
             def _hist_x(ax: Axes, dat: np.ndarray, color: str='0.6', alpha: float=0.55) -> None:
@@ -861,7 +965,9 @@ def multipleCurvesAndHist(
                             ln.set_color(col)
                         else:
                             ln = axx.axvline(xv, ls='--', color=col, zorder=3)
-                        ln.set_linewidth(_LW_GUIDE)
+                        if not external_layout:
+
+                            ln.set_linewidth(_LW_GUIDE)
 
 
             if 'mu' in showXStats or 'sigma' in showXStats:
@@ -870,9 +976,13 @@ def multipleCurvesAndHist(
                     sig = float(np.std(x_all, ddof=0))
                 else:
                     mu = 0.0; sig = 0.0
-                ln = xhist_axes[0].axvline(mu,           color='0.1',  ls='--', zorder=3); ln.set_linewidth(_LW_MU)
+                if not external_layout:
+
+                    ln = xhist_axes[0].axvline(mu,           color='0.1',  ls='--', zorder=3); ln.set_linewidth(_LW_MU)
                 if 'sigma' in showXStats and sig > 0:
-                    ln = xhist_axes[0].axvline(mu - sig, color='0.35', ls='--', zorder=3); ln.set_linewidth(_LW_SIG)
+                    if not external_layout:
+
+                        ln = xhist_axes[0].axvline(mu - sig, color='0.35', ls='--', zorder=3); ln.set_linewidth(_LW_SIG)
                     ln = xhist_axes[0].axvline(mu + sig, color='0.35', ls='--', zorder=3); ln.set_linewidth(_LW_SIG)
 
             _x_tick_pol = (xhist_ticks or 'auto').lower()
@@ -897,29 +1007,45 @@ def multipleCurvesAndHist(
                     except Exception:
                         pass
                     twin.set_xscale('linear'); twin.set_yscale('linear')
-                    twin.tick_params(axis='y', which='both', labelsize=_FS_TICK_HIST, width=_W_TICK_MAJOR)
+                    if not external_layout:
+
+                        twin.tick_params(axis='y', which='both', labelsize=_FS_TICK_HIST, width=_W_TICK_MAJOR)
                     twin.tick_params(axis='y', which='minor', width=_W_TICK_MINOR)
                     side = (x_cdf_ticks or 'right').lower()
                     # assign density ticks to the opposite side to avoid duplication
                     if side == 'left':
                         axx.yaxis.set_ticks_position('right')
-                        axx.tick_params(axis='y', which='both', right=True, labelright=True, left=False, labelleft=False, width=_W_TICK_MAJOR, labelsize=_FS_TICK_HIST)
+                        if not external_layout:
+
+                            axx.tick_params(axis='y', which='both', right=True, labelright=True, left=False, labelleft=False, width=_W_TICK_MAJOR, labelsize=_FS_TICK_HIST)
                     else:
                         axx.yaxis.set_ticks_position('left')
-                        axx.tick_params(axis='y', which='both', left=True, labelleft=True, right=False, labelright=False, width=_W_TICK_MAJOR, labelsize=_FS_TICK_HIST)
+                        if not external_layout:
+
+                            axx.tick_params(axis='y', which='both', left=True, labelleft=True, right=False, labelright=False, width=_W_TICK_MAJOR, labelsize=_FS_TICK_HIST)
                     if side == 'right':
                         twin.yaxis.set_ticks_position('right')
-                        twin.tick_params(axis='y', which='both', right=True, labelright=True)
-                        if 'right' in twin.spines: twin.spines['right'].set_linewidth(_LW_AXES)
+                        if not external_layout:
+
+                            twin.tick_params(axis='y', which='both', right=True, labelright=True)
+                        if not external_layout:
+
+                            if 'right' in twin.spines: twin.spines['right'].set_linewidth(_LW_AXES)
                     elif side == 'left':
                         twin.yaxis.set_ticks_position('left')
-                        twin.tick_params(axis='y', which='both', left=True, labelleft=True)
-                        if 'left' in twin.spines: twin.spines['left'].set_linewidth(_LW_AXES)
+                        if not external_layout:
+
+                            twin.tick_params(axis='y', which='both', left=True, labelleft=True)
+                        if not external_layout:
+
+                            if 'left' in twin.spines: twin.spines['left'].set_linewidth(_LW_AXES)
 
                     twin.set_ylim(0.0, 1.0)
                     dat = x_all if axx is xhist_axes[0] else _finite(np.asarray(extraX[xhist_axes.index(axx)-1].get('data', [])))
                     edges, cdf = _cdf_from_hist(x_all, bins=x_bins_final)
-                    ln, = twin.plot(edges, cdf, color='0.25', zorder=4); ln.set_linewidth(_LW_CDF)
+                    if not external_layout:
+
+                        ln, = twin.plot(edges, cdf, color='0.25', zorder=4); ln.set_linewidth(_LW_CDF)
 
                     # reference probabilities (horizontals at y=p)
                     if cdf_ref_probs_x:
@@ -927,7 +1053,9 @@ def multipleCurvesAndHist(
                         for j, p in enumerate(cdf_ref_probs_x):
                             col = (cols[j % len(cols)] if cols else '0.35')
                             lref = twin.axhline(float(p), ls=(0,(2,2)), color=col, zorder=4)
-                            lref.set_linewidth(_LW_GUIDE)
+                            if not external_layout:
+
+                                lref.set_linewidth(_LW_GUIDE)
                             if cdf_ref_labels and cdf_ref_fmt is not None:
                                 twin.text(axx.get_xlim()[1], float(p), str(cdf_ref_fmt(float(p))), ha='left', va='center')
 
@@ -939,7 +1067,9 @@ def multipleCurvesAndHist(
                             setattr(axx, '_cdf_twin_y', twin)
                         except Exception:
                             pass
-                        twin.yaxis.set_major_locator(FixedLocator([0.0, 0.5, 1.0]))
+                        if not external_layout:
+
+                            twin.yaxis.set_major_locator(FixedLocator([0.0, 0.5, 1.0]))
 
         # --------------------
         # Y TICK policy on main (sparse in [-1,1])
@@ -947,9 +1077,13 @@ def multipleCurvesAndHist(
         try:
             ymin, ymax = ax_main.get_ylim()
             if np.isclose([ymin, ymax], [-1.0, 1.0], atol=1e-6).all():
-                ax_main.yaxis.set_major_locator(FixedLocator([-1.0, -0.5, 0.0, 0.5, 1.0]))
+                if not external_layout:
+
+                    ax_main.yaxis.set_major_locator(FixedLocator([-1.0, -0.5, 0.0, 0.5, 1.0]))
             else:
-                ax_main.yaxis.set_major_locator(MaxNLocator(nbins=5, prune=None))
+                if not external_layout:
+
+                    ax_main.yaxis.set_major_locator(MaxNLocator(nbins=5, prune=None))
         except Exception:
             pass
 
@@ -970,19 +1104,25 @@ def multipleCurvesAndHist(
                     for g in xGuides:
                         xv, lab, col = _unpack_guide(g)
                         if lab:
-                            h = Line2D([0],[0], color=col, ls='--'); h.set_linewidth(_LW_GUIDE)
+                            if not external_layout:
+
+                                h = Line2D([0],[0], color=col, ls='--'); h.set_linewidth(_LW_GUIDE)
                             handles.append(h); labels.append(str(lab))
                 if yGuides:
                     for g in yGuides:
                         yv, lab, col = _unpack_guide(g)
                         if lab:
-                            h = Line2D([0],[0], color=col, ls='--'); h.set_linewidth(_LW_GUIDE)
+                            if not external_layout:
+
+                                h = Line2D([0],[0], color=col, ls='--'); h.set_linewidth(_LW_GUIDE)
                             handles.append(h); labels.append(str(lab))
 
             if show_yhist:
                 rect = Patch(facecolor='0.7', edgecolor='0.3', alpha=0.55, label='Y data')
                 handles.append(rect); labels.append('Y data')
-                hmu  = Line2D([0],[0], color='0.1',  ls='--'); hmu.set_linewidth(_LW_MU)
+                if not external_layout:
+
+                    hmu  = Line2D([0],[0], color='0.1',  ls='--'); hmu.set_linewidth(_LW_MU)
                 hsig = Line2D([0],[0], color='0.35', ls='--'); hsig.set_linewidth(_LW_SIG)
                 handles.extend([hmu, hsig]); labels.extend([r'$\mu$', r'$\mu \pm \sigma$'])
 
@@ -991,7 +1131,9 @@ def multipleCurvesAndHist(
             leg = ax_leg.legend(handles, labels, loc='center left', frameon=False, borderaxespad=0.0,
                           prop=FontProperties(size=_FS_LEG))
             try:
-                leg.get_frame().set_linewidth(_LW_AXES)
+                if not external_layout:
+
+                    leg.get_frame().set_linewidth(_LW_AXES)
                 leg.get_frame().set_edgecolor('0.0')
                 leg.get_frame().set_alpha(1.0)
                 leg.get_frame().set_facecolor('white')
