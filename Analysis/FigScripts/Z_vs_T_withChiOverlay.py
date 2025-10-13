@@ -8,6 +8,29 @@ specs = [
     {
         "model": "realGraphs/ZKC",
         "runs": [
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.5_0_inf_20_inf_run2636",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.5_0_inf_20_inf_run7597",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.5_0_inf_20_inf_run9035",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.5_0_inf_20_inf_run40",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\20_0.5_0_inf_20_inf_run9374",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\15_0.5_0_inf_20_inf_run8770",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\10_0.5_0_inf_20_inf_run4144",
+        ],
+        "outfile": "_figs/Z_withChiCurves/ZKC_ZandChi_bet0p5_3States",
+        "overlay_chi": "tmax",              # "tmax" | "all" | "none"
+        "fit_model": "cinematic_chi",            # "linear_Z" | "saturation_Z" | "quad_chi" | "cinematic_chi" | "none"
+        "chi_scale": "Z",                   # "Z" | "none"
+        "figsize": (4.2, 3.2),
+        "dpi": 300,
+        "formats": ["pdf", "png"],
+        "grid": False,
+        "x_label": r"$t$",
+        "y_label": r"$Z$",
+        "plot_tau_vertical": True,          # NEW: disegna la linea verticale a tau*
+    },
+    {
+        "model": "realGraphs/ZKC",
+        "runs": [
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run2620",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.9_0_inf_20_inf_run6950",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.9_0_inf_20_inf_run7081",
@@ -24,8 +47,8 @@ specs = [
         "dpi": 300,
         "formats": ["pdf", "png"],
         "grid": False,
-        "x_label": r"$t$  (punti a $T$)",
-        "y_label": r"$Z(T)$  e  $Z\cdot\chi(t)$",
+        "x_label": r"$t$",
+        "y_label": r"$Z$",
         "plot_tau_vertical": True,          # NEW: disegna la linea verticale a tau*
     },
     {
@@ -47,16 +70,16 @@ specs = [
         "dpi": 300,
         "formats": ["pdf", "png"],
         "grid": False,
-        "x_label": r"$t$  (punti a $T$)",
-        "y_label": r"$Z(T)$  e  $Z\cdot\chi(t)$",
+        "x_label": r"$t$",
+        "y_label": r"$Z$",
         "plot_tau_vertical": True,          # NEW
     },
     {
         "model": "realGraphs/ZKC",
         "runs": [
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.9_0_inf_20_inf_run2620",
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.9_0_inf_20_inf_run6950",
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.9_0_inf_20_inf_run7081",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.9_0_inf_20_inf_run7601",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.9_0_inf_20_inf_run7581",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.9_0_inf_20_inf_run7079",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\20_0.9_0_inf_20_inf_run7077",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\15_0.9_0_inf_20_inf_run7083",
@@ -70,16 +93,16 @@ specs = [
         "dpi": 300,
         "formats": ["pdf", "png"],
         "grid": False,
-        "x_label": r"$t$  (punti a $T$)",
-        "y_label": r"$Z(T)$  e  $Z\cdot\chi(t)$",
+        "x_label": r"$t$",
+        "y_label": r"$Z$",
         "plot_tau_vertical": True,          # NEW: disegna la linea verticale a tau*
     },
     {
         "model": "realGraphs/ZKC",
         "runs": [
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\40_0.55_0_inf_20_inf_run2634",
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.55_0_inf_20_inf_run8308",
-            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.55_0_inf_20_inf_run9935",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\35_0.55_0_inf_20_inf_run7595",
+            r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\30_0.55_0_inf_20_inf_run9033",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\25_0.55_0_inf_20_inf_run42",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\20_0.55_0_inf_20_inf_run9742",
             r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\realGraphs\ZKC\DataForPathsMC\PathsMCs\15_0.55_0_inf_20_inf_run8772",
@@ -93,8 +116,8 @@ specs = [
         "dpi": 300,
         "formats": ["pdf", "png"],
         "grid": False,
-        "x_label": r"$t$  (punti a $T$)",
-        "y_label": r"$Z(T)$  e  $Z\cdot\chi(t)$",
+        "x_label": r"$t$",
+        "y_label": r"$Z$",
         "plot_tau_vertical": True,          # NEW
     },
     {
@@ -116,8 +139,8 @@ specs = [
         "dpi": 300,
         "formats": ["pdf", "png"],
         "grid": False,
-        "x_label": r"$t$  (punti a $T$)",
-        "y_label": r"$Z(T)$  e  $Z\cdot\chi(t)$",
+        "x_label": r"$t$",
+        "y_label": r"$Z$",
         "plot_tau_vertical": True,          # NEW
     },
     {
@@ -139,8 +162,8 @@ specs = [
         "dpi": 300,
         "formats": ["pdf", "png"],
         "grid": False,
-        "x_label": r"$t$  (punti a $T$)",
-        "y_label": r"$Z(T)$  e  $Z\cdot\chi(t)$",
+        "x_label": r"$t$",
+        "y_label": r"$Z$",
         "plot_tau_vertical": True,          # NEW
     },
 ]
@@ -151,6 +174,7 @@ from typing import List, Dict
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import LinearLocator, MaxNLocator
 import pandas as pd
 from scipy.optimize import least_squares
 
@@ -174,9 +198,9 @@ Z_SIGMA_POLICY = "from_table"
 Z_SIGMA_COLS_ORDER = ["ZFromTIBetaStd","ZFromTIBeta_sigma","Z_sigma","sigma_Z","err_Z","ZFromTIBetaErr"]
 
 # === colori
-COL_Z_POINTS = "black"
-COL_CHI_CURVE = "blue"
-COL_FIT = "red"
+COL_Z_POINTS = "k"
+COL_CHI_CURVE = "tab:blue"
+COL_FIT = "tab:orange"
 COL_TAU = "0.6"
 
 # === forza shift prima del primo T (per includere tutti i punti in Z-fit)
@@ -344,7 +368,6 @@ def _guess_k_from_tail_decay(t, y, plateau):
     # stima k su coda: log(plateau - y) ~ -k*t + const
     resid = plateau - y
     mask = (resid > 1e-12)
-    print(t)
     if np.sum(mask) < 5: 
         return 1.0 / max(t[-1]-t[0], 1.0)
     xt = t[mask]
@@ -596,17 +619,30 @@ def _plot_same_axes_with_fit(model, runs, df_ti, graphs_root, outfile, overlay_c
     with ustyle.auto_style(mode="latex",
         base=str(Path(ustyle.__file__).resolve().parent / "styles" / "paper_base.mplstyle"),
         overlay=str(Path(ustyle.__file__).resolve().parent / "styles" / "overlay_latex.mplstyle")):
-        fig = plt.figure(figsize=figsize, dpi=dpi); ax = fig.add_subplot(111)
-        ax.scatter(T_arr, Z_arr, s=12, color=COL_Z_POINTS)
+        # Fixed external size (2.124 × 1.580 in), margins tuned for no-clipping & decent data-area
+        target_w_in, target_h_in = 2.124, 1.580
+        left_in, right_in, bottom_in, top_in = 0.44, 0.08, 0.34, 0.18
+        data_w_in = target_w_in - left_in - right_in
+        data_h_in = target_h_in - bottom_in - top_in
+        fig, ax, _meta = uplot.figure_single_fixed(
+            data_w_in=data_w_in, data_h_in=data_h_in,
+            left_in=left_in, right_in=right_in,
+            bottom_in=bottom_in, top_in=top_in
+        )
+        # Match EnergyVsM spines/ticks
+        for sp in ax.spines.values(): sp.set_linewidth(0.9)
+        ax.tick_params(direction='out', length=3.2, width=0.8, pad=2.6)
+
+        ax.scatter(T_arr, Z_arr, s=8, color=COL_Z_POINTS, edgecolors="k", linewidths=0.6, zorder=30)
         if overlay_chi == "tmax" and (chi_t is not None):
             t_full, chi_full, chi_err_full, _ = _load_av_series_with_err(run_ord[idx_tmax])
             if chi_scale.lower() == "z": chi_full = chi_full * float(Z_arr[idx_tmax])
-            ax.plot(t_full, chi_full, color=COL_CHI_CURVE, lw=1.1)
+            ax.plot(t_full, chi_full, color=COL_CHI_CURVE, lw=1.2, alpha=1.0, zorder=10)
         elif overlay_chi == "all":
             for i, rpath in enumerate(run_ord):
                 t, chi, chi_err, _ = _load_av_series_with_err(rpath)
                 if chi_scale.lower() == "z": chi = chi * float(Z_arr[i])
-                ax.plot(t, chi, color=COL_CHI_CURVE, lw=0.9, alpha=0.55)
+                ax.plot(t, chi, color=COL_CHI_CURVE, lw=0.8, alpha=0.40, zorder=5)
 
         fit_res = None
         tau_char = None
@@ -614,35 +650,64 @@ def _plot_same_axes_with_fit(model, runs, df_ti, graphs_root, outfile, overlay_c
             fit_res = do_fit_linear_Z(T_arr, Z_arr, Z_sig)
             tau,k,C = fit_res["tau"], fit_res["k"], fit_res["C"]
             tx = np.linspace(max(tau, T_arr.min()), T_arr.max(), 600)
-            ax.plot(tx, model_linear_Z(tx, k, tau, C), color=COL_FIT, lw=1.2)
+            ax.plot(tx, model_linear_Z(tx, k, tau, C), color=COL_FIT, lw=1.6, linestyle="--", zorder=25)
             tau_char = (tau - C/k) if (k != 0) else None
         elif fit_model == "saturation_Z":
             fit_res = do_fit_saturation_Z(T_arr, Z_arr, Z_sig)
             c,m,s = fit_res["c"], fit_res["m"], fit_res["s"]
             tx = np.linspace(max(s, T_arr.min()), T_arr.max(), 600)
-            ax.plot(tx, model_saturation_Z(tx, c, m, s), color=COL_FIT, lw=1.2)
+            ax.plot(tx, model_saturation_Z(tx, c, m, s), color=COL_FIT, lw=1.6, linestyle="--", zorder=25)
             tau_char = s
         elif fit_model == "quad_chi":
             if chi_t is None or chi_y is None or chi_s is None: raise RuntimeError("Serve χ(t) per 'quad_chi'.")
             fit_res = do_fit_quadratic_chi(chi_t, chi_y, chi_s)
             tau,a,C = fit_res["tau"], fit_res["a"], fit_res["C"]
             tx = np.linspace(max(tau, chi_t.min()), chi_t.max(), 600)
-            ax.plot(tx, model_quad_chi(tx, a, tau, C), color=COL_FIT, lw=1.2)
+            ax.plot(tx, model_quad_chi(tx, a, tau, C), color=COL_FIT, lw=1.6, linestyle="--", zorder=25)
             tau_char = tau
         elif fit_model == "cinematic_chi":
             if chi_t is None or chi_y is None or chi_s is None: raise RuntimeError("Serve χ(t) per 'cinematic_chi'.")
             fit_res = do_fit_cinematic_chi(chi_t, chi_y, chi_s)
             tau,r,k,C = fit_res["tau"], fit_res["r"], fit_res["k"], fit_res["C"]
             tx = np.linspace(max(tau, chi_t.min()), chi_t.max(), 600)
-            ax.plot(tx, model_cinematic_chi(tx, r, k, tau, C), color=COL_FIT, lw=1.2)
+            ax.plot(tx, model_cinematic_chi(tx, r, k, tau, C), color=COL_FIT, lw=1.6, linestyle="--", zorder=25)
             tau_char = tau
 
         if plot_tau_vertical and (tau_char is not None) and np.isfinite(tau_char):
-            ax.axvline(tau_char, linestyle="--", linewidth=0.9, color=COL_TAU)
+            ax.axvline(tau_char, linestyle="--", linewidth=0.9, color=COL_TAU, zorder=2)
 
         if x_label: ax.set_xlabel(x_label)
         if y_label: ax.set_ylabel(y_label)
         if grid: ax.grid(True, which="both", linestyle=":", linewidth=0.5, alpha=0.5)
+
+        # Finalize: limits, ticks, labels
+        try:
+            ax.relim(); ax.autoscale_view()
+        except Exception:
+            pass
+        # Gentle tick policy: X fallback 3; Y aim for 3–4 nice ticks (not too many)
+        if len(ax.get_xticks()) < 3:
+            ax.xaxis.set_major_locator(LinearLocator(3))
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=4, min_n_ticks=3, steps=[1,2,5,10]))
+        # Labels & offset sizing and padding
+        try:
+            ax.xaxis.label.set_fontsize(ax.xaxis.label.get_size()*0.90)
+            ax.yaxis.label.set_fontsize(ax.yaxis.label.get_size()*0.90)
+            ax.xaxis.labelpad = 1.0
+            ax.yaxis.labelpad = 1.0
+            off = ax.yaxis.get_offset_text(); off.set_fontsize(off.get_fontsize()*0.72)
+        except Exception:
+            pass
+        # Post-style safety: ensure all fit lines are dashed and above chi
+        try:
+            for ln in ax.lines:
+                c = ln.get_color()
+                if isinstance(c, str) and c == COL_FIT:
+                    ln.set_linestyle('--'); ln.set_linewidth(1.6); ln.set_zorder(25)
+        except Exception:
+            pass
+        # Log size
+        _w_in, _h_in = fig.get_size_inches(); print(f"[FIG SIZE] Z-panel: {_w_in:.3f}×{_h_in:.3f} in @ {dpi}dpi")
 
         out_base = Path(outfile); out_base.parent.mkdir(parents=True, exist_ok=True)
         fmts = [f.lower() for f in specs[0].get("formats", ["pdf","png"])]
@@ -677,7 +742,7 @@ def run_from_specs(_specs: List[Dict]):
             fit_model=s.get("fit_model", "linear_Z"),
             figsize=tuple(s.get("figsize", (4.2,3.2))), dpi=int(s.get("dpi", 300)),
             grid=bool(s.get("grid", False)), x_label=s.get("x_label", r"$t$"),
-            y_label=s.get("y_label", r"$Z$ e $Z\cdot\chi$"),
+            y_label=s.get("y_label", r"$Z$"),
             plot_tau_vertical=bool(s.get("plot_tau_vertical", True))
         )
 

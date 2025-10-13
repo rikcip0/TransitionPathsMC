@@ -1097,6 +1097,13 @@ specs = [
         # "graphs_root": None,              # optional override
         "outfile_dir": "_figs/TI_fromMembers/ER"  # destination folder for figures
     },
+    {
+        "model": "ER",
+        "TIcurve_id": "36122a1f76cdb57d",   # or use "run_uids": ["<uid1>", "<uid2>", ...]
+        # "run_uids": [],
+        # "graphs_root": None,              # optional override
+        "outfile_dir": "_figs/TI_fromMembers/ER"  # destination folder for figures
+    },
 ]
 
 def _load_members_from_ti(outdir: Path, model: str, curve_id: str):

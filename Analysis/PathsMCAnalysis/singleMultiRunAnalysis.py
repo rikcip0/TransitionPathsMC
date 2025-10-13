@@ -19,6 +19,7 @@ from scipy.optimize import minimize_scalar
 
 from MyBasePlots.plotWithDifferentColorbars import plotWithDifferentColorbars
 scale_Threshold=0.33
+chi2_Threshold=0.43
 minNumberOfSingleRunsToDoAnAnalysis=4
 discBetaStep=0.025
 nNsToConsiderForSubFit=6 #For extracting free energy barriers, there is also a fit
@@ -521,7 +522,7 @@ def singleMultiRunAnalysis(runsData, parentAnalysis_path, symType, toPdf=False):
     scale = chi_m2*T+chi_c2
     scale2 = np.copy(scale)
     scale2[scale2<scale_Threshold] = np.nan
-    scale2[chi_chi2>0.43] = np.nan
+    scale2[chi_chi2>chi2_Threshold] = np.nan
     
     ZFromTIBeta = np.full_like(N, np.nan, dtype=np.float64) # l'esistenza di questo array è una sconfitta
     rescaledBetas_M = np.full_like(N, np.nan, dtype=np.float64) # l'esistenza di questo array è una sconfitta

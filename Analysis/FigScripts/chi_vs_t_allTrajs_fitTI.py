@@ -1,57 +1,94 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+r"""
+chi_vs_t_allTrajs_fitTI_paper_dropin.py — drop-in “paper-ready” per χ(t) su tutte le traiettorie con fit TI.
+⟶ Nessuna colorbar. Data-area fissa in pollici, margini assoluti: identico layout ai tuoi altri drop-in.
+⟶ Nessun tight/constrained; nessun bbox_inches="tight".
+⟶ LaTeX overlay con i tuoi .mplstyle via percorsi assoluti.
+⟶ Spessori/ticks coerenti (spines ~0.9 pt; ticks out 3.2 pt/0.8 pt; Y 3–4 tick con MaxNLocator; offset ridotto).
+⟶ Log [FIG SIZE]/[AX BOX]/[SCALE] e export via uplot.export_figure_strict (PNG+PDF).
+"""
 
 # ==============================
-# LISTA PLOT (in testa al file)
+# LISTA PLOT (copiata dall'originale)
 # ==============================
 specs = [
-    {
-        "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\RRG\p2C3\N120\structure194235\fPosJ1.00\graph4245\DataForPathsMC\PathsMCs\70_1_0_inf_72_inf_run5798",
-        "outfile": "__figs/ChiVsT_allTrajs/RRG_ref",
-        "only_end": True,
+        {
+        "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\ER\p2C3\N200\structure388845\fPosJ1.00\graph8865\DataForPathsMC\PathsMCs\80_0.525_0_inf_120_inf_run7201",
+        "outfile": "_figs/ChiVsT_allTrajs/ER_HT",
+        "only_end": False,
         "figsize": (4.0, 3.0),
         "dpi": 300,
         "formats": ["pdf","png"],
-        "x_label": "t",
+        "x_label": r"$t$",
         "y_label": r"$\chi$",
         "grid": False,
-        "use_Z": True,
-        "model": "RRG"
+        "use_Z": False,
+        "model": "ER",
+        "xticks":[0,40,80],
+        "yticks":[0,0.2, 0.4,0.6,0.8,1.0],
     },
     {
-        "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\ER\p2C3\N160\structure998785\fPosJ1.00\graph8797\DataForPathsMC\PathsMCs\45_1_0_inf_96_inf_run8927",
-        "outfile": "__figs/ChiVsT_allTrajs/ER_ref",
+        "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\RRG\p2C3\N160\structure140322\fPosJ1.00\graph340\DataForPathsMC\PathsMCs\80_1_0_inf_96_inf_run9157",
+        "outfile": "_figs/ChiVsT_allTrajs/RRG_refnew",
         "only_end": True,
         "figsize": (4.0, 3.0),
         "dpi": 300,
         "formats": ["pdf","png"],
-        "x_label": "t",
-        "y_label": r"$\chi$",
+        "x_label": r"$t$",
+        "y_label": r"$Z$",
         "grid": False,
         "use_Z": True,
-        "model": "ER"
+        "model": "RRG",
+        "xticks":[0,40,80]
     },
     {
         "run_path": r"C:\Users\ricca\Desktop\College\Codici\TransitionPathsMC\Data\Graphs\ER\p2C3\N140\structure655712\fPosJ1.00\graph5735\DataForPathsMC\PathsMCs\70_1_0_inf_84_inf_run6751",
-        "outfile": "__figs/ChiVsT_allTrajs/ER_ref2",
+        "outfile": "_figs/ChiVsT_allTrajs/ER_refnew",
         "only_end": True,
         "figsize": (4.0, 3.0),
         "dpi": 300,
         "formats": ["pdf","png"],
-        "x_label": "t",
-        "y_label": r"$\chi$",
+        "x_label": r"$t$",
+        "y_label":  r"$Z$",
         "grid": False,
         "use_Z": True,
-        "model": "ER"
+        "model": "ER",
+        "xticks":[0,35,70]
     },
+
 ]
 
 # ==============================
-# TUNABLES (facili da editare)
+# USER TUNABLE (assoluti, in pollici)
 # ==============================
-FIT_EXTEND_LEFT  = 0.10
-FIT_EXTEND_RIGHT = 0.10
+FIG_SCALE   = 1.50  # per impaginazione a 2 colonne: 1.40–1.50
+DATA_W_IN   = 1.60  # larghezza data-area
+DATA_H_IN   = 1.10  # altezza   data-area
 
+LEFT_IN     = 0.40  # margine sinistro (base)
+RIGHT_FRAME = 0.08  # margine destro “cornice”
+BOTTOM_IN   = 0.34  # margine inferiore
+TOP_IN      = 0.16  # margine superiore
+
+# micro-“bump” per sicurezza (non altera la data-area)
+LEFT_BUMP_IN   = 0.02
+BOTTOM_BUMP_IN = 0.02
+TOP_BUMP_IN    = 0.00
+RIGHT_BUMP_IN  = 0.02
+
+# Stile/LaTeX
+USE_TEX_MODE   = "latex"  # "latex", "latex_text", "pgf"
+STYLE_BASE     = "paper_base.mplstyle"
+STYLE_OVERLAY  = "overlay_latex.mplstyle"
+
+# Fit extenders (preservati)
+FIT_EXTEND_LEFT  = 0.1
+FIT_EXTEND_RIGHT = 15
+
+# ==============================
+# Import e setup
+# ==============================
 import os, sys, json, hashlib
 import numpy as np
 from pathlib import Path
@@ -68,22 +105,19 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.append('../')
 from MyBasePlots.FigCore import utils_style as ustyle
 from MyBasePlots.FigCore import utils_plot  as uplot
+from matplotlib.ticker import MaxNLocator
 
 # --- helpers path utils (robusto Windows->WSL) ---
 def _norm_path(p: str) -> str:
-    if p is None:
-        return p
-    # normalizza backslash in slash e compatta eventuale doppio slash iniziale
+    if p is None: return p
     q = p.replace("\\\\", "\\").replace("\\", "/")
-    # su WSL: se inizia con "C:/" -> mappa a /mnt/c/...
     if len(q) >= 3 and q[1:3] == ":/":
         drive = q[0].lower()
         q = f"/mnt/{drive}/{q[3:]}"
     return q
 
 def _get_file_with_prefix(parent_dir: str, prefix: str) -> Optional[str]:
-    if not os.path.isdir(parent_dir):
-        return None
+    if not os.path.isdir(parent_dir): return None
     for f in os.listdir(parent_dir):
         fp = os.path.join(parent_dir, f)
         if os.path.isfile(fp) and f.startswith(prefix):
@@ -116,52 +150,37 @@ def _load_av_table(run_path: str):
     avChi = data[:, 4]
     return t, avChi
 
-# --- progressiveLinearFit: IDENTICO al tuo ---
+# --- progressiveLinearFit: IDENTICO all'originale ---
 def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.5, onlyEnd=False):
-
     par_values = []
     minimumShifting = np.maximum(len(x)//150, 5)
     minimumLength = 3*minimumShifting
-
-    def linear(t, a, b):
-        return t*a+b
-
+    def linear(t, a, b): return t*a+b
     iStartIndex = np.maximum(np.argmax(y>0.001), minimumShifting)
-
-    if iStartIndex + minimumShifting >= len(x)-1:
-        return None
+    if iStartIndex + minimumShifting >= len(x)-1: return None
     largestIndexOfTimeLargerThanTminus2 = np.where(x<x[-1]-0.3)[0][-1]
-
     for i in range(iStartIndex, len(x)-2*minimumShifting, minimumShifting):
         jMin = i+minimumShifting
         if onlyEnd:
             jMin = np.maximum(largestIndexOfTimeLargerThanTminus2, i+minimumLength)
         for j in range(jMin, len(x)-1, minimumShifting):
-            
             try:
                 popt, pcov = curve_fit(
                     linear, x[i:j], y[i:j],
-                sigma=yerr[i:j],
-                method='lm',
-                p0=[1/x[-1], -0.6],
-                maxfev=5000
+                    sigma=yerr[i:j],
+                    method='lm',
+                    p0=[1/x[-1], -0.6],
+                    maxfev=5000
                 )
             except RuntimeError as e:
                 import warnings
-                warnings.warn(
-                f"[progressiveLinearFit] fit fallito per i={i}, j={j}: {e}",
-                RuntimeWarning
-                )
+                warnings.warn(f"[progressiveLinearFit] fit fallito per i={i}, j={j}: {e}", RuntimeWarning)
                 continue
-            
-            slope = popt[0]
-            intercept = popt[1]
+            slope = popt[0]; intercept = popt[1]
             chi_r_value = np.nansum(((y[i:j]-(linear(x[i:j],*popt)))/yerr[i:j])**2.)/(j-i)
             if chi_r_value < threshold_chi_square and intercept+slope*x[-1]>0.02:
                 par_values.append((chi_r_value, i, j, slope, intercept))
-
-    if len(par_values)==0:
-        return None
+    if len(par_values)==0: return None
     best_segment = min(par_values, key=lambda x: x[0]/(x[2]-x[1])**5.)
     best_Chi = best_segment[0]
     terminalParameters= ["m","b"]
@@ -171,8 +190,7 @@ def progressiveLinearFit(x, y, yerr, threshold_chi_square=0.5, onlyEnd=False):
     else:
         return None
 
-nameOfFoldersContainingGraphs = ["fPosJ"
-                               ]
+nameOfFoldersContainingGraphs = ["fPosJ"]
 
 def _load_run_json_bits(run_path: str):
     run_json = os.path.join(run_path, "Results", "runData.json")
@@ -201,12 +219,13 @@ def _compute_avchi_err(avChi, lastMeasureMc, mcMeas, muAvEnergy):
     return np.sqrt(avChi*(1.0-avChi)/denom)
 
 # --------- Z deterministica via run_uid + ti_points.parquet (ZFromTIBeta) ---------
+from hashlib import sha1
 def _make_run_uid(run_dir: Path, graphs_root: Path) -> str:
     try:
         rel = str(run_dir.resolve().relative_to(graphs_root.resolve()))
     except Exception:
         rel = str(run_dir.resolve())
-    return hashlib.sha1(rel.encode("utf-8")).hexdigest()[:16]
+    return sha1(rel.encode("utf-8")).hexdigest()[:16]
 
 def _get_Z_ref_for_run(run_path: str, model: str) -> tuple[float, str]:
     graphs_root = _find_graphs_root_from_run(run_path)
@@ -222,17 +241,20 @@ def _get_Z_ref_for_run(run_path: str, model: str) -> tuple[float, str]:
     sub = df.loc[df["run_uid"].astype(str) == run_uid]
     if sub.empty:
         return 1.0, "run_uid not found in ti_points"
-    # usa la riga a beta massimo per quella run (deterministico)
     sub = sub.sort_values(by=["beta"], ascending=True, na_position="last")
     z = float(sub["ZFromTIBeta"].iloc[-1])
     if not np.isfinite(z) or z <= 0:
         return 1.0, "invalid ZFromTIBeta"
     return z, f"ti_points.parquet:run_uid={run_uid}:beta=max"
 
+# ==============================
+# Runner con layout deterministico
+# ==============================
 def run_from_specs(_specs):
-    with ustyle.auto_style(mode="latex",
-                           base=str(Path(ustyle.__file__).resolve().parent / "styles" / "paper_base.mplstyle"),
-                           overlay=str(Path(ustyle.__file__).resolve().parent / "styles" / "overlay_latex.mplstyle")):
+    styles_root = Path(ustyle.__file__).resolve().parent / "styles"
+    with ustyle.auto_style(mode=USE_TEX_MODE,
+                           base=str(styles_root / STYLE_BASE),
+                           overlay=str(styles_root / STYLE_OVERLAY)):
         for s in _specs:
             raw_path = s["run_path"]
             run_path = _norm_path(raw_path)
@@ -240,7 +262,6 @@ def run_from_specs(_specs):
                 raise FileNotFoundError(f"Cartella run non trovata:\n  {raw_path}\nNormalizzato a:\n  {run_path}")
 
             t, avChi = _load_av_table(run_path)
-
             lastMeasureMc, mcMeas, muAvEnergy = _load_run_json_bits(run_path)
             yerr = _compute_avchi_err(avChi, lastMeasureMc, mcMeas, muAvEnergy)
 
@@ -252,13 +273,40 @@ def run_from_specs(_specs):
             if bool(s.get("use_Z", False)):
                 Z_ref, Z_source = _get_Z_ref_for_run(run_path, s.get("model",""))
 
-            figsize = tuple(s.get("figsize", (4.0,3.0)))
-            dpi = int(s.get("dpi", 300))
-            fig = plt.figure(figsize=figsize, dpi=dpi)
-            ax = fig.add_subplot(111)
+            # ====================== GEOMETRIA DETERMINISTICA (NO COLORBAR) ======================
+            L0 = LEFT_IN + LEFT_BUMP_IN
+            B0 = BOTTOM_IN + BOTTOM_BUMP_IN
+            T0 = TOP_IN + TOP_BUMP_IN
+            R0 = RIGHT_FRAME + RIGHT_BUMP_IN
 
-            ax.plot(t, avChi*Z_ref, color="black", linewidth=1.0)
-            ax.errorbar(t, avChi*Z_ref, yerr=yerr*Z_ref, fmt=" ", elinewidth=0.4, alpha=0.3, color="black")
+            L = L0 * FIG_SCALE; B = B0 * FIG_SCALE; T = T0 * FIG_SCALE; R_frame = R0 * FIG_SCALE
+            DW = DATA_W_IN * FIG_SCALE; DH = DATA_H_IN * FIG_SCALE
+
+            fig_w = L + DW + R_frame
+            fig_h = B + DH + T
+
+            dpi = int(s.get("dpi", 300))
+
+            # Figura con area dati ESATTA
+            fig, ax, _meta = uplot.figure_single_fixed(
+                data_w_in=DW, data_h_in=DH,
+                left_in=L, right_in=R_frame,
+                bottom_in=B, top_in=T
+            )
+            fig.set_constrained_layout(False)
+            try: fig.tight_layout = lambda *a, **k: None
+            except Exception: pass
+
+            # Spessori / ticks coerenti e labelpad contenuti
+            for sp in ax.spines.values():
+                sp.set_linewidth(0.9)
+            ax.tick_params(direction='out', length=3.2, width=0.8, pad=2.0)
+            ax.xaxis.labelpad = 1.2
+            ax.yaxis.labelpad = 1.2
+
+            # === DRAW ===
+            ax.plot(t, avChi*Z_ref, color="black", linewidth=1.2, zorder=2)
+            ax.errorbar(t, avChi*Z_ref, yerr=yerr*Z_ref, fmt=" ", elinewidth=0.4, alpha=0.1, color="tab:blue", zorder=1)
 
             meta = {}
 
@@ -276,10 +324,10 @@ def run_from_specs(_specs):
 
                 xx = np.linspace(x0, x1, 256)
                 yy = (m*xx + b) * Z_ref
-                ax.plot(xx, yy, "--", linewidth=0.9, color="#666666")
+                ax.plot(xx, yy, "--", linewidth=1.2, color="#E90000", zorder=3)
 
-                ax.axvline(tL, linestyle="--", linewidth=0.9, color="#999999")
-                ax.axvline(tR, linestyle="--", linewidth=0.9, color="#999999")
+                ax.axvline(tL, linestyle="--", linewidth=0.9, color="#7D7D7D", zorder=2)
+                ax.axvline(tR, linestyle="--", linewidth=0.9, color="#7D7D7D", zorder=2)
                 ax.set_xlim(xlim_before)
 
                 meta.update({
@@ -297,10 +345,33 @@ def run_from_specs(_specs):
             if bool(s.get("grid", False)):
                 ax.grid(True, which="both", linestyle=":", linewidth=0.5, alpha=0.5)
 
-            out_base = s.get("outfile", "__figs/ChiVsT_allTrajs/output")
-            out_base = Path(out_base)
+            # Y ticks/offset coerenti con gli altri pannelli
+            ax.yaxis.set_major_locator(MaxNLocator(nbins=4, min_n_ticks=3))
+            try:
+                ax.yaxis.get_offset_text().set_fontsize(ax.yaxis.get_offset_text().get_fontsize()*0.72)
+            except Exception:
+                pass
+            xTicks=s.get("xticks",None)
+            if xTicks is not None:
+                ax.xaxis.set_ticks(xTicks)
+                ax.xaxis.set_ticklabels([str(x) for x in xTicks])
+            yTicks=s.get("yticks",None)
+            if yTicks is not None:
+                ax.yaxis.set_ticks(yTicks)
+                ax.yaxis.set_ticklabels([str(y) for y in yTicks])
+
+            out_base = Path(s.get("outfile", "_figs/ChiVsT_allTrajs/output"))
             out_base.parent.mkdir(parents=True, exist_ok=True)
 
+            # === LOG GEOMETRIA PRIMA DEL SALVATAGGIO ===
+            W, H = fig.get_size_inches()
+            print(f"[FIG SIZE] chi_vs_t_allTrajs: {W:.3f} × {H:.3f} in")
+            bbox = ax.get_position(); data_w = bbox.width * W; data_h = bbox.height * H
+            right_total = R_frame
+            print(f"[AX BOX]   data: {data_w:.3f} × {data_h:.3f} in; margins L/R/B/T={L:.2f}/{right_total:.2f}/{B:.2f}/{T:.2f}")
+            print(f"[SCALE]     FIG_SCALE={FIG_SCALE:.2f} ⇒ DW×DH={DW:.2f}×{DH:.2f} in")
+
+            # Export (senza tight)
             formats = list(s.get("formats", ["pdf","png"]))
             for ext in formats:
                 uplot.export_figure_strict(fig, str(out_base), formats=(ext,), dpi=dpi)
@@ -313,7 +384,7 @@ def run_from_specs(_specs):
                 "lastMeasureMc": int(lastMeasureMc),
                 "mcMeas": int(mcMeas),
                 "muAvEnergy": float(muAvEnergy),
-                "figsize": list(figsize),
+                "figsize": [W,H],
                 "dpi": dpi,
                 "outfile_base": str(out_base),
                 "saved_formats": formats,

@@ -126,8 +126,8 @@ def fit_and_members_raw(points: pd.DataFrame,
     base = base.loc[sel].copy()
 
     # merge scale2 per RAW se kcol è Scaled
-    need_scale = (kcol == "kFromChi_InBetween_Scaled")
-    if need_scale:
+    usingInBetweenScaled = (kcol == "kFromChi_InBetween_Scaled")
+    if usingInBetweenScaled:
         _ensure_cols(runs_results, ["run_uid","scale2"], "runs_results")
         base = base.merge(runs_results[["run_uid","scale2"]].drop_duplicates(), on="run_uid", how="left")
     else:
@@ -155,13 +155,15 @@ def fit_and_members_raw(points: pd.DataFrame,
             considered = is_used_subset | include_unused
             chi_ok = (g[chi_col].to_numpy(float) <= chi2_thr)
 
-            if need_scale:
+            if usingInBetweenScaled:
                 s2 = g["scale2"].to_numpy(float)
                 scale_ok = np.isfinite(s2) & (s2 >= scale_thr)
             else:
                 scale_ok = np.ones(len(g), dtype=bool)
 
-            used_by_fit = considered & chi_ok & scale_ok
+            used_by_fit = considered & scale_ok
+            if usingInBetweenScaled:
+                used_by_fit= used_by_fit & chi_ok
 
             if len(np.unique(g.loc[used_by_fit, "N"].to_numpy(float))) < min_unique_N:
                 continue
@@ -181,17 +183,17 @@ def fit_and_members_raw(points: pd.DataFrame,
             })
 
             excl_chi = considered & (~chi_ok)
-            excl_scale = considered & (~scale_ok) if need_scale else np.zeros(len(g), dtype=bool)
+            excl_scale = considered & (~scale_ok) if usingInBetweenScaled else np.zeros(len(g), dtype=bool)
             rows = pd.DataFrame({
                 "beta_kind": "raw", "subset_id": subset_id, "family_id": fam, "anchor": None, "ref_stat": None, "kcol": kcol,
                 "beta": float(b_val), "beta_rescaled_bin": np.nan,
                 "TIcurve_id": g["TIcurve_id"].astype(str).values, "run_uid": g["run_uid"].astype(str).values,
                 "N": g["N"].astype(float).values, "beta_point": g["beta"].astype(float).values,
                 "beta_rescaled": np.nan, "k_value": g[kcol].astype(float).values, "chi_value": g[chi_col].astype(float).values,
-                "scale2": (g["scale2"].astype(float).values if need_scale else np.full(len(g), np.nan)),
+                "scale2": (g["scale2"].astype(float).values if usingInBetweenScaled else np.full(len(g), np.nan)),
                 "is_used_subset": is_used_subset, "used_by_fit": used_by_fit,
                 "excluded_chi": excl_chi, "excluded_scale": excl_scale,
-                "chi2_threshold": float(chi2_thr), "scale_threshold": (float(scale_thr) if need_scale else np.nan),
+                "chi2_threshold": float(chi2_thr), "scale_threshold": (float(scale_thr) if usingInBetweenScaled else np.nan),
                 "rescaled_step": np.nan,
             })
             members.append(rows)
@@ -241,8 +243,8 @@ def fit_and_members_rescaled(points: pd.DataFrame,
     ok_basic = (k > 0) & _finite_mask(k, N, br, chi)
     base = base.loc[ok_basic].copy()
 
-    need_scale = (kcol == "kFromChi_InBetween_Scaled")
-    if need_scale:
+    usingInBetweenScaled = (kcol == "kFromChi_InBetween_Scaled")
+    if usingInBetweenScaled:
         base = base.merge(runs_results[["run_uid","scale2"]].drop_duplicates(), on="run_uid", how="left")
 
     base["beta_rescaled_bin"] = _bin_rescaled(base["beta_rescaled"], step)
@@ -261,13 +263,15 @@ def fit_and_members_rescaled(points: pd.DataFrame,
             is_used_subset = g["is_used"].astype(bool).to_numpy()
             considered = is_used_subset | include_unused
             chi_ok = (g[chi_col].to_numpy(float) <= chi2_thr)
-            if need_scale:
+            if usingInBetweenScaled:
                 s2 = g["scale2"].to_numpy(float)
                 scale_ok = np.isfinite(s2) & (s2 >= scale_thr)
             else:
                 scale_ok = np.ones(len(g), dtype=bool)
 
-            used_by_fit = considered & scale_ok & chi_ok
+            used_by_fit = considered & scale_ok
+            if usingInBetweenScaled:
+                used_by_fit= used_by_fit & chi_ok
 
             if len(np.unique(g.loc[used_by_fit, "N"].to_numpy(float))) < min_unique_N:
                 continue
@@ -295,10 +299,10 @@ def fit_and_members_rescaled(points: pd.DataFrame,
                 "N": g["N"].astype(float).values, "beta_point": g["beta"].astype(float).values,
                 "beta_rescaled": g["beta_rescaled"].astype(float).values, "k_value": g[kcol].astype(float).values,
                 "chi_value": g[chi_col].astype(float).values,
-                "scale2": (g["scale2"].astype(float).values if need_scale else np.full(len(g), np.nan)),
+                "scale2": (g["scale2"].astype(float).values if usingInBetweenScaled else np.full(len(g), np.nan)),
                 "is_used_subset": is_used_subset, "used_by_fit": used_by_fit,
-                "excluded_chi": excl_chi, "excluded_scale": (excl_scale if need_scale else np.zeros(len(g), dtype=bool)),
-                "chi2_threshold": float(chi2_thr), "scale_threshold": (float(scale_thr) if need_scale else np.nan),
+                "excluded_chi": excl_chi, "excluded_scale": (excl_scale if usingInBetweenScaled else np.zeros(len(g), dtype=bool)),
+                "chi2_threshold": float(chi2_thr), "scale_threshold": (float(scale_thr) if usingInBetweenScaled else np.nan),
                 "rescaled_step": float(step),
             })
             members.append(rows)
@@ -332,8 +336,8 @@ def _parser() -> argparse.ArgumentParser:
     ap.add_argument("--rescaled-step", type=float, default=0.025, help="Delta per binning di beta_rescaled")
     ap.add_argument("--min-unique-N", type=int, default=5, help="Min # di N distinti nel fit (default 4)")
     ap.add_argument("--include-unused", action="store_true", help="Includi anche TIcurve con is_used=False (appariranno come unused_subset=True)")
-    ap.add_argument("--chi2-threshold", type=float, default=0.45, help="Soglia su χ")
-    ap.add_argument("--scale-threshold", type=float, default=0.4, help="Soglia su scale2 (solo per kFromChi_InBetween_Scaled)")
+    ap.add_argument("--chi2-threshold", type=float, default=0.43, help="Soglia su χ")
+    ap.add_argument("--scale-threshold", type=float, default=0.33, help="Soglia su scale2 (solo per kFromChi_InBetween_Scaled)")
     ap.add_argument("--outname", default="ti_linear_fits.parquet", help="Nome file output parquet")
     ap.add_argument("--out-members", default="ti_linear_fit_members.parquet", help="Nome file membership output parquet")
     ap.add_argument("-v", "--verbose", action="store_true")
