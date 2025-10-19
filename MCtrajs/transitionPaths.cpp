@@ -43,7 +43,7 @@
 #define MCprint 50000
 #define MCconf 100000
 #define mcForIntegratedMeasuring 5000
-#define printconf false
+#define printconf true
 #include "../Generic/random.h"
 
 #include "MCdyn_classi/Generic/fileSystemUtil_Trajs.h"
